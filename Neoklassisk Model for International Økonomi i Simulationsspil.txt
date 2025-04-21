@@ -1,0 +1,2870 @@
+﻿Neoklassisk Model for International Økonomi i Simulationsspil
+1. Handelsdynamikker og tariffer
+Tariffer og prisdannelse: Tariffer er en afgift på importerede varer, som øger prisen for forbrugerne, reducerer importmængden og ofte fører til gengældelsesforanstaltninger fra andre lande . Når en udenlandsk vare pålægges en told t, stiger dens pris i hjemlandet til:
+* Importeret pris: P_import = P_f * valutakurs * (1 + t), hvor P_f er udenlandske producenters pris (i udenlandsk valuta) og valutakursen omregner til lokal valuta. Denne formel indebærer, at en 10% told (dvs. t=0{,}1) hæver indenlandsk pris for varen med 10% alt andet lige.
+
+* Indenlandsk prisniveau: En del af økonomiens prisindeks påvirkes af dyrere importer. Hvis en andel \mu af forbruget er importeret, kan man approksimere det samlede prisniveau som et vægtet gennemsnit: P_domestic = (1 - μ) * P_hjemmelavet + μ * P_import. Empirisk ses det, at samlet inflation er et vægtet gennemsnit af prisændringer på henholdsvis hjemlige og importerede varer .
+
+Effekt på import og nettoeksport (NX): Når importprisen stiger, falder efterspørgslen efter importvarer typisk. Resultatet er lavere importvolumen og dermed en forbedring af nettoeksporten NX = X - M (da M falder). I første omgang kan en told derfor øge landets NX, hvis eksporten forbliver uændret. Men i praksis er der flere dynamikker: en handelsbalance i overskud øger efterspørgslen efter landets valuta, hvilket kan styrke (appreciere) valutaen og gøre eksport dyrere i udlandet . Desuden risikerer man, at handelspartnere svarer igen med told på landets egne eksportvarer (retaliation) . Modellens handelskomponent bør derfor simulere, at told gavner beskyttede industrier men kan udløse modreaktioner og en dyrere valuta, som modvirker noget af gevinsten.
+Dynamisk kobling mellem økonomier: I et spil med 30 store økonomier skal udenlandske priser ikke være faste – de udvikler sig med de andre landes indenlandske priser. En simpel antagelse er at definere hvert lands P_f (udenlandske prisniveau) som gennemsnittet af de andre 29 landes prisniveauer P_d. Med vægte kan dette skrives: P_f(i) = sum_{j≠i}( w_{ij} * P_d(j) ), hvor w_{ij} er vægten (fx importandel fra land j til i). Derved smitter inflation i større økonomier af på de øvrige via importpriser. Som eksempel kan en global stigning i priser (høj inflation i de fleste andre lande) løfte P_f for et givent land, hvilket gennem formlen ovenfor øger landets egne importpriser og dermed potentielt dets inflation. Denne indbyrdes afhængighed mellem økonomierne bør indbygges, så f.eks. en kraftig prisstigning i én stormagt kan mærkes i importpriserne hos de øvrige.
+2. Valutakursmekanisme
+Rente og kapitalbevægelser: I en neoklassisk åben økonomi-model bestemmes valutakursen (FX) i høj grad af udbud og efterspørgsel efter valuta, som påvirkes af renteforskelle og handelsbalancen . Et højere indenlandsk renteniveau tiltrækker kapital fra udlandet, da investorer kan få højere afkast, hvilket alt andet lige styrker valutaens værdi . Omvendt vil en lavere rente end i udlandet føre til kapitaludstrømning og svække valutaen. Denne mekanisme kan modelleres ved at lade valutakursen appreciere, når hjemlandets styringsrente (policyRate) overstiger udlandets:
+   * Rentedifferential: Δe_due_to_rate = k1 * (policyRate - policyRate_udland). Her vil k1 > 0 være en kalibreringsfaktor. Hvis fx Danmark hæver renten 1%-point over udlandets, forventes kronen at blive stærkere (lavere DKK per euro) – i modellen giver det et negativt bidrag til DKK/EUR kursen, hvis man definerer valutakurs som indenlandsk valuta per enhed udenlandsk (alternativt kan man definere kursen som antal udenlandske enheder per indenlandsk for at forenkle fortegnet). Dette følger idéen om uforsikret renteparitet, hvor et renteløft medfører en forventet appreciering af valutaen over tid .
+
+Handelsbalance og valuta: Foruden renten påvirker handelsbalancen valutakursen gennem strømmen af valuta fra eksport/import . Eksporterer landet meget mere end det importerer (NX > 0), er der høj efterspørgsel efter dets valuta, da udenlandske købere skal købe den for at betale landets varer. Det presser kursen op (valutaappreciering) . Omvendt, et land med stort importoverskud (NX < 0) vil se sin valuta udbudt i bytte for fremmed valuta, hvilket svækker den. I modellen kan dette indfanges ved:
+      * Handelsbidrag: Δe_due_to_trade = - k2 * (ΔNX). Her vil k2 > 0 og fortegnet minus sige, at når NX stiger (bedre handelsbalance), falder valutakursen (appreciering hvis defineret som domestic per foreign). Tilsvarende vil en forværring af NX (f.eks. importboom) føre til stigning i valutakursen (depreciering). Denne simple lineære relation fanger ideen om, at valutakursen bevæger sig mod at korrigere handelsubalancer: får et land et større overskud, vil valutaen typisk styrkes, indtil eksport bliver dyrere og import billigere, hvilket dæmper overskuddet (Marshall-Lerner-betingelsen forudsat opfyldt). Empirisk forskning viser da også, at korrektion af handelsbalance kan forklare en betydelig del af valutakursbevægelser over tid .
+
+Implementering: Samlet kan valutakursens ændring per tidsperiode være summen af disse effekter:
+delta_fx = k1 * (policyRate - policyRate_foreign) - k2 * (NX_current - NX_last)
+exchange_rate += delta_fx
+Ved kalibrering skal k1 og k2 vælges, så rimelige størrelsesordener opnås. F.eks. kunne k1=0.5 og k2=0.1 betyde at en renteforskel på 2%-point giver ~1%-point appreciering af valutaen, mens en forbedring af NX på 10 mia. USD giver ~1%-point appreciering. Disse parametre kan finjusteres for at matche historiske data eller ønsket følsomhed.
+3. Arbejdsløshed via Okuns lov
+Okuns lov – output og arbejdsløshed: Okuns lov er en empirisk regel der sammenkæder økonomisk vækst med arbejdsløsheden. Den klassiske formulering (fra Arthur Okuns studie i 1962) siger, at hvis BNP vokser ca. 2% over trend, falder arbejdsløsheden omkring 1% . Dette svarer til, at en 1%-point lavere BNP-vækst end normalen øger ledigheden med ~0,3%-point . Med andre ord er der typisk en β-coefficient i størrelsesorden 0,3–0,5, der angiver hvor meget arbejdsløsheden ændrer sig, når væksten afviger fra sin potentiale (trendmæssige vækst). I modellen kan vi implementere Okuns lov som:
+         * Ændring i arbejdsløshed: Δu = - β * (gdpGrowth - potentialGrowth). Hvor β sættes fx til 0,4 (midt i intervallet 0,3–0,5). Hvis BNP vokser hurtigere end potentialet, bliver Δu negativ (ledighed falder). Er væksten derimod under potentialet eller direkte negativ (recession), bliver Δu positiv (stigende arbejdsløshed). Okuns lov afspejler således, at høj vækst “trækker folk i arbejde”, mens lav vækst kaster folk ud i ledighed .
+
+Potentielle justeringer: I praksis kan forholdet variere lidt mellem lande og over tid. Fx har nogle studier fundet ~0,5 i USA historisk, mens andre lande ligger nærmere ~0,3 . For Danmark kunne man kigge på empirien (Danmarks Nationalbank eller vismændene) for at vælge β. I spillet kan man evt. gøre β justerbar pr. land for at afspejle strukturelle forskelle (fx mere fleksibelt arbejdsmarked => lavere β, da outputudsving lettere absorberes uden at fyre medarbejdere). For enkelhed kan man dog bruge samme β for alle.
+Eksempel (kode): Hvis Danmarks potentiale er 2% årligt og faktisk vækst et år er 3%, så:
+beta = 0.4
+delta_unemp = -beta * (growth - potential)  # = -0.4 * (3% - 2%) = -0.4% (point)
+unemployment_rate += delta_unemp
+Det vil sige arbejdsløsheden falder 0,4%-point. Denne mekanisme erstatter den nuværende simplere metode og sikrer, at konjunktursving slår igennem på arbejdsmarkedet på en økonomisk konsistent måde.
+4. Inflationsmekanisme med importeffekter
+Outputgab og inflation: Ifølge Phillips-kurven og moderne inflationsdynamik afhænger inflationen dels af det indenlandske output gap (hvor meget BNP afviger fra kapacitetsgrænsen) og dels af eksterne prisstød. Når økonomien kører over sin trend (positivt output gap), skaber det et opadgående pres på priserne (efterspørgselsdrevet inflation). Omvendt vil et negativt output gap (sløvt økonomi) dæmpe inflationen. Dette kan indbygges via en faktor φ (phi) gange output gap.
+Importprisernes rolle: I en åben økonomi som Danmarks kommer der også importeret inflation: hvis de varer vi importerer pludselig bliver dyrere (pga. enten udenlandsk inflation, valutakursfald eller nye tariffer), så stiger vores indenlandske prisniveau udenom den hjemlige kapacitetsudnyttelse. Inflation i modellen bør derfor også reagere på ændringer i importpriser . En simpel måde at gøre det på er at inkludere en γ (gamma) gange ændringen i importprisindekset. Samlet får vi fx følgende opdateringsregel per periode:
+            * Inflationsopdatering: inflation_new = inflation_old + φ * (outputGap) + γ * (Δ P_import). Her er outputGap typisk i % af BNP (fx +2 hvis økonomien kører 2% over sit potentiale), og Δ P_import er ændringen i importprisindekset (fx 5% hvis en større toldsvingsrunde eller olieprisstigning har gjort importerede varer 5% dyrere). Konstanten φ styrer hvor følsom inflationen er over for aktivitetsgap (Phillips-kurvens hældning), mens γ angiver import price pass-through – hvor meget en given stigning i importpriser slår igennem på forbrugerpriser.
+
+Fortolkning: Hvis φ=0.5 og outputGap=+2, så bidrager det med +1%-point til inflationen. Hvis samtidig importpriserne stiger 10% og γ=0.3, bidrager det med +3%-point. Ny inflation bliver da gammel inflation plus 4%-point. Dette illustrerer, at både overefterspørgsel og dyre importerede inputs kan drive inflation. Det stemmer overens med erfaringen fra små åbne økonomier: en valutakursdepreciering eller told kan give et direkte inflationsløft, uanset den indenlandske situation . Omvendt, hvis valutaen styrkes eller verdensmarkedspriser falder (negativ Δ P_import), kan landet importere disinflation. Ved implementering kan man bruge glidende gennemsnit eller lag (f.eks. lade Δ P_import repræsentere seneste års ændring) for at undgå for meget volatilitet periode for periode.
+Forventningsdannelse (udvidelse): For fuldstændighedens skyld nævner vi, at inflationsforventninger også er vigtige i neoklassiske modeller (folk sætter priser efter hvad de forventer inflationen bliver). En Phillipskurve med forventninger kunne inkludere et led for forventet inflation π^e: inflation_new = π^e + φ*outputGap + γ*ΔP_import. I spillet kunne man holde forventninger adaptivt π^e = inflation_{old} for enkelhed. Det vigtigste er at inkludere de to drivere φ og γ for hhv. aktivitets- og importtryk, så politikker som påvirker output eller importpriser (f.eks. toldsatser) får realistisk effekt på inflationen.
+5. Sektorspecifik dynamik
+Tariffer rammer sektorer forskelligt: Ikke alle sektorer påvirkes lige meget af en told. Effekten afhænger af sektorens handelsmønster – fx vil en høj told på stål direkte beskytte stålindustrien, men den kan skade bilindustrien, som bruger importeret stål. I modellen bør tariffer derfor kunne angives pr. sektor eller varetype. Hver sektor s kan have sin egen toldsats t_s for import af tilsvarende varer, hvilket reflekteres i sektorspecifikke importpriser: P_import[s] = P_f[s] * valutakurs * (1 + t_s). Sektorens indenlandske pris på output vil så afhænge af, hvor meget konkurrencen fra importvarer er dæmpet af told. Hvis fx 30% af forbruget af varer i sektor s normalt importeres, men told hæver deres pris, kan de indenlandske producenter hæve egne priser noget tættere på importprisen uden at miste markedsandele. Modellen kan simplificeres ved at antage, at indenlandsk pris for sektor s er: P_d[s] = (1 - μ_s) * P_hjem[s] + μ_s * P_import[s], hvor μ_s er importandelen i sektoren. P_hjem[s] (prisen på hjemmeproducerede varer i s) vil på kort sigt kunne stige mod importprisen, hvis tolden giver dem et beskyttelsesrum. Dermed virker told som en støtte til pris og produktion i de sektorer, der var udsat for udenlandsk konkurrence . Samtidig kan sektorer der bruger importerede inputs opleve højere omkostninger . Denne krydseffekt kan implementeres ved, at en told på inputvarer vises som et negativt chok for de sektorers produktionsomkostninger der bruger dem.
+Nettoeksport per sektor: For at fange handelsdynamikken pr. sektor skal vi beregne eksport og import separat for hver sektor. Hver sektor har: NX_s = Export_s - Import_s. Import_s afhænger af indenlandsk efterspørgsel efter sektorens varer og deres pris relativt til indenlandske (høj told mindsker Import_s). Export_s afhænger af udenlandsk efterspørgsel samt udenlandske toldsatser mod denne sektor. For implementering kan man antage en simpel efterspørgselsfunktion, fx at eksporten fra sektor s i land i til land j afhænger af land js aktivitet og pris på i’s varer relativt til js egne: hvis land j lægger told på sektor s mod land i, stiger prisen på i’s varer og j importerer mindre. Detaljeret kunne dette kræve et matrix af bilateral handel; en simplere tilnærmelse er at antage at land i’s sektor s eksporterer en andel til “verden” og at den påvirkes af en gennemsnitlig fremmed told. Uanset metode er målet at få, at told reducerer import i den pågældende sektor og dermed forbedrer dens NX, mens eventuelle gengældelsestariffer fra udlandet reducerer eksporten i de sektorer, de rammer. I praksis så man fx under handelskrige, at landbrugssektoren i USA fik lavere eksport pga. kinesiske straftold, mens fx stålindustrien fik højere indenlandsk salg pga. amerikansk importtold .
+Efterspørgsel og output i sektor: Hver sektors output bestemmes af summen af indenlandsk efterspørgsel (fra forbrug, investering, offentlig) og udenlandsk efterspørgsel (eksport). I modellen kan man for hver sektor beregne en efterspørgselsindikator: Demand_s = DomesticDemand_s + Export_s. Den indenlandske efterspørgsel kunne fx afhænge af disponibel indkomst og præferencer (forbrugerne køber måske en vis andel fra hver sektor) – man kan antage faste budgetandele pr. sektor initialt, som ændrer sig med relative priser. Udenlandsk efterspørgsel kommer fra andre landes efterspørgsel efter import i denne sektor. Hvis spillet har et globalt handelssystem, kan man iterere: beregn for hver sektor import i alle lande som funktion af deres efterspørgsel og told/priser, og sæt export_i_s = sum_j(import_j_s fra land i). Alternativt kan man for simpleht definere, at eksport fra sektor s i land i er proportional med land i’s andel af global eksportkapacitet i s og de andre landes totalefterspørgsel. Uanset metode bør modellen tillade, at sektorer vokser forskelligt: En sektor med høj udenlandsk efterspørgsel (fx en boomende tech-sektor globalt) vil se sin produktion stige, mens en sektor ramt af handelskrig eller fald i hjemmeefterspørgsel falder.
+Arbejdsløshed på sektorniveau: For at gøre arbejdsmarkedet sektorspecifikt beregnes beskæftigelsen/ledigheden i hver sektor separat. Hvis sektorens output falder, vil dens beskæftigelse falde (medmindre produktiviteten falder tilsvarende). Man kan antage en fast arbejdskraftproduktivitet pr. sektor, så Employment_s = Output_s / productivity_s. Så kan ledigheden i sektoren stige, hvis output falder under potentiale. Okuns lov kan også anvendes sektorspecifikt: Δu_s = -β_s * (growth_s - potential_s). I en simpel model kan vi sætte samme β som på aggregatet, men det kunne variere – fx er nogle sektorer (byggeri) mere cykliske end andre (offentlig). Outputgab pr. sektor kan findes ved at sammenligne sektors aktuelt output med dens kapacitet (potentiale).
+Implementeringstips: I praksis kan man repræsentere hver sektor som et objekt med egenskaber: output, price, export, import, employment, unemployment_rate. Hver tick af simuleringen opdateres disse: først beregnes nye priser ift. importpriser og told, så beregnes efterspørgsel (domestic+export) givet de nye priser, så fastlægges output. Derefter opdateres sektorens arbejdsløshed via Okuns lov ift. output-ændringen. Til sidst aggregeres på tværs af sektorer. Dette giver en mere nuanceret simulering, hvor fx en told kan sænke ledigheden i den beskyttede sektor men øge den i andre sektorer der rammes af modtiltag eller dyrere inputs . Det afspejler virkelighedens blandede effekter, hvor protektion af én industri omfordeler ressourcer og job fra andre industrier .
+6. BNP og arbejdsløshed som aggregerede størrelser
+BNP som sum af sektorer: Bruttonationalproduktet skal beregnes som den samlede værditilvækst fra alle sektorer. Ifølge nationalregnskabsprincipperne er GDP netop summen af alle sektorers (branchers) værditilvækst . I modellen kan man lade GDP = sum_{s}( Output_s ) (hvis output er målt i værditilvækst-termer for hver sektor). Alternativt summerer man bruttoproduktion og trækker mellemprodukt-forbrug – men hvis sektormodellen er enkel med klart adskilte outputs, er en simpel sum passende. Eksempel: Hvis der er 5 sektorer med output på hhv. 100, 80, 50, 70, 30 (mia.), så er BNP = 330 mia.
+Samlet arbejdsløshed: Den samlede arbejdsløshed beregnes som et vægtet gennemsnit af sektorernes arbejdsløshedsprocenter. Hvis hver sektor s har en arbejdsløshedsrate u_s og udgør en andel L_s af arbejdsstyrken, så: u_total = sum_s( L_s * u_s ). I starten kan L_s sættes efter virkelighedens fordeling af beskæftigelse (fx industri 20%, service 70%, landbrug 3%, osv. afhængigt af land). Når sektorer vokser eller skrumper, ændres L_s over tid – dette kan modelleres ved at lade arbejdere flytte mellem sektorer gradvist. Men hvis man antager kort sigt uden fuld mobilitet, kan man beholde faste L_s for beregningens skyld og så opdatere dem langsomt. Uanset hvad, så er resultatet på aggregatet: BNP og arbejdsløshed fremkommer af sektorniveauet. Dette giver indsigt i, hvilke sektorer der driver ændringerne – fx hvis samlet BNP falder, kan man i modellen se om det var industriproduktionen eller fx servicesektoren der svigtede. For validation kan man tjekke, at aggregeret arbejdsløshed også nogenlunde følger Okuns lov med BNP – det burde den, da sektor-Okun summen ca. bliver til en aggregeret Okun-forhold (med evt. små afvig).
+Beregning i kode: Efter at alle sektorer er opdateret:
+GDP = sum(sector.output for sector in sectors)
+u_total = sum(sector.unemp_rate * sector.labor_share for sector in sectors)
+Her kunne labor_share være sektorens andel af samlede arbejdsstyrke. Det giver den aggregerede ledighedsprocent. Man kan yderligere beregne beskæftigelsesniveau som sum af sektorbeskæftigede, og sammenholde med total arbejdsstyrke for at få ledighed. Konsistensen mellem summationerne er vigtig, så massen af arbejdskraft går op (hvis folk flytter sektor, skal det afspejles korrekt). I en endnu mere avanceret model kan man tillade at nogle sektorer overtage de ledige fra andre sektorer (arbejdskraftmobilitet), men det kan tilføjes senere som kompleksitet. Første skridt er at måle samlet BNP og u som summen af dele, hvilket følger nationalregnskabets definitioner .
+7. Investering og kapacitetsudbygning
+Investeringens drivkræfter: Investering I i modellen skal repræsentere virksomhedernes udgifter til at øge kapaciteten (køb af maskiner, fabrikker, osv.). To centrale faktorer påvirker investering i neoklassisk teori: (1) Renteniveauet, der afgør omkostningen ved at finansiere investeringer, og (2) Accelerator-effekten, dvs. hvor meget økonomisk vækst/efterspørgsel ansporer behovet for mere kapacitet. Accelerator-teorien postulerer, at når efterspørgslen stiger, vil virksomheder øge investeringerne for at udvide produktionen . Omvendt, hvis økonomien går i stå, skæres investeringer typisk ned. Samtidig gør en lav rente det billigere at låne til projekter, hvilket stimulerer investeringer, mens en høj rente bremser dem (dyr finansiering) .
+Investeringsfunktion: En simpel lineær form, der fanger disse effekter, er:
+               * Grundformel: I = max(0, i0 + i1 * ΔGDP - i2 * r). Her er i0 en basisinvestering (kan ses som autonome investeringer eller erstatningsinvesteringer uafhængig af konjunktur), ΔGDP er ændringen (væksten) i BNP, og r er renten. Parameter i1 (>0) angiver acceleratorens styrke – hvor meget ekstra investering en 1%-points højere BNP-vækst udløser. i2 (>0) angiver rentefølsomheden – hvor meget en 1%-point højere rente skærer ned på investeringerne. max(0, ...) sikrer, at investering ikke bliver negativ selvom økonomien kontraherer kraftigt; den kan gå mod nul i værste fald.
+
+Dette kan også skrives som: I = i0 + i1 * (Y_t - Y_{t-1}) - i2 * policyRate, hvor Y er BNP. Hvis vi eksempelvis sætter i0 = 50 (mia.), i1 = 1.5 og i2 = 2.0, så betyder det: hvis BNP stiger med 10 mia., øges I med 15 mia., mens en rentestigning på 1%-point mindsker I med 2 mia. (tallene kan justeres efter skalering). Accelerator-effekten er her i1ΔY-leddet: investeringer øges når økonomien vokser, fordi virksomheder ser behov for kapacitetsudvidelse . Renteeffekten er i2r-leddet: højere rente øger kapitalomkostningen, så færre projekter er rentable – hvilket matcher at lave renter historisk har fremmet både erhvervsinvesteringer og fx boligbyggeri .
+Sektordeling af investering: Når total investering I er bestemt, skal den fordeles ud på sektorerne, da det er der kapacitetsudvidelsen sker. En mulighed er at fordele investering proportionelt med hver sektors andel af BNP eller ud fra hvor mangel på kapacitet er størst. En enkel heuristik: Lad sektor s modtage I_s = I * share_s, hvor share_s fx kan være sektorens andel af samlet kapital stock eller output. Alternativt kan share_s være dynamisk: sektorer med høj vækst (ΔOutput) får en større del af investeringerne (flere investeringsprojekter bliver rentable der). En forbedret formel kunne være: I_s = max(0, i0_s + i1 * ΔOutput_s - i2 * r). Altså anvende accelerator og rente per sektor. Dog kræver det mange parametre i0_s, så det måske er overkill. En mellemvej er at bestemme total I med rente og total ΔGDP, og så allokere ved at vægte med sektors vækst: fx I_s = I * \frac{\max(0, ΔOutput_s)}{\sum_{j}\max(0, ΔOutput_j)} for de sektorer med positiv vækst (og måske lidt til dem med negativ for renovering).
+Kapacitetsudbygning: Investering skal øge fremtidig produktionskapacitet. Dette kan modelleres ved at øge sektorens potentiale output eller reducere dens kapacitetsudnyttelse. Simpelt: hver sektor kan have en kapitalstock K_s, som øges med investering I_s. Man kan antage en produktionsfunktion fx Y_s = f(K_s, L_s) (neoklassisk Cobb-Douglas eller lignende). I en lineær forenkling kan man sige at potentialet Y^_{s} øges proportionalt med investering: hvis sektor s investerer 5 mia., dens kapacitetsgrænse stiger måske 5 mia. (eller en faktor deraf). Alternativt kan man holde styr på kapital og have Y^{s} = \alpha K_s med \alpha som kapitalens produktivitet, således at K_s næste periode = K{s,\text{old}} + I_s (minus evt. afskrivninger). For spils formål kan en enkel approach være at direkte øge potentialGrowth for sektoren i en periode efter store investeringer.
+Opsummering: Investering forbinder pengepolitik og vækst: Lav rente → mere investering → højere fremtidig kapacitet og udbud. Høj vækst → mere investering (accelerator) → endnu højere kapacitet senere. Dette skaber en procyklisk feedback, som dog kan tæmmes af renten. I koden kan det implementeres sådan:
+# Beregn samlet investering
+investment = max(0, i0 + i1 * (GDP - GDP_last) - i2 * policyRate)
+# Fordel til sektorer (f.eks. proportionalt med output_vækst)
+for s in sectors:
+    sector_invest[s] = investment * max(0, s.output - s.output_last) / total_positive_output_growth
+    s.capacity += sector_invest[s]  # øg sektors kapacitet/potentiale
+Her er total_positive_output_growth = sum(max(0, s.output - s.output_last) for s in sectors) for at undgå negative andele. Dette vil give mere investering til sektorer i fremgang. Man kan også vælge en statisk fordeling for enkelhed hvis ønsket.
+8. Finanspolitik
+Styring via G og T: Finanspolitikken i spillet udøves gennem offentlige udgifter G (government spending) og skatter T. I modellen kan T tænkes som en samlet skatteprocent af BNP eller en kombination af skattesatser. For at holde det enkelt antager vi én samlet skattesats τ sådan at skatteprovenu = τ * GDP. Så kan man sætte T = τ * Y og justere τ som politikværdi (fx hæve/sænke den med ±1%-point). Offentlige udgifter G indgår direkte i efterspørgslen (BNP-udtrykket Y = C + I + G + NX). Disponibel indkomst for husholdningerne vil afhænge af skatter: en simpel formel er Y_disposable = (1 - τ) * Y. Dvs. hvis τ=0.2 (20%), så går 20% af output til skat, og 80% er tilbage som disponibel indkomst for forbrugerne. Dette følger definitionen: disponibel indkomst er indkomst efter skatter . Hvis regeringen udbetaler overførsler kan de lægges til, men i en basal model kan man antage, at der ikke er eksplicitte overførsler udover at det offentlige forbrug G går til borgerne i form af service.
+Effekt på økonomien: En stigning i G øger direkte efterspørgslen og dermed BNP (det er en fiskal stimulus). En stigning i skatteprocenten τ derimod mindsker disponibel indkomst, hvilket dæmper privatforbruget og dermed BNP. I programmering kan man modellere forbruget C som en andel af disponibel indkomst: fx C = c0 + MPC * Y_disposable, hvor MPC er marginal konsumtilbøjelighed. Øger man skatter så Y_disposable falder, vil C falde. Effekten på BNP kommer så gennem C ned, minus det direkte via højere G op eller vice versa. Det kunne være relevant at sætte finanspolitiske multiplikatorer (fx en parameter >1, der fanger at G også øger privat efterspørgsel via afledte effekter), men en lineær førsteordens model kan nøjes med ovenstående for nu.
+Budgetsaldo og gæld: Offentlig gæld skal akkumuleres som summen af år efter år’s budgetunderskud. Budgetunderskuddet er G - T (dvs. udgifter minus indtægter). Hvis G > T, kører staten underskud og må finansiere det ved lån, hvilket øger gælden. Hvis G < T har man overskud og kan nedbringe gæld. Man implementerer dette ved: debt = debt_last + (G - T) per periode. Over tid vil gælden således være akkumulerede underskud, præcis som defineret i makroøkonomien . Man kan også beregne gældens andel af BNP (debt/GDP) for at vurdere bæredygtighed. I spillet kunne der være konsekvenser af meget høj gæld (stigende rente eller krav om nedskæring), men det afhænger af ambitionsniveauet.
+Eksempel: Hvis BNP = 1000, τ=0.2 → T=200. Antag G=250. Så budgetunderskud = 50. Gæld øges med 50 den periode. Disponibel indkomst = 800. Hvis MPC (marginal propensity to consume) fx er 0,8, og basisforbrug c0=0, så C=0.8*800=640. Så BNP-demand = C+I+G+NX = 640 + I + 250 + NX. Vi ser, at høj G bidrog, men det blev delvist modvirket af lavere C end hvis skat var lavere. I modelkode kan man gøre:
+tax_revenue = tax_rate * GDP
+budget_balance = tax_revenue - G  # positiv = overskud
+debt += -budget_balance           # hvis negativt balance (underskud), gæld stiger
+Y_disposable = (1 - tax_rate) * GDP
+Og så bruge Y_{disposable} i forbrugsfunktionen.
+Kontrol af finanspolitik: Spillerens handlinger vil typisk være at ændre G (f.eks. iværksætte infrastrukturprojekt) eller τ (ændre skattetrykket). Rapporten her antager, at disse to er de primære håndtag. Man kan udvide med finere detaljer (forskellige skattekategorier eller offentlige investeringer vs. forbrug), men givet fokus på international økonomi er kernen at have en fiskal stimulans mulighed vs. konsolidering, og spore effekten på aktivitet, arbejdsløshed (via output gap), inflation (via output gap påvirkning) og offentlig gæld.
+9. Politisk tillid / borgernes opbakning
+Økonomiske indikatorer og tillid: En variabel “trust” repræsenterer befolkningens tillid til regeringen eller generel tilfredshed. Empirisk ved vi, at økonomisk velstand og stabilitet påvirker opbakningen til de siddende politikere. To meget synlige faktorer er arbejdsløshed og inflation – tilsammen kendt som “misery index” i økonomi. Misery index (elendighedsindekset) er blot summen af arbejdsløshedsrate og inflation, og bruges som en grov indikator for økonomisk smerte i befolkningen . Høje tal betyder lav tilfredshed. Historisk har man set, at stigende arbejdsløshed koster regeringer stemmer: fx estimater for USA viser ~2,3%-point fald i præsidentens stemmeandel per 1%-point højere arbejdsløshed . Tilsvarende kan høj inflation undergrave tilliden, især da det rammer købekraften for almindelige mennesker . I modellen kan man derfor lade tillid falde, når arbejdsløshed eller inflation stiger for højt.
+En simpel formel kunne være: Δtrust = -a * (unemp_rate - u_target) - b * (inflation - π_target) - c * (shock_unpopular). Her er u_{target} og π_{target} niveauer, folk accepterer som normale (fx 5% arbejdsløshed, 2% inflation). shock_unpopular er en indikator for upopulære beslutninger (beskrives nedenfor). a og b vil være positive vægte, så hvis arbejdsløshed er over mål, trækkes trust ned, og hvis inflation er over mål, ligeledes. Popularitet/tillid kan også stige, hvis man får arbejdsløshed under det normale eller inflation under kontrol – dog er effekten asymmetrisk: vælgerne straffer som regel dårlig økonomi mere, end de belønner god økonomi. Dette kan reflekteres ved at a, b er større, når indikatorerne er over målet, end når de er under (altså ikke-lineært). Som udgangspunkt antag lineært for enkelhed.
+Politik-specifikke effekter: Udover de makroøkonomiske resultater reagerer tilliden også direkte på visse politiske handlinger. For eksempel: en skatteforhøjelse vil ofte være upopulær blandt borgerne (medmindre den rammer en lille rig elite). Ligeledes kan nedskæring i velfærd eller korrupte handlinger reducere tilliden. Omvendt kan populære beslutninger (f.eks. en check til alle borgere, succesfuld krisehåndtering, eller told på varer hvor folk føler arbejdspladser trues) øge tilliden kortvarigt. I spillet bør man definere en liste af handlinger, der giver plus eller minus på trust. For eksempel:
+                  * Hæve skat: -X% trust (umiddelbart, da folk har mindre indkomst – måske yderligere -Y% over tid hvis det svækker økonomien).
+
+                  * Sænke skat: +X% trust (folk kan lide skattelettelser, men måske mindre belønning end straf for hæve, i tråd med økonomisk stemmeteori).
+
+                  * Øge arbejdsløshedsunderstøttelse eller give tilskud: kan øge trust hos nogle (arbejdsløse), men måske neutral for andre – komplekst, men kunne give en lille stigning i trust hvis økonomien er dårlig (signal om omsorg).
+
+                  * Korruption-skandale (hvis simuleret): stor negativ effekt på trust, da det er upopulært uanset økonomi.
+
+                  * Handelstold: det kan være populært hos arbejdere i den beskyttede industri, men upopulært hos forbrugere pga. højere priser. I spillet kan man forsimple: hvis arbejdsløsheden falder i en sektor pga. told, får regeringen et plus hos dem, men den generelle forbrugerfølelse måske et lille minus pga. dyrere varer.
+
+Man kunne også introducere ideen om politikområder (økonomi, udenrigspolitik, miljø) hvor trust påvirkes separat, men det bliver nok for detaljeret. I stedet kan man modellere et samlet trust-index der glider op/ned med de økonomiske nøgletal og diskrete skift ved politiske tiltag.
+Konsekvenser af “trust”: Variablen trust kan bruges som en feedback til gameplay – f.eks. hvis trust falder for meget, kan der opstå protester, mistillidsvotum eller i yderste fald at spilleren “taber” fordi regeringen væltes. Høj trust kan derimod give politisk kapital til at gennemføre svære reformer. I modellen påvirker trust ikke selve økonomien direkte (medmindre man vil indbygge, at meget lav tillid giver højere risiko-premier på rente eller lavere forbrug pga. usikkerhed). Primært er det en målestok for politisk stabilitet. Dog kan man argumentere, at ekstremt lav tillid kan udløse politisk krise, hvilket kunne hæve renten (usikkerhed) eller flytte investeringer ud. For nu fokuserer vi på beregningen:
+# Eksempelopdatering af tillid
+trust_change = -a*(unemployment - 5) - b*(inflation - 2)
+if tax_hike_decision:
+    trust_change -= 3  # f.eks. 3 point fald
+trust = max(0, min(100, trust + trust_change))
+Her er trust målt 0–100. a og b kan sættes så 1%-point over målet giver måske 2 point mindre trust (a=2, b=2 som idé). Dette kan finjusteres. Det vigtigste er, at stigende arbejdsløshed og inflation mærkbart reducerer borgernes tilfredshed , hvilket presser spilleren til at føre ansvarlig økonomisk politik – en mekanisme der afspejler den virkelige politiske økonomi, hvor ledere straffes ved valg for dårlig økonomi .
+10. AI-opførsel (andre lande)
+Strategisk respons: De andre 29 økonomier i spillet styres af AI, som skal reagere realistisk på spillerens handlinger og globale begivenheder. Internationalt vil lande ofte svare igen på andres politikker, især i handelsspørgsmål. Et klassisk eksempel er en toldkrig: hvis spilleren hæver tariffer markant på et andet lands varer, vil det ramte land ofte indføre sine egne tariffer som gengældelse . Modellen bør derfor implementere en form for tit-for-tat i handelspolitik: AI registrerer når spilleren (eller en anden AI) ændrer noget, og justerer sin politik efter sine interesser.
+Retaliation (gengældelse): For tariffer kan en simpel regel være: Hvis Land A indfører X% told på Land B’s eksport (i en sektor), så overvej Land B at lægge cirka X% told på Land A’s varer (evt. i samme sektor eller en strategisk vigtig sektor for A). Dette simulerer den observerede adfærd, fx da USA indførte told på kinesiske varer, svarede Kina igen med told på amerikanske produkter, ofte udvalgt for at ramme politisk følsomme sektorer (sojabønner, bourbon, etc.). I spillet kunne AI’en have en liste over modtræk for forskellige handlinger.
+Beskyttelse af nøglesektorer: Lande har typisk nogle strategiske industrier de vil beskytte – fx landbrug, stål, teknologi. Hvis spilleren forsøger at “udkonkurrere” et andet land i sådan en sektor (f.eks. via subsidier eller dumpingpriser), kan AI reagere ved at støtte sin egen sektor mere eller ved handelsrestriktioner. Dette kan modelleres ved, at AI overvåger sektorers markedsandel: Hvis en indenlandsk sektors output falder meget pga. import, og arbejdsløsheden der stiger, vil regeringen måske hæve tolden for at beskytte den (hvis det er politisk prioriteret sektor). For eksempel har mange lande ført industripolitik for at sikre en vis selvforsyning i forsvarsindustri, fødevarer osv. . I spillet kan man forsyne hver AI-land med en “prioritetsliste” af sektorer; hvis disse lider, er AI mere aggressiv med støtte/tariffer.
+Sanktioner og alliancer: AI-lande kan også reagere kollektivt. Hvis spilleren opfører sig ekstremt (f.eks. maksimal protektionisme), kunne flere AI-lande danne en alliance (f.eks. gennem WTO-lignende mekanismer) mod spilleren. Dette kan være avanceret, men en forsimplet logik: Hvert land har en relation score til spilleren; gentagne “unfair” tiltag fra spilleren (høj told, valutadevalueringer, osv.) reducerer relationen. Ved lav relation kan AI-lande koordinere (f.eks. alle hæver told mod spilleren). Omvendt, hvis spilleren samarbejder (lav told, hjælper i kriser), kan relationen stige og AI er mere venligt stemt.
+Eksempel på AI-reaktion i kode (told):
+for other in countries:
+    if player.tariff_increase_against[other] > 0:
+        # Retaliate with similar tariff
+        other.tariff_against[player] = player.tariff_increase_against[other]
+        # Possibly protect key sector
+        key_sector = other.key_industries[0]
+        other.increase_tariff(sector=key_sector, amount=5)  # +5% tariff
+Ovenstående er pseudo-logik: hvis spilleren hæver told mod et land, detekteres det, og det andet land matcher toldsatser (tit-for-tat). Desuden hæver det land måske forebyggende told på sin vigtigste sektor for at beskytte den.
+Rente- og valutapolitik: AI kan også reagere på ændringer i økonomiske forhold: Hvis spilleren kører en meget lemfældig finanspolitik, der giver høj inflation og svækker valutaen, kan andre lande opleve at deres valuta styrkes for meget i forhold (skade på eksport). De kunne da overveje at sænke renten for at undgå for stærk valuta. Sådanne beggar-thy-neighbor politikker er dog sværere at script’e. En lettere implementering er at have hver AI følge egne mål: fx inflationsmålsætning (justere rente for at ramme 2% inflation) uafhængigt. Dette vil indirekte reagere på global inflationstryk. Men man kan tilføje elementer af koordinering, f.eks. “valutakurspres”: Hvis et land får meget stort handelsunderskud fordi en handelspartner manipulerer valutaen, kan første land intervenere eller klage (i spilvilkår måske en event).
+Sammenhæng med trust: AI-landenes ledere har også “trust/popularitet” variabler internt (som spilleren har). De vil også træffe foranstaltninger for at holde deres befolkning nogenlunde tilfredse. Hvis fx et AI-land oplever massiv arbejdsløshed i en sektor pga. import fra spilleren, vil dens trust falde, og for at afhjælpe det kan AI reagere kraftigere (for at undgå at miste magten). Dette skaber en dynamik hvor indenrigspolitiske hensyn driver udenrigspolitisk respons – ganske lig den virkelige verden, hvor f.eks. høj arbejdsløshed presser regeringer til at indføre beskyttende tiltag .
+Afslutningsvis: AI-opførsel bør kalibreres, så det giver spillerens valg konsekvenser: En aggressiv protektionistisk spiller vil hurtigt stå overfor handelskonflikter og måske isolering. En kooperativ spiller kan se mere stabile relationer men må så håndtere indre udfordringer uden at skyde skylden på andre. Ved at kode nogle enkle regler for gengældelse og sektorbeskyttelse, opnås en mere levende simulation, hvor AI-landene agerer genkendeligt (f.eks. som Kina, EU, USA historisk har gjort i handelstvister) . Dette giver programmøren en ramme til at implementere “intelligente” modstandere, hvis beslutninger udspringer af de samme økonomiske mekanismer og politiske mål som spillerens – blot med forskellige prioriteter.
+
+
+
+
+Implementing Advanced Macroeconomic Dynamics for a
+Trade War Simulation: An Evidence-Based Guide
+Introduction
+Purpose
+This report provides a detailed, evidence-based guide for the programmer tasked
+with implementing realistic macroeconomic dynamics within a simulation game
+environment, with a specific focus on capturing the complexities of trade policy and
+trade wars. The objective is to translate established macroeconomic theory and
+relevant empirical findings into concrete specifications, including functional forms
+(equations) and parameter values derived from contemporary research. This
+document serves as a bridge between economic modeling principles and practical
+code implementation, enabling the development of a more sophisticated and
+behaviorally accurate simulation.
+Structure
+The report is structured to build the economic model progressively. It begins with the
+core mechanisms governing international trade and price determination under tariff
+regimes (Section 1). It then integrates these mechanisms into the broader
+macroeconomic framework, detailing the interplay between output, employment, and
+inflation (Section 2). Recognizing that trade shocks often have sector-specific origins
+and impacts, Section 3 outlines methods for incorporating sectoral linkages. Section 4
+refines the modeling of key aggregate demand components – consumption and
+investment. Section 5 introduces the government sector, focusing on fiscal policy
+levers and the critical dynamics of public debt. Section 6 explores the integration of
+political economy factors, specifically modeling citizen trust as influenced by
+economic outcomes and policy choices. Finally, Section 7 consolidates the key
+equations and parameters, offering practical implementation guidance and
+suggesting avenues for calibration.
+Key Assumption
+It is assumed that the programmer possesses a functional simulation architecture and
+requires expert guidance primarily on refining the underlying economic logic and
+parameterizing the model components based on the evidence and specifications
+presented herein. Familiarity with basic macroeconomic concepts is assumed, but the
+report aims to provide sufficient detail for direct implementation.Section 1: Core Trade and Price Mechanisms
+Objective: To establish the fundamental relationships governing how tariffs,
+exchange rates, and foreign price levels interact to determine import prices and
+influence trade flows within the simulation.
+1.1. Tariffs and Import Prices (Border Price Pass-Through)
+Concept: Tariffs are fundamentally taxes levied by a government on imported goods,
+typically calculated as a percentage of the import's value (ad valorem).
+1 A critical
+aspect of modeling tariffs is determining the extent to which the cost imposed by the
+tariff is reflected in the price paid by the domestic importer. This phenomenon is
+known as tariff pass-through.
+Evidence: Standard trade theory might suggest that large economies imposing tariffs
+could force foreign exporters to lower their pre-tariff prices, resulting in incomplete
+pass-through. However, substantial empirical research focusing on the US tariffs
+imposed in 2018-2019 indicates that pass-through to the prices paid by importers at
+the border was virtually complete, often estimated at or near 100% within a year.
+1 This
+implies that foreign exporters, particularly from China during this period, did not
+significantly absorb the tariff cost by reducing their prices; instead, the burden fell
+largely on the US importing firms and, subsequently, potentially on consumers.
+3 This
+finding contrasts sharply with historical expectations 2 and, importantly, with the
+typically much lower pass-through observed for exchange rate fluctuations.
+2 While
+some studies using different methodologies suggest a lower pass-through upon
+immediate impact (around 10%) rising towards 50% in the medium run 6
+, the evidence
+from the specific trade war period points towards near-complete pass-through at the
+border over a medium-term horizon (e.g., one year). Pass-through can also vary
+depending on product characteristics, such as the degree of differentiation, which
+affects the availability of substitutes.
+3
+Equation: The price paid by the domestic importer for goods from country j in sector
+s (Pimport,s,j ) must explicitly incorporate the tariff (Tariffs,j ), the foreign price in
+foreign currency (Pfs,j ), and the exchange rate (Valutakursj , defined as domestic
+currency units per unit of foreign currency j). Assuming complete pass-through at the
+border (pass-through coefficient ϕ=1):
+Pimport,s,j
+=Pfs,j
+×Valutakursj
+×(1+Tariffs,j )
+Parameter (Border Pass-Through ϕ): Based on the strong evidence from the
+2018-2019 trade conflict, implementing a pass-through coefficient ϕ≈1 for the impactof tariffs on border import prices (Pimport ) is recommended for medium-term
+dynamics.
+1 If the simulation requires modeling pass-through to final retail prices, a
+lower coefficient would be necessary, as evidence suggests significant absorption by
+retailers in the short run. Estimates for retail pass-through vary, with some analyses
+suggesting values around 0.25 to 0.44 3
+, meaning only a fraction of the border price
+increase reaches the final consumer initially.
+Asymmetry of Pass-Through (Tariffs vs. Exchange Rates): The marked difference
+between near-complete tariff pass-through and partial exchange rate pass-through
+(often estimated between 25-35% 2) is a crucial feature to capture. Tariffs represent
+specific, often politically motivated, cost shocks targeted at particular goods and
+origins. Firms may perceive them as less transient or more direct cost increases
+compared to broader exchange rate movements, which affect all international
+transactions and might be hedged against or offset by other macroeconomic
+adjustments. This difference in perception and scope likely drives the differential
+pricing responses. Therefore, the simulation logic should treat the price impact of
+tariffs distinctly and more strongly than that of exchange rate changes.
+Retailer Absorption and Dynamics: The observed gap between high pass-through
+at the border and lower pass-through to retail prices points to significant cost
+absorption by importing firms and retailers, at least initially.
+3 These firms appear to
+have compressed their profit margins rather than immediately passing the full tariff
+cost to consumers.
+3 This could be driven by competitive pressures, a desire to
+maintain market share, or inventory management strategies (e.g., stocking up before
+tariffs hit 3). However, such margin compression may not be sustainable indefinitely.
+4
+This suggests that a static retail pass-through coefficient might be insufficient. A
+more realistic model could feature dynamic pass-through to retail prices, potentially
+linking the speed and extent of pass-through to factors like retailer profitability,
+inventory levels, market structure, or the perceived permanence of the tariff.
+Pass-through could start low and increase over time if tariffs remain in place.
+1.2. Domestic Price Level (Pd)
+Concept: The overall domestic price level, represented by indices like the Consumer
+Price Index (CPI) or the GDP deflator, reflects the weighted average price of goods
+and services consumed or produced within the economy. It is influenced by the prices
+of both domestically produced items and imported goods. Tariffs, by directly
+increasing the cost of imported goods 1
+, contribute to upward pressure on the overall
+price level.
+Evidence: Increases in trade costs, such as tariffs, demonstrably lead to higherdomestic inflation.
+10 The impact profile differs based on the type of good affected:
+tariffs on final goods tend to cause a larger but more temporary spike in inflation,
+whereas tariffs on intermediate goods can lead to more persistent inflationary
+pressures due to their role as inputs in production across various sectors, potentially
+reducing productivity.
+10 Empirical studies suggest that a 10% increase in tariffs might
+raise producer prices by about 1%.
+1 A combined 10 percentage point increase in trade
+costs on both intermediate and final goods was estimated to raise CPI inflation by 0.8
+percentage points over several years.
+10 Simulations of recent large-scale tariff
+proposals (e.g., potential 2025 US tariffs) estimated short-run increases in the overall
+price level (CPI or PCE) ranging from 1% to 3%.
+11
+Different price indices capture import effects differently. The CPI includes prices of
+imported goods directly in its basket, weighted according to consumer expenditure
+patterns.
+13 In contrast, the Producer Price Index (PPI) measures prices received by
+domestic producers and explicitly excludes imports.
+16 The GDP deflator measures the
+prices of goods and services produced domestically; while it doesn't directly include
+import prices, it is affected indirectly through the cost of imported intermediate inputs
+used in domestic production.
+13
+Equation: A common approach to modeling the domestic price level (Pd ) is as a
+weighted average of the prices of domestically produced goods and imported goods
+relevant to the index being modeled:
+Pd
+=wd
+×Pdomestic
+_produced
++(1−wd )×Pimports
+_
+avg
+Where:
+●
+●
+●
+Pdomestic
+_produced represents the price index for domestically produced goods
+and services. Its dynamics are typically governed by domestic factors like wage
+costs and the output gap (as captured by the Phillips Curve, see Section 2.2).
+Pimports
+_
+avg is the average price index of imported goods faced by domestic
+purchasers (consumers or firms), derived from the border prices (Pimport,s,j )
+calculated in Section 1.1, potentially adjusted for retail markups and pass-through
+dynamics.
+wd is the weight assigned to domestically produced goods in the specific price
+index being simulated (e.g., CPI or GDP deflator). (1−wd ) represents the weight of
+imports.
+Parameter (Weight wd ): The appropriate weight depends heavily on the specific
+price index being modeled and the structure of the simulated economy.●
+●
+●
+For a CPI-like index, (1−wd ) should reflect the share of imported goods and
+services directly consumed by households. This varies significantly across
+countries (e.g., Eurostat data shows import contribution to total supply ranging
+from 12% in Italy to 37% in Ireland in 2020 17). Data on the share of imports in final
+consumption expenditure is needed.
+17
+For a GDP deflator, wd would conceptually be 1, as it measures domestic
+production prices. However, Pdomestic
+_produced itself will be influenced by the
+cost of imported intermediate goods.
+Distinguishing between imports for final consumption and imports used as
+intermediate inputs is crucial.
+17 Intermediate goods constitute a large share of
+trade (e.g., over 50% of OECD goods imports 23
+, potentially higher for developing
+economies 26). Input-Output (I-O) tables, such as those from the BEA 28
+, provide
+detailed information on the use of imported commodities by domestic industries
+and final demand categories, which can inform the calibration of weights or the
+indirect impact on Pdomestic
+_produced .
+Intermediate vs. Final Goods Inflation Impact: The differential inflationary impact
+of tariffs on intermediate versus final goods warrants careful consideration.
+10 Tariffs on
+final consumer goods (like washing machines 3) directly affect the CPI basket,
+potentially causing a rapid but possibly one-off adjustment in the price level.
+10
+Conversely, tariffs on intermediate inputs (like steel, aluminum, or electronic
+components 1) increase costs for domestic producers across various sectors.
+2 These
+cost increases can ripple through domestic supply chains, potentially reducing firm
+productivity as they substitute towards less efficient inputs 10
+, leading to a more
+gradual but persistent increase in overall inflation. To capture this, the simulation
+should ideally differentiate tariffs applied to final goods from those applied to
+intermediate goods (requiring sectoral detail, see Section 3). The inflation dynamics
+modeled in Section 2.2 should then reflect this difference, with intermediate goods
+price shocks having a more drawn-out effect on Pd .
+1.3. Foreign Price Level (Pf)
+Concept: In a multi-country simulation, the foreign price level (Pf ) represents the
+price environment faced by the domestic economy when trading with the rest of the
+world. It cannot be treated as a static constant (e.g., fixed at 1) if the simulation aims
+to capture global interactions and feedback effects realistically. Pf reflects the prices
+set by trading partners.
+Evidence: Sophisticated multi-country macroeconomic models used by international
+institutions and central banks, such as the IMF's FSGM 34 and GEM 35
+, the ECB'sECB-Global 37
+, and the World Bank's MFMod 38
+, explicitly incorporate mechanisms for
+modeling foreign price levels and their interaction with domestic economies through
+trade and financial linkages.
+39 A standard approach involves linking the foreign price
+level faced by one country to the domestic price levels (Pd ) of its trading partners,
+often weighted by trade shares.
+Equation: A practical approach to model the foreign price level (Pf,i ) faced by country
+i is to calculate it as a trade-weighted average of the domestic price levels (Pd,j ) of its
+trading partners (j), adjusted for exchange rates:
+Pf,i
+=j∑ (TradeWeightij
+×Valutakursj Pd,j )
+Where:
+●
+●
+●
+TradeWeightij is the share of country j in country i's total trade (or specifically
+imports, depending on the desired focus).
+Pd,j is the domestic price level index of trading partner country j.
+Valutakursj is the exchange rate converting country j's currency into country i's
+currency (or a common numeraire currency like the USD).
+Implementation Note: This formulation necessitates that the simulation calculates
+the state of all countries (or AI agents) either simultaneously or iteratively within each
+time step. The Pf for country i depends on the Pd of all countries j, and conversely, the
+Pd of country j will be influenced by the Pf it faces (which depends on country i's Pd ).
+Interdependence: Modeling Pf dynamically introduces crucial interdependence into
+the global simulation. For instance, if country A imposes tariffs, its domestic price level
+(Pd,A ) might rise due to higher import costs. According to the equation above, this
+increase in Pd,A will contribute to a higher foreign price level (Pf,B ) faced by its trading
+partner, country B. This could, in turn, increase import costs and potentially raise the
+domestic price level (Pd,B ) in country B. This change in Pd,B then feeds back into the
+foreign price level (Pf,A ) faced by country A. Such feedback loops are fundamental to
+understanding the international transmission of shocks, global inflation dynamics, and
+changes in international competitiveness, which are central themes in trade war
+scenarios.
+34 Hardcoding Pf to a constant value would eliminate these vital global
+interaction effects.
+1.4. Exchange Rates (Valutakurs)
+Concept: The nominal exchange rate, the relative price of two currencies, is a critical
+variable linking domestic and foreign economies. It directly influences the relative
+prices of imports and exports (Pd /Pf ). Exchange rate determination is complex,influenced by relative price levels, interest rate differentials, trade flows, capital flows,
+and market expectations.
+Evidence: Several theoretical frameworks attempt to explain exchange rate
+movements:
+●
+●
+●
+●
+●
+Purchasing Power Parity (PPP): Suggests exchange rates adjust to equalize
+international price levels.
+42 While useful for long-run trends, PPP often fails in the
+short-to-medium run due to trade barriers, non-traded goods, and sticky prices.
+42
+Interest Rate Parity (IRP): Links exchange rate changes to interest rate
+differentials. Covered Interest Parity (CIP), involving forward contracts, tends to
+hold due to arbitrage. Uncovered Interest Parity (UIP), which relates expected
+exchange rate changes to interest differentials, assumes risk neutrality and
+rational expectations.
+42 Empirically, UIP performs poorly; high-interest-rate
+currencies often appreciate rather than depreciate as UIP predicts (the "forward
+premium puzzle") 48
+, suggesting risk premia or other factors are significant
+drivers.
+48
+Balance of Payments / Flow Models: Relate exchange rate movements to flows
+in the current account (trade balance) and capital account.
+42 An improving trade
+balance (higher net exports) increases demand for domestic currency, leading to
+appreciation.
+50 Net capital inflows also lead to appreciation.
+Asset Market / Portfolio Balance Models: View the exchange rate as the
+relative price of national monies or assets, determined by relative supply and
+demand, incorporating factors like relative money supplies, income levels, interest
+rates, and stocks of domestic/foreign assets (reflecting cumulative current
+account balances).
+42 These models often assume imperfect substitutability
+between domestic and foreign assets.
+Behavioral Equilibrium Exchange Rate (BEER): Empirically relates the real
+exchange rate to long-term fundamentals (like terms of trade, net foreign assets,
+productivity) and short-term real interest rate differentials, often assuming UIP
+holds for the short-term component.
+46
+Equation (Simplified Flow-Based): A pragmatic approach, incorporating key
+elements suggested by theory and the user query, models the change in the
+exchange rate (ΔValutakurs) based on interest rate differentials, changes in the trade
+balance, and potentially net capital flows:
+ΔValutakurst
+=k1
+×(policyRatet
+−policyRateudland
+_
+avg,t )−k2
+×(GDPt ΔNXt )+k3
+×(GDPt ΔNe
+tCapitalFlowt )+ϵvalutakurs,tWhere:
+●
+●
+●
+●
+●
+●
+●
+ΔValutakurst is the change in the exchange rate (domestic units per foreign unit;
+a positive change represents depreciation).
+policyRatet is the domestic policy interest rate.
+policyRateudland
+_
+avg,t is a relevant average foreign policy rate.
+ΔNXt /GDPt is the change in the trade balance (Net Exports) as a share of GDP. An
+improvement (ΔNX>0) should lead to appreciation (ΔValutakurs<0), hence the
+negative sign associated with k2 .
+ΔNetCapitalFlowt /GDPt represents net capital inflows (positive for net inflows) as
+a share of GDP. This could be proxied by the change in the net foreign asset
+position or related to the current account balance. Net inflows should lead to
+appreciation (ΔValutakurs<0), so k3 should capture this inverse relationship (or
+the variable itself should be defined such that inflows are negative). For simplicity,
+the term could be omitted initially or proxied crudely.
+k1 ,k2 ,k3 are positive sensitivity parameters.
+ϵvalutakurs,t represents unexplained shocks or volatility.
+Parameters (k1 ,k2 ,k3 ): Precise empirical estimates are difficult and
+model-dependent.
+●
+k1 (Interest Rate Sensitivity): UIP implies a strong link, but empirical failures
+suggest k1 might be smaller than theory predicts.
+47 Start with a small positive
+value.
+●
+k2 (Trade Balance Sensitivity): Changes in trade balances are found to
+significantly impact exchange rates.
+50 This parameter should likely be positive and
+potentially significant relative to k1 .
+●
+k3 (Capital Flow Sensitivity): Standard in portfolio balance models.
+44 Requires
+careful definition of the flow variable and calibration. Calibration is key. Some
+studies suggest trade rebalancing explains a larger share of exchange rate
+fluctuations (~50%) than UIP shocks (~20%) 50
+, hinting that k2 might warrant a
+relatively larger weight than terms capturing pure interest rate effects or
+exogenous shocks.
+UIP Failure and Risk Premia: The consistent empirical rejection of UIP 47 is a strong
+indicator that exchange rates are driven by more than just expected interest rate
+differentials. Risk premia, reflecting investor aversion to holding assets denominated in
+certain currencies (due to perceived risks like inflation, default, or political instability),
+likely play a major role.
+48 Other factors like "safe haven" flows or shifts in long-term
+growth expectations also influence capital movements and exchange rates. A purely
+UIP-driven model would generate unrealistic dynamics. The simplified equation aboveattempts to capture some of these additional factors implicitly through the trade
+balance term (k2 ), the capital flow term (k3 ), and the shock term (ϵvalutakurs ). The
+simulation should not impose or expect UIP to hold strictly.
+1.5. Net Exports (NX)
+Concept: Net Exports (NX), the difference between exports and imports, are a key
+component of aggregate demand and the channel through which trade policy directly
+impacts the economy. NX is determined by the relative prices of domestic versus
+foreign goods (incorporating tariffs and exchange rates) and by income levels both
+domestically and abroad.
+Evidence: International trade flows are empirically sensitive to both relative price
+changes and income fluctuations.
+54 Tariffs act as an increase in the relative price of
+imported goods, thereby depressing import volumes.
+6 The responsiveness of trade
+volumes to price changes is measured by the price elasticity of demand, while
+responsiveness to income changes is measured by the income elasticity. Gravity
+models consistently show that trade increases with the economic size (GDP) of
+trading partners and decreases with trade costs, which include distance, transport
+costs, and tariffs.
+59 Both price and income elasticities vary considerably across
+different countries and different sectors or products.
+54 For the US, studies have often
+found the income elasticity of imports to be higher than the income elasticity of
+exports, contributing to trade balance dynamics.
+54 Estimates for the long-run price
+elasticity of imports (often denoted ϵ or related to the elasticity of substitution σ in
+theoretical models) vary widely in the literature. Aggregate estimates for the general
+equilibrium response to tariffs range from -0.8 6 to potentially higher values like -1.75
+to -2.25 57 or even -4 based on some US analyses.
+8 Product-level estimates can be
+around -5 55
+, and country-specific aggregate import elasticities can range from -0.7
+(Hong Kong) to over -7 (China).
+58
+Equation (Sectoral NX): To capture sector-specific tariff effects, net exports should
+be modeled at the sectoral level (s):
+NXs
+=Exportss
+−Importss
+Importss
+=M0,s
+×(Yd,potential Yd )ϵM,Y
+×(Pd Pimport,s )ϵM,P
+Exportss
+=X0,s
+×(Yf,potential Yf )ϵX,Y
+×(Pf Pexport,s )ϵX,P
+Where:
+●
+NXs is net exports for sector s.●
+●
+Importss , Exportss are real import and export volumes for sector s.
+M0,s , X0,s are scaling constants or base levels for imports and exports in sector
+●
+●
+●
+●
+●
+●
+●
+s.
+Yd , Yf are real domestic and foreign income/GDP, respectively. Yd,potential ,
+Yf,potential represent potential output levels (or alternatively, income growth rates
+can be used).
+Pimport,s is the domestic currency price of imports in sector s, inclusive of tariffs
+and exchange rate effects (from Section 1.1).
+Pd is the domestic price level index.
+Pexport,s is the price of domestic exports in sector s (in domestic currency). This
+price might be affected by foreign retaliatory tariffs if those are modeled.
+Pf is the relevant foreign price level index (from Section 1.3).
+ϵM,Y , ϵX,Y are the income elasticities of demand for imports and exports,
+respectively.
+ϵM,P , ϵX,P are the price elasticities of demand for imports and exports,
+respectively (these should be negative). ϵM,P represents the general equilibrium
+import elasticity with respect to relative price changes (including those caused by
+tariffs).
+Parameters (Elasticities):
+●
+●
+Income Elasticities (ϵY ): Values typically range from 1.0 to 2.5. As noted, US ϵM,Y
+might be higher than ϵX,Y .
+54 Start with values around 1.5 for both and adjust based
+on desired trade balance behavior.
+Price Elasticities (ϵP ): These are crucial but highly uncertain and variable. Based
+on the evidence:
+○
+Aggregate long-run ϵM,P could be around -0.8 6 to -2.0.
+8
+○
+Sectoral/product elasticities can be significantly higher in magnitude (e.g.,
+-5
+or more 55).
+○
+A reasonable starting point for aggregate elasticities might be in the range of
+-1.0 to -1.5 for both ϵM,P and ϵX,P , acknowledging the need for potential
+sector differentiation (Section 3) and calibration. The general equilibrium
+estimates 6 suggest the overall response might be closer to -1.0 in the long
+run.
+Trade Elasticity Dynamics: The response of trade flows to price changes induced by
+tariffs or exchange rate movements is not instantaneous.
+6 Empirical estimates show
+that short-run elasticities are considerably smaller in magnitude than long-run
+elasticities (e.g.,
+-0.2 vs -0.8 for tariff impact on imports 6). Full adjustment can take
+several years as firms find new suppliers, consumers change habits, and supplychains are reconfigured.
+57 This implies that using static long-run elasticities in the
+simulation will likely overstate the immediate impact of tariff changes on trade
+volumes. A more realistic approach involves implementing dynamic elasticities or
+lagged adjustment mechanisms. For example, a partial adjustment model could be
+used, where the actual change in imports/exports in a given period only partially
+closes the gap between the current level and the level implied by the long-run
+elasticities and current prices/income. Alternatively, the elasticity itself could be
+modeled as increasing gradually over time following a shock.
+Table 1: Core Trade Parameters
+Parameter
+Symbol
+Description Equation Ref. Value/Range Source
+Snippet(s)
+ϕ Tariff
+Pass-through to
+Import Price
+(Border)
+Sec 1.1 ≈1 (medium
+term)
+1
+wd Weight of
+Domestic Goods
+in Pd
+Sec 1.2 Calibration Req.
+13
+k1 Exch. Rate
+Sensitivity to
+Interest Diff.
+Sec 1.4 Small positive 47
+k2 Exch. Rate
+Sensitivity to
+$\Delta$NX/GDP
+Sec 1.4 Positive 50
+k3 Exch. Rate
+Sensitivity to
+Capital Flow
+Sec 1.4 Calibration Req.
+44
+ϵM,Y Income
+Elasticity of
+Imports
+Sec 1.5 1.0 - 2.5 54
+ϵX,Y Income
+Elasticity of
+Sec 1.5 1.0 - 2.5 54Exports
+ϵM,P Price Elasticity
+of Imports
+Sec 1.5 -0.8 to -2.0 (LR
+Agg.)
+6
+ϵX,P Price Elasticity
+of Exports
+Sec 1.5 -1.0 to -2.0 (LR
+Agg.)
+58
+Note: LR = Long Run, Agg.
+= Aggregate. Elasticities are subject to significant variation
+and require calibration. Short-run price elasticities are smaller in magnitude.
+Section 2: Output, Employment, and Inflation Dynamics
+Objective: To model the core macroeconomic feedback loops connecting aggregate
+output, the labor market (unemployment), and the price level (inflation), ensuring
+these relationships are informed by empirical evidence and incorporate the influence
+of international trade dynamics, particularly import prices.
+2.1. Unemployment (Okun's Law)
+Concept: Okun's Law provides an empirical cornerstone for linking the real side of the
+economy (output) to the labor market (unemployment). It posits a stable negative
+relationship between deviations of output from its potential level (the output gap) and
+deviations of the unemployment rate from its natural rate (the unemployment gap).
+64
+Essentially, when the economy produces above its potential, unemployment tends to
+fall below its natural rate, and vice versa.
+Evidence: The law, originally formulated by Arthur Okun in 1962 66
+, has been widely
+confirmed empirically, although the precise quantitative relationship (the Okun
+coefficient) varies across countries and over time.
+64 Okun's original estimate for the
+US suggested that a 3% shortfall in GDP growth corresponded to a 1% increase in the
+unemployment rate.
+67 Modern estimations often focus on the relationship between
+gaps (output gap and unemployment gap) or differences (changes in GDP growth vs
+changes in unemployment).
+Recent cross-country studies by the IMF suggest that for advanced economies (AEs),
+the Okun coefficient (β) in a gap specification like (ut
+−ut∗
+)=β×(yt
+−yt∗
+) is typically in
+the range of -0.3 to -0.4.
+64 This implies that a 1 percentage point decrease in output
+relative to potential is associated with a 0.3 to 0.4 percentage point increase in the
+unemployment rate above its natural level. The coefficient tends to be smaller in
+magnitude (less negative, e.g., around -0.17) for emerging market and developingeconomies (EMDEs), possibly due to factors like greater labor market informality.
+64
+Some estimates for individual European countries show variability, ranging from -0.1
+to -0.8, but averaging around -0.3.
+70 There is also evidence suggesting the
+relationship might be asymmetric, with unemployment responding more strongly
+during economic downturns (negative output gaps) than during upturns.
+64
+Furthermore, the sensitivity differs across demographic groups, with youth
+unemployment typically being more responsive to output fluctuations than adult
+unemployment.
+64
+Equation: Following the user query's suggestion and common practice, the
+"difference version" relates the change in the unemployment rate to the deviation of
+GDP growth from potential growth:
+Δut
+≈−β×(gy,t
+−gy,t∗
+)+ϵu,t
+Alternatively, the "gap version" relates the unemployment gap to the output gap:
+ut
+−ut∗
+=βgap
+×(yt
+−yt∗
+)+ϵu,t
+Where:
+●
+●
+●
+●
+●
+●
+Δut is the change in the unemployment rate in period t.
+ut is the unemployment rate; ut∗
+is the natural rate of unemployment (NAIRU).
+69
+gy,t is the real GDP growth rate; gy,t∗
+is the potential real GDP growth rate.
+yt is the log of real GDP; yt∗
+is the log of potential GDP. (yt
+−yt∗
+) is the output gap.
+β in the difference version is the Okun coefficient (positive). βgap in the gap
+version is negative.
+ϵu,t represents shocks to unemployment not explained by output fluctuations.
+Parameter (β for difference version): Based on the IMF estimates for AEs (gap
+coefficient of -0.3 to -0.4), the corresponding coefficient for the difference version
+(β) would be approximately 0.3 to 0.4. The range suggested in the user query
+(0.3-0.5) aligns well with this empirical evidence. A starting value of β=0.4 appears
+reasonable for a baseline AE simulation.
+Asymmetry and Heterogeneity: While a constant Okun coefficient is a useful
+simplification, it's important to recognize its limitations. The empirical findings suggest
+that the relationship is not uniform.
+64 Factors such as labor market institutions
+(hiring/firing costs, unemployment benefits, union density), the cyclical behavior of
+labor force participation, and the degree of labor hoarding by firms influence the
+coefficient's magnitude.
+64 The stronger response observed during downturns impliesthat recessions may translate into larger increases in unemployment than booms
+translate into decreases. For enhanced realism, particularly in a simulation focused on
+potentially large shocks like trade wars, the parameter β could be modeled as
+state-dependent, increasing in magnitude during periods of negative output gaps.
+Similarly, if the simulation distinguishes between country types, using a lower β for
+EMDEs would be appropriate.
+2.2. Inflation (Augmented Phillips Curve)
+Concept: The Phillips Curve describes the relationship between inflation and
+economic slack. The original formulation linked wage growth to unemployment.
+72
+Modern macroeconomic models typically employ a New Keynesian Phillips Curve
+(NKPC) which relates current inflation (πt ) to expected future inflation (Et [πt+1 ]), a
+measure of real economic activity or marginal cost (often proxied by the output gap or
+unemployment gap), and various cost-push shocks.
+73 Crucially for an open economy
+model, changes in import prices are a significant cost-push factor that should be
+included.
+10
+Evidence: Empirical estimation confirms that inflation dynamics are influenced by
+expectations, economic slack, and supply-side shocks.
+73 Import prices, reflecting
+costs of imported consumer goods and intermediate inputs, directly affect domestic
+price levels.
+10 The pass-through from import price changes to overall consumer
+inflation (γ) is generally found to be positive but incomplete and variable across
+countries and time.
+77 For low-inflation economies like the US, long-run pass-through
+from import prices to consumer prices is estimated to be relatively low, perhaps
+around 0.2 to 0.4, implying that only a fraction of import price fluctuations feeds into
+headline inflation.
+78 Studies simulating trade cost shocks suggest a 10 percentage
+point rise in import costs could increase CPI inflation by 0.3 to 0.8 percentage points,
+implying a pass-through coefficient (γ) in the range of 0.03 to 0.08 when relating
+percentage point changes.
+10 Pass-through might be higher in environments with
+higher inflation or greater exchange rate volatility.
+78
+The sensitivity of inflation to the output gap (the slope of the Phillips curve, ϕ) is a
+subject of ongoing debate. Some research suggested a flattening of the Phillips curve
+in recent decades, meaning inflation became less responsive to changes in economic
+slack.
+73 However, the inflation surge following the COVID-19 pandemic has reignited
+discussion, with some evidence suggesting the Phillips curve may steepen
+significantly when economies face large shocks or operate near capacity
+constraints.
+79 Estimating ϕ is challenging due to econometric issues, particularly the
+endogeneity of monetary policy which actively tries to stabilize both inflation and theoutput gap.
+74
+Equation: An augmented NKPC incorporating import prices, consistent with the user
+query and standard practice, can be specified as:
+πt
+=αEt [πt+1 ]+(1−α)πt−1
++ϕ×(OutputGapt )+γ×(ΔPimport
+_
+avg,t )+ϵπ,t
+Where:
+●
+●
+●
+●
+●
+●
+●
+●
+πt is the inflation rate in period t.
+Et [πt+1 ] is the expected inflation rate for period t+1, formed at time t.
+πt−1 is lagged inflation, capturing backward-looking behavior or persistence. α
+(between 0 and 1) weights forward vs. backward looking expectations. A purely
+forward-looking NKPC has α=1. Using πt−1 alone (α=0) represents adaptive
+expectations, as implied in the user query's initial suggestion. A mix is often
+empirically plausible.
+OutputGapt
+=(yt
+−yt∗
+) is the output gap.
+ΔPimport
+_
+avg,t is the percentage change in the relevant average import price
+index (potentially CPI-weighted import prices).
+ϕ (phi) is the coefficient on the output gap (Phillips curve slope).
+γ (gamma) is the pass-through coefficient from import price inflation to domestic
+inflation.
+ϵπ,t represents other exogenous cost-push shocks (e.g., changes in oil prices 73
+,
+indirect taxes).
+Parameters:
+●
+α: Weight on expected future inflation. Needs calibration. α=0.5 represents a
+●
+●
+hybrid curve.
+ϕ: Phillips curve slope. Given the estimation challenges and debate, a small
+positive value is a common starting point, e.g., 0.1 to 0.3. Calibration should
+ensure inflation responds plausibly to demand shocks.
+γ: Import price pass-through to domestic inflation. Based on empirical estimates
+for low-inflation AEs, this is likely partial. Values around 0.05 to 0.15 seem
+plausible as a starting range.
+10 Needs careful scaling depending on whether
+ΔPimport
+_
+avg,t is a percentage change or percentage point change.
+Phillips Curve Identification and State Dependence: The difficulty in empirically
+pinning down the Phillips curve slope (ϕ) arises partly because effective monetary
+policy aims to counteract deviations of inflation and output from their targets. If a
+central bank successfully offsets cost-push shocks by adjusting demand, theobserved correlation between inflation and the output gap might appear weak or even
+negative, even if the underlying structural relationship (ϕ) is positive and significant.
+74
+This endogeneity complicates estimation. Furthermore, the assumption of a constant
+slope may be too restrictive. The experience of recent years suggests the slope might
+increase (inflation becomes more sensitive to slack) during periods of high inflation,
+high volatility, or when the economy hits supply constraints in key sectors.
+79 Similarly,
+the pass-through of import prices (γ) might increase in high-inflation environments.
+78
+For advanced simulation, incorporating state-dependency in ϕ and γ could enhance
+realism. For instance, ϕ could be modeled to increase when the output gap is large
+and positive, or when inflation is significantly above target.
+Table 2: Okun's Law and Phillips Curve Parameters
+Parameter
+Symbol
+Description Equation Ref. Value/Range Source
+Snippet(s)
+β Okun
+Coefficient
+(Difference
+Version)
+Sec 2.1 0.3 - 0.5 64
+βgap Okun
+Coefficient (Gap
+Version)
+Sec 2.1 -0.3 to -0.5 64
+α Weight on
+Expected
+Inflation (Phillips
+Curve)
+Sec 2.2 0.0 - 1.0 (Calib.) 73 (Conceptual)
+ϕ Phillips Curve
+Slope (Output
+Gap Coeff.)
+Sec 2.2 0.1 - 0.3 (Calib.) 74
+γ Import Price
+Pass-through to
+Dom. Inflation
+Sec 2.2 0.05 - 0.15
+(Calib.)
+10
+Note: Calib.
+Economies.
+= Requires Calibration. Values are indicative starting points for AdvancedSection 3: Sectoral Linkages and Dynamics
+Objective: To disaggregate the macroeconomic model to capture how
+sector-specific phenomena, particularly tariffs, propagate through the economy via
+inter-industry linkages, affecting sectoral output and employment, and ultimately
+influencing aggregate outcomes. This section also addresses how aggregate
+investment translates into sector-specific capacity expansion.
+3.1. Sector-Specific Tariff Impacts and Trade
+Concept: Trade policies, especially tariffs, are rarely applied uniformly across all
+goods. They typically target specific products or sectors.
+1 Therefore, a realistic
+simulation of trade wars requires modeling tariff impacts at a sectoral level. This
+involves applying sector-specific tariff rates to calculate import prices and then
+determining the resulting changes in import and export volumes for each sector,
+considering that trade elasticities can also differ across sectors.
+Evidence: The importance of sectoral detail is highlighted by the use of Computable
+General Equilibrium (CGE) models for trade policy analysis, which explicitly map out
+inter-industry linkages and allow for sector-specific shocks.
+81 Input-Output (I-O)
+tables provide the statistical foundation for these models, detailing how the output of
+one sector is used as an input by others.
+28 Empirical studies confirm that trade
+elasticities vary significantly by product or sector.
+55 For example, estimates of
+aggregate import price elasticities derived from sector-specific data range widely
+across countries.
+58 Gravity models, often used to estimate trade potentials and policy
+impacts, can also be applied at a disaggregated product level.
+55
+Implementation: The core trade equations presented in Section 1 should be
+implemented at the sector level (s).
+●
+Import Price: Pimport,s,j
+=Pfs,j
+×Valutakursj
+×(1+Tariffs,j ), where Tariffs,j is now the
+specific tariff rate applied to imports of goods from sector s originating in country
+j.
+●
+Trade Volumes: The import and export equations from Section 1.5 are applied
+sector by sector: Importss
+=M0,s
+×(Yd,potential Yd )ϵM,Y
+×(Pd Pimport,s )ϵM,P,s
+Exportss
+=X0,s
+×(Yf,potential Yf )ϵX,Y
+×(Pf Pexport,s )ϵX,P,s Crucially, the price
+elasticities (ϵM,P,s and ϵX,P,s ) can now be made sector-specific. While finding
+precise empirical estimates for every sector might be challenging, using different
+elasticity values for broad categories (e.g., manufacturing vs. services, or durable
+vs. non-durable goods) based on ranges found in studies like 58 or general
+principles (e.g., goods with more substitutes having higher elasticity) can addrealism.
+3.2. Sectoral Output and Employment
+Concept: The output of an individual sector (Ys ) responds to the total demand for its
+products. This demand comprises final demand (consumption Cs , investment Is ,
+government spending Gs ) and intermediate demand (use of the sector's output as
+inputs by other sectors). Changes in sectoral output, driven by these demand
+fluctuations (including changes in export demand Xs and import competition affecting
+domestic demand), directly influence the demand for labor within that sector, leading
+to changes in sectoral employment (Ls ).
+Evidence: I-O analysis is the standard framework for quantifying these inter-industry
+dependencies, showing how demand for final goods translates into required output
+across all sectors, both directly and indirectly.
+28 The relationship between sectoral
+output and employment is fundamental. I-O models often use fixed labor coefficients
+(units of labor required per unit of output) derived from historical data to link output
+changes to employment changes.
+88 More sophisticated approaches, like those used
+by the Bureau of Labor Statistics (BLS) for employment projections, model sectoral
+employment based on projected sectoral output, considering factors like labor
+productivity trends.
+92
+Equation:
+●
+Sectoral Output (Ys ): Modeling the full I-O structure can be complex. A
+simplified approach focuses on how changes in key demand components drive
+changes in sectoral output. For instance, ΔYs could be modeled as a function of
+changes in final domestic demand (ΔCs ,ΔIs ,ΔGs ) and net exports (ΔNXs ) for that
+sector, potentially with multipliers reflecting intermediate linkages.
+ΔYs
+≈f(ΔCs ,ΔIs ,ΔGs ,ΔXs ,ΔImportss ,Inter-industry links)
+●
+Sectoral Employment (Ls ): Changes in sectoral employment can be linked to
+changes in sectoral output.
+○
+Method 1 (Growth Rate based): Link employment growth to output growth,
+adjusting for productivity trends (λs ) and potentially cyclical factors (response
+to sectoral output gap Ys
+−Ys∗
+): Ls ΔLs
+≈ηs
+×Ys ΔYs
+−λs where ηs is the elasticity
+of employment to output (often assumed to be close to 1, adjusted for
+productivity λs ).
+○
+Method 2 (Labor Coefficient based): Use a labor requirement coefficient (es ,
+representing labor units per unit of real output), potentially derived from I-O
+data 88: Ls
+=es
+×Ys In dynamic terms, assuming a relatively stable coefficient in
+the short run: ΔLs
+≈es
+×ΔYsParameters: Sector-specific labor coefficients (es ) or output elasticities of
+employment (ηs ) and productivity trends (λs ) are required. These can be informed by
+national I-O tables or sectoral productivity data.
+3.3. Aggregation to Macro Variables
+Concept: Aggregate macroeconomic variables like total GDP and the overall
+unemployment rate are derived by summing or averaging the corresponding sectoral
+values, appropriately weighted.
+Evidence: National accounting standards define GDP using three approaches:
+expenditure, income, and production (value added).
+93 The production approach
+calculates GDP as the sum of value added across all industries (or sectors) in the
+economy.
+93 Value added for a sector is defined as the value of its gross output minus
+the value of intermediate inputs consumed in the production process.
+17 The aggregate
+unemployment rate is calculated as the total number of unemployed individuals
+(summed across sectors or demographics) divided by the total labor force.
+96 Sectoral
+value added or employment shares are typically used as weights when constructing
+aggregate indices or analyzing contributions.
+Equation:
+●
+Aggregate Real GDP (Y): Sum of sectoral value added:
+Y=s∑ ValueAddeds
+=s∑ (Ys
+−IntermediateConsumptions ) where
+IntermediateConsumptions is the real value of inputs used by sector s. This
+requires tracking intermediate input usage, often derived from I-O coefficients.
+●
+Aggregate Unemployment Rate (u): Ratio of total unemployed to total labor
+force: u=∑s LaborForces ∑s Unemployeds where Unemployeds
+=LaborForces
+−Ls .
+This requires tracking sectoral labor force and employment (Ls from Section 3.2).
+Implementation Note: This aggregation step requires the simulation to maintain
+consistent accounts at the sectoral level for output, intermediate consumption,
+employment, and labor force.
+3.4. Investment Allocation and Sectoral Capacity (newCap)
+Concept: Aggregate investment spending (I, determined as in Section 4.2) needs to
+be allocated across the different sectors of the economy (Is ). This sectoral investment
+drives the accumulation of capital stock within each sector, thereby determining its
+future production capacity (represented as newCap in the user's supply.ts module).
+Key drivers for investment allocation include relative sectoral profitability, expected
+future growth prospects, and potentially sector-specific financing conditions oradjustment costs.
+Evidence: Investment decisions are fundamentally forward-looking and aim to
+maximize expected returns relative to costs. Factors influencing aggregate investment
+also operate at the sectoral level. Firms are more likely to invest in sectors where
+profitability is high or expected to grow.
+97 The accelerator principle suggests
+investment flows towards sectors experiencing rapid demand growth.
+99 Tobin's Q
+theory implies sectors where the market values assets highly relative to their
+replacement cost (high Q) will attract more investment.
+101 Macroeconomic conditions
+affect sectors differently; for example, cyclical sectors like energy and materials might
+see investment fluctuate more with growth expectations than defensive sectors like
+healthcare or consumer staples.
+98 Financial market conditions and the availability of
+credit can also influence sectoral investment patterns, potentially amplifying shocks
+(financial accelerator).
+106
+Equation:
+●
+Investment Allocation (Is ): Total aggregate investment (I) can be allocated
+based on relative sectoral attractiveness, proxied by factors like profit rates,
+expected growth, or Tobin's Q: Is
+=I×ShareWeights Where ShareWeights could be
+defined proportionally to a sector's relative profitability, expected demand
+growth, or Q ratio. For example, using profitability:
+ShareWeights
+=∑k (ProfitRatek
+×Kk )ProfitRates
+×Ks (or similar weighting scheme)
+ProfitRates
+=Ks (Revenues
+−Costss ) where Ks is the capital stock in sector s.
+●
+Sectoral Capacity / Capital Stock (Ks ): The capital stock in each sector evolves
+according to the standard accumulation equation, incorporating sectoral
+investment and depreciation (δs ): Ks,t+1
+=(1−δs )×Ks,t
++Is,t The variable newCap_
+s
+from the user's supply.ts should be directly linked to this evolving capital stock,
+Ks,t+1 . The exact relationship depends on the assumed production function (e.g.,
+Cobb-Douglas, CES), where capital is an input determining potential output.
+Parameters: Sector-specific depreciation rates (δs ) are needed. The parameters
+governing the allocation weights (ShareWeights ) require calibration based on
+assumptions about what drives sectoral investment (e.g., the relative importance of
+current profits vs. expected growth).
+Investment Driver Interplay: The decision to invest in a particular sector reflects a
+complex calculation weighing expected future returns against the cost and risk
+involved. Low overall interest rates reduce the cost of capital for all sectors, but the
+impact might be larger for capital-intensive industries.
+108 Strong aggregate demand
+growth (accelerator effect) might boost investment across the board, but particularlyin cyclical sectors anticipating continued expansion.
+98 A high Tobin's Q signals that the
+market places a high value on installed capital in a sector relative to its replacement
+cost, making new investment attractive.
+101 These factors interact – a sector might face
+high demand growth but also high interest rates or a low Q ratio, leading to conflicting
+signals. A comprehensive model should ideally capture these interacting influences.
+The sectoral allocation mechanism should reflect that different sectors exhibit varying
+sensitivities to these drivers based on their technological characteristics, market
+structure, and position in the business cycle.
+98
+Table 3: Sectoral Data Requirements and Linkages
+Data Item / Variable Potential Source /
+Calculation Method
+Importance for Model
+Linkages
+Sectoral Tariffs Exogenous policy input
+(player/AI controlled)
+Initiates trade shock, affects
+Pimport,s .
+Sectoral Imports/Exports Calculated via trade equations
+(Sec 1.5, 3.1) using sector
+tariffs, prices, elasticities,
+income.
+Determines sectoral NXs , links
+trade policy to sectoral
+activity.
+Sectoral Output (Ys ) Responds to sectoral demand
+(final + intermediate),
+influenced by NXs . Requires
+I-O structure or simplified
+demand linkage.
+Links trade/demand shocks to
+production. Input for
+calculating Value Added and
+driving employment.
+Sectoral Value Added Ys
+- Sectoral Intermediate
+Consumption. Requires I-O
+coefficients or estimates.
+Aggregates to total GDP (Sec
+3.3). Basis for sectoral
+contribution to economy.
+Sectoral Employment (Ls ) Calculated from ΔYs using
+labor coefficients or
+elasticity/productivity (Sec
+3.2).
+Aggregates to total
+employment/unemployment
+(Sec 3.3). Links economic
+activity to labor market
+outcomes.
+Sectoral Capital Stock (Ks ) Accumulates based on
+sectoral investment (Is ) and
+depreciation (δs ) (Sec 3.4).
+Determines sectoral
+production capacity
+(newCap_
+s). Influences
+investment allocation viaprofitability calculations.
+Sectoral Investment (Is ) Allocated from aggregate I
+based on relative profitability,
+growth expectations, or Q
+ratio (Sec 3.4).
+Drives capital accumulation
+(Ks ) and capacity growth.
+Links aggregate investment
+decisions to sectoral
+structure.
+Sectoral Profit Rate Calculated from sectoral
+revenue, costs, and capital
+stock (Sec 3.4).
+Potential driver for investment
+allocation (Is ). Reflects sector
+performance.
+Section 4: Enhancing Aggregate Demand Components
+Objective: To develop more sophisticated and empirically grounded functions for the
+primary private sector components of aggregate demand: private consumption (C)
+and gross private domestic investment (I).
+4.1. Consumption Function (C)
+Concept: Aggregate private consumption expenditure is the largest component of
+GDP in most economies. Understanding its determinants is crucial for modeling
+macroeconomic dynamics. The simplest models link consumption directly to current
+disposable income (the Keynesian consumption function). More advanced theories
+incorporate roles for wealth, consumer confidence, and expectations about future
+income, leading to concepts like the Marginal Propensity to Consume (MPC),
+autonomous consumption, the Permanent Income Hypothesis (PIH), and the
+Life-Cycle Hypothesis (LCH).
+Evidence: A strong positive relationship between consumption and current
+disposable income (typically defined as aggregate income less net taxes) is
+consistently observed.
+110 The slope of this relationship is the MPC (ΔC/ΔYdisposable ),
+representing the fraction of an additional dollar of disposable income that is spent on
+consumption.
+110 Aggregate MPC estimates for developed economies often fall in the
+range of 0.5 to 0.7 in the long run 114
+, although short-run MPCs can differ, particularly
+in response to temporary income changes. Autonomous consumption represents
+spending that occurs even when disposable income is zero.
+111
+The PIH (developed by Friedman) and LCH (developed by Modigliani and Brumberg)
+argue that rational, forward-looking individuals base consumption decisions not just
+on current income, but on their expected lifetime resources or "permanent" income.
+115This implies that consumers attempt to "smooth" consumption over time, saving
+during high-income periods (like middle age) and dissaving or borrowing during
+low-income periods (like youth or retirement).
+116 A key implication is that consumption
+should respond less strongly to temporary or unexpected income changes (which
+primarily affect savings) than to changes perceived as permanent.
+Wealth also plays a significant role. Increases in household net worth (from rising
+stock prices or housing values) tend to boost consumption – the "wealth effect"
+120
+.
+Empirical estimates of the marginal propensity to consume out of wealth vary, but
+often suggest that a $1 increase in wealth leads to an increase in annual consumption
+of roughly 3 to 9 cents.
+120 Some evidence suggests the effect might be stronger for
+housing wealth than for financial wealth.
+121 Consumer confidence, reflecting
+households' optimism about the future, is also believed to influence spending
+decisions.
+121
+Equation (Refined): Incorporating disposable income, wealth, and confidence:
+Ct
+=A+MPC×(GDPt
+×(1−TaxRatet )+Transferst )+γW
+×Wealtht
++γConf
+×Confidencet
++ϵC,t
+Where:
+●
+●
+●
+●
+●
+●
+●
+●
+●
+Ct is aggregate real consumption expenditure.
+A is autonomous consumption (a constant).
+MPC is the marginal propensity to consume out of disposable income.
+(GDPt
+×(1−TaxRatet )+Transferst ) represents aggregate real disposable income.
+TaxRatet is the average net tax rate (Taxes minus Transfers as a share of GDP).
+Explicit modeling of Taxes and Transfers based on policy variables is preferable if
+possible.
+Wealtht is a measure of real household net worth.
+Confidencet is an index of consumer confidence (potentially linked to the Trust
+variable from Section 6 or other economic indicators like unemployment).
+γW is the marginal propensity to consume out of wealth.
+γConf is the sensitivity of consumption to confidence.
+ϵC,t represents other consumption shocks.
+Parameters:
+●
+●
+MPC: A value between 0.5 and 0.7 is empirically supported for the aggregate
+long-run MPC.
+114 A mid-range value like 0.65 is a reasonable starting point.
+A: Calibrated to match a target steady-state consumption-to-GDP ratio, given the
+chosen MPC and steady-state values of other variables.●
+●
+γW : Based on empirical estimates 120
+, a value in the range 0.03 to 0.09 is
+appropriate. Start with 0.05.
+γConf : Needs calibration. Should be positive, but the magnitude depends on the
+scaling of the Confidencet variable.
+Consumption Smoothing vs. Current Income: The refined equation above primarily
+links consumption to current disposable income (Keynesian element) but incorporates
+wealth and confidence, which implicitly capture some forward-looking aspects and
+accumulated savings consistent with PIH/LCH principles.
+115 A pure PIH/LCH model
+would make consumption a function of expected lifetime wealth/income. While more
+theoretically rigorous, this is significantly more complex to implement. The current
+formulation provides a practical compromise. However, the underlying theory
+suggests that the response of consumption to income shocks should depend on
+whether the shock is perceived as temporary or permanent. Temporary shocks (like a
+one-year tariff rebate) should ideally have a smaller impact on consumption (lower
+effective MPC) than permanent changes (like a long-lasting change in growth
+prospects). This state-dependency could be added for greater realism, perhaps by
+adjusting the MPC based on the persistence of income shocks or by using the
+Confidencet term to capture shifts in expectations about permanent income.
+4.2. Investment Function (I)
+Concept: Aggregate investment (I) represents spending by firms on new capital
+goods (machinery, equipment, buildings, software). It is a volatile component of GDP
+and a key driver of business cycles and long-run growth. Investment decisions
+depend on firms' expectations about future profitability, weighed against the cost of
+acquiring and financing capital. Key theoretical drivers include the real interest rate
+(as a component of the user cost of capital), the expected growth rate of demand or
+output (the accelerator effect), and the market valuation of existing capital relative to
+its replacement cost (Tobin's Q).
+Evidence:
+●
+Interest Rates: Theory predicts a negative relationship between investment and
+the real interest rate (or the broader user cost of capital), as higher rates increase
+financing costs and the opportunity cost of investing.
+108 However, empirically
+identifying a stable and significant interest rate sensitivity (i1 ) has proven difficult,
+partly due to simultaneity issues (e.g., strong growth expectations might drive
+both investment and interest rates up).
+108 Some studies suggest that the
+aggregate sensitivity of investment to interest rates may have declined in recent
+decades.
+108●
+●
+●
+Accelerator Effect: Investment is strongly correlated with changes in output or
+sales (ΔY). When demand increases and firms expect the increase to persist, they
+invest to expand capacity.
+99 This relationship, where changes in output induce
+larger percentage changes in investment, is known as the accelerator effect. The
+strength of the accelerator (i2 ) depends on factors like the capital-output ratio
+and how quickly firms adjust capital stock.
+100
+Tobin's Q: This theory posits that investment is positively related to the ratio of a
+firm's market value to the replacement cost of its capital stock (Q).
+101 A Q ratio
+greater than 1 indicates that the market values installed capital more highly than
+its replacement cost, creating an incentive for firms to invest in new capital.
+Empirical studies have found support for Q theory, including in housing
+investment.
+101
+Financial Frictions: Access to finance and the health of firm balance sheets can
+also significantly impact investment, especially for smaller or credit-constrained
+firms. Deteriorating financial conditions can amplify downturns by restricting
+investment (the financial accelerator effect).
+106
+Equation (Refined, incorporating Accelerator and Q):
+It
+=max(0,Ibase
+−i1
+×(real
+interest
+ratet )+i2
+×ΔYt
++i3
+×(Qt
+−1))+ϵI,t
+_
+_
+Where:
+●
+●
+●
+●
+●
+●
+●
+●
+●
+It is aggregate real investment.
+Ibase is autonomous investment (investment occurring regardless of the other
+factors).
+real
+interest
+_
+_
+ratet is the relevant real interest rate influencing investment
+decisions (e.g., long-term corporate borrowing rate adjusted for expected
+inflation, potentially proxied by policyRate−Et [πt+1 ] plus a risk premium).
+ΔYt is the growth rate of real GDP (or expected future growth).
+Qt is Tobin's Q (aggregate market value of capital divided by its replacement
+cost). If difficult to compute, it could be proxied by stock market indices relative to
+capital goods prices or omitted initially. The term (Qt
+−1) reflects the incentive to
+invest when Q > 1.
+i1 (positive) captures the sensitivity to the real interest rate.
+i2 (positive) captures the strength of the accelerator effect.
+i3 (positive) captures the sensitivity to Tobin's Q.
+ϵI,t represents exogenous investment shocks (e.g., changes in business
+confidence or "animal spirits").Parameters:
+●
+●
+●
+●
+i1 (Interest Rate Sensitivity): Highly uncertain empirically.
+108 Requires careful
+calibration to ensure monetary policy has a plausible impact on investment in the
+simulation. Given potential decline in sensitivity, start with a moderate positive
+value.
+i2 (Accelerator Coefficient): Depends on the economy's aggregate capital-output
+ratio and adjustment speed.
+100 Needs calibration. A value between 0.5 and 1.5
+might be a reasonable starting range for aggregate investment response to GDP
+growth.
+i3 (Tobin's Q Sensitivity): Also requires calibration. Should be positive.
+Ibase : Calibrated based on steady-state I/Y ratio and other parameters.
+Declining Interest Rate Sensitivity?: The possibility that investment has become
+less sensitive to monetary policy changes (i.e., lower i1 ) is an important consideration
+for calibration.
+108 If this is the case, it implies that other factors, such as growth
+expectations (accelerator, i2 ), technological opportunities, or financial conditions
+(potentially captured in ϵI,t or through Qt ), may play a relatively larger role in driving
+investment fluctuations in the simulated modern economy. Calibrating i1 to a relatively
+modest value might be more consistent with recent economic behavior than relying on
+older estimates suggesting strong interest rate effects.
+Table 4: Consumption and Investment Function Parameters
+Parameter
+Symbol
+Description Equation Ref. Value/Range Source
+Snippet(s)
+A Autonomous
+Consumption
+Sec 4.1 Calibration Req.
+111
+MPC Marginal
+Propensity to
+Consume
+Sec 4.1 0.5 - 0.7 114
+γW Wealth Effect
+Sensitivity (C
+per $ Wealth)
+Sec 4.1 0.03 - 0.09 120
+γConf Consumption
+Sensitivity to
+Sec 4.1 Positive (Calib.) 121 (Conceptual)Confidence
+Ibase Autonomous
+Investment
+Sec 4.2 Calibration Req.
+i1 Investment
+Sensitivity to
+Real Interest
+Rate
+Sec 4.2 Positive (Calib.) 108
+i2 Accelerator
+Coefficient
+(Investment/ΔY)
+Sec 4.2 0.5 - 1.5 (Calib.) 99
+i3 Investment
+Sensitivity to
+Tobin's Q
+Sec 4.2 Positive (Calib.) 101
+Note: Calib.
+states.
+= Requires Calibration based on simulation behavior and target steady
+Section 5: Fiscal Policy and Government Debt
+Objective: To incorporate the government sector into the model, allowing for fiscal
+policy actions (changes in government spending G and taxes T) and tracking the
+evolution of public debt, including the potential macroeconomic consequences of
+high debt levels.
+5.1. Government Spending (G) and Taxes (T)
+Concept: Government spending on goods and services (G) is a direct component of
+aggregate demand (Y=C+I+G+NX). Taxation (T) affects the economy primarily by
+reducing household disposable income (influencing C) and corporate profits
+(potentially influencing I), while providing revenue to the government. Both G and T
+are key instruments of fiscal policy, controllable by the player or AI.
+Implementation:
+●
+Government Spending (G): Model G as an exogenous policy variable, directly
+controllable within the simulation. It represents government purchases of goods
+and services. (Note: Government transfer payments, like unemployment benefits
+or pensions, are typically netted against taxes to calculate disposable income,
+rather than included in G).●
+Net Taxes (Tnet ): Model net taxes (taxes minus transfer payments) as a function
+of aggregate income (GDP). A simple formulation is:
+Tnet,t
+=Tautonomous
++TaxRate×Yt Where Tautonomous represents lump-sum
+taxes/transfers, and TaxRate is the marginal net tax rate. For simplicity,
+Tautonomous can be set to zero, making net taxes proportional to GDP:
+Tnet,t
+=TaxRate×Yt The TaxRate itself can be treated as a policy variable, allowing
+for changes in tax policy within the simulation. This formulation directly feeds into
+the disposable income calculation used in the consumption function (Section 4.1).
+5.2. Government Budget Balance
+Concept: The government's budget balance reflects the difference between its
+revenues and expenditures in a given period. It is typically decomposed into the
+primary balance and interest payments on existing debt.
+Equation:
+●
+Primary Balance: The difference between net tax revenue and non-interest
+government spending (G). PrimaryBalancet
+=Tnet,t
+−Gt
+●
+Overall Balance (Deficit/Surplus): The primary balance minus interest payments
+on the outstanding government debt from the previous period. A negative overall
+balance represents a budget deficit.
+OverallBalancet
+=PrimaryBalancet
+−(idebt,t
+×Debtt−1 ) Where idebt,t is the average
+nominal interest rate paid on the government debt stock (Debtt−1 ) outstanding at
+the end of period t−1.
+5.3. Public Debt Dynamics
+Concept: The stock of government debt changes over time based on the flow of
+budget deficits or surpluses. The evolution of the debt-to-GDP ratio, a key indicator of
+fiscal sustainability, depends critically on the overall balance and the relationship
+between the interest rate paid on debt and the nominal growth rate of the economy.
+Evidence: The standard equation governing debt dynamics is a fundamental
+accounting identity used in fiscal analysis by institutions like the IMF.
+127 The "snowball
+effect" refers to the impact of the interest rate-growth differential (i−g or, in real
+terms, r−g) on the debt ratio.
+127 If the average interest rate paid on debt (i) exceeds
+the nominal GDP growth rate (gnominal ), the debt-to-GDP ratio will tend to rise even
+with a balanced primary budget. Conversely, if i<gnominal (or r<greal ), the debt ratio
+can decline even with modest primary deficits.
+127
+Equation (Debt Level): The change in the nominal debt stock equals the overallbudget deficit:
+Debtt
+=Debtt−1
+−OverallBalancet
+Debtt
+=Debtt−1
++(Gt
+−Tnet,t )+(idebt,t
+×Debtt−1 )
+Equation (Debt-to-GDP Ratio, dt
+=Debtt /GDPt ): The change in the debt-to-GDP
+ratio can be approximated by:
+Δdt
+≈(rt
+−gt )×dt−1
+−pbt
++sfat
+Where:
+●
+●
+●
+●
+●
+dt is the debt-to-GDP ratio at the end of period t.
+rt is the average real interest rate on government debt (approximated as
+idebt,t
+−πt ).
+gt is the real GDP growth rate (ΔYt /Yt−1 ).
+pbt is the primary balance as a share of GDP (PrimaryBalancet /GDPt ).
+sfat represents stock-flow adjustments (e.g., valuation changes, privatization
+receipts), which capture differences between the deficit and the change in debt
+not explained by the flow variables. These are often ignored in simpler models but
+can be empirically relevant.
+130
+Parameters:
+●
+●
+●
+Average interest rate on debt (idebt or r): This should be linked to market interest
+rates (e.g., government bond yields, influenced by policyRate and risk premia) but
+typically adjusts more slowly than policy rates, reflecting the average rate across
+outstanding debt of varying maturities.
+Potential GDP growth (g∗): Influences the long-run trajectory.
+Primary balance (pb): Determined by policy choices for G and Tnet .
+5.4. Impacts of High Debt
+Concept: Persistently high levels of public debt relative to GDP can pose significant
+risks to macroeconomic stability and long-term growth. These risks include potential
+negative impacts on growth, upward pressure on interest rates, increased vulnerability
+to shocks, and constraints on future policy flexibility. An alternative perspective,
+Ricardian Equivalence, suggests that the method of financing government spending
+(taxes vs. debt) may be neutral under certain assumptions.
+Evidence:
+●
+Growth Effects: Numerous empirical studies find a negative correlation between
+high public debt-to-GDP ratios and subsequent economic growth, particularly●
+●
+●
+above certain thresholds.
+131 Threshold estimates vary but are often placed around
+85-100% of GDP for advanced economies.
+132 Potential channels for this negative
+impact include crowding out of private investment as government borrowing
+absorbs available savings, higher long-term interest rates, increased uncertainty,
+and the anticipation of future distortionary taxes needed to service the debt.
+132
+Interest Rates and Risk Premia: High debt levels can increase the perceived
+riskiness of government bonds, leading investors to demand a higher risk
+premium. This raises government borrowing costs (idebt ) and potentially spills
+over to other interest rates in the economy.
+127 The CBO, for instance, assumes
+each percentage point increase in the debt-to-GDP ratio adds about 2 basis
+points to 10-year Treasury yields.
+134 High debt also increases vulnerability to shifts
+in market sentiment or global financial conditions.
+130
+Policy Constraints: High debt reduces "fiscal space,
+" limiting the government's
+ability to respond effectively to future economic downturns or crises with
+counter-cyclical fiscal stimulus.
+130 It can also lead to concerns about "fiscal
+dominance,
+" where the central bank feels pressured to keep interest rates low to
+ease the government's debt burden, potentially compromising its inflation control
+objectives.
+131
+Ricardian Equivalence: This theory posits that rational, forward-looking
+individuals understand that government borrowing today implies higher taxes
+tomorrow.
+135 Therefore, if the government cuts taxes and finances spending with
+debt, households will save the tax cut to pay the future taxes, neutralizing the
+impact on aggregate demand. While theoretically elegant, the strong
+assumptions required (perfect foresight, perfect capital markets,
+intergenerational altruism, no liquidity constraints) are often violated in reality.
+136
+Empirical evidence suggests only a partial Ricardian offset; for example, studies
+indicate private saving might increase by about 30 cents for every dollar of
+increased government borrowing, implying that deficit-financed fiscal policy still
+has a significant impact on demand.
+137
+Implementation: To capture the potential negative consequences of high debt:
+1.
+Interest Rate Risk Premium: Add a component to the determination of
+government borrowing costs (idebt ) or potentially broader market interest rates
+that increases as the debt-to-GDP ratio (dt ) rises above a specified threshold
+(dthreshold , e.g., 90%). RiskPremiumt
+=max(0,kdebt
+×(dt
+−dthreshold ))
+idebt,t
+=BaseRatet
++RiskPremiumt where kdebt is a sensitivity parameter.
+2. Growth Impact (Optional): Introduce a small negative effect on potential GDP
+growth (g∗) or productivity growth when the debt ratio is persistently very high.
+3.
+Ricardian Offset (Optional): Implement a partial Ricardian effect by making thehousehold saving rate (or 1−MPC) slightly increasing in the debt-to-GDP ratio or
+the budget deficit. This dampens the demand impact of fiscal policy changes.
+Partial Ricardian Equivalence: The empirical finding that Ricardian Equivalence
+holds only partially 136 is important. It means that fiscal policy actions like tax cuts or
+spending increases financed by borrowing should affect aggregate demand in the
+simulation, but perhaps less powerfully than in a simple model that completely ignores
+the government's budget constraint and households' potential reactions to future tax
+liabilities. Implementing a mechanism where the MPC slightly decreases (or saving
+increases) as government debt rises provides one way to model this dampened effect
+without assuming full neutrality. Assuming zero Ricardian offset is likely more realistic
+for short-to-medium term simulation dynamics than assuming full offset.
+Table 5: Fiscal Parameters and Thresholds
+Parameter
+Symbol
+Description Equation Ref. Value/Range Source
+Snippet(s)
+TaxRate Average Net Tax
+Rate (% of GDP)
+Sec 5.1 Policy
+Variable/Calib.
+dthreshold Debt/GDP
+Threshold for
+Risk Premium
+Sec 5.4 ~90% (AEs) 132
+kdebt Sensitivity of
+Risk Premium to
+Debt Ratio
+Sec 5.4 Positive (Calib.) 130
+Ricardian Offset
+Param.
+Parameter
+linking
+Saving/MPC to
+Debt/Deficit
+Sec 5.4 Small (Calib.) 137 (Partial
+offset)
+Note: AE = Advanced Economy. Calib.
+= Requires Calibration.
+Section 6: Political Economy and Trust Dynamics
+Objective: To introduce a mechanism for modeling citizen trust (or political capital)
+as an endogenous variable within the simulation, influenced by economic
+performance and policy choices, and potentially feeding back into political stability orpolicy effectiveness.
+6.1. Modeling Citizen Trust / Political Capital
+Concept: Citizen trust in government and political institutions is a crucial element of
+social capital and effective governance. It is not static but evolves based on citizens'
+evaluations of government performance and actions. Key drivers include
+macroeconomic outcomes (unemployment, inflation, growth), perceptions of fairness
+and inequality, and the impact of specific government policies. High levels of trust can
+facilitate policy implementation and compliance, enhancing overall state capacity.
+Evidence: Research supports the view that political trust is evaluative, meaning
+citizens assess government performance and base their trust levels on these
+assessments.
+140 Macroeconomic performance is consistently identified as a critical
+factor.
+140 Poor economic outcomes, such as high unemployment, high inflation, or
+low/negative growth, tend to erode public trust and government approval ratings.
+72
+Subjective perceptions of the economy can be as, or even more, important than
+objective indicators.
+140 Beyond aggregate performance, factors like economic
+insecurity, income inequality, and perceptions of corruption can also significantly
+influence trust levels.
+140 Specific policies, especially those with salient negative
+impacts on consumers (like broad, high tariffs leading to price increases 144), can also
+affect trust. Conversely, high trust acts as a valuable asset, enhancing the
+government's ability to implement policies effectively, particularly those requiring
+voluntary compliance.
+155 Agent-based modeling (ABM) provides a framework for
+simulating the complex dynamics of trust formation and its feedback effects on social
+and political outcomes.
+155 Political stability itself is interconnected with economic
+performance and institutional quality.
+152
+Equation (Illustrative Dynamic Model): A simple dynamic equation can capture the
+evolution of trust based on key economic indicators and policy impacts:
+ΔTrustt
+=τ0
+−τu
+×(max(0,ut
+−utarget ))−τπ
+×(max(0,∣πt
+−πtarget ∣))+τg
+×(gy,t
+−gtarget )−τp
+olicy
+×(PolicyImpactt )−τdecay
+×Trustt−1
++ϵtrust,t
+Where:
+●
+●
+●
+●
+Trustt is an index representing the level of citizen trust or political capital at time t.
+ΔTrustt
+=Trustt
+−Trustt−1 .
+τ0 is a constant baseline change or drift term.
+ut ,πt ,gy,t are the current unemployment rate, inflation rate, and real GDP growth
+rate.●
+●
+●
+●
+●
+utarget ,πtarget ,gtarget are socially acceptable or target levels for these variables
+(e.g., natural rate of unemployment, inflation target, potential growth rate). The
+max(0,...) terms imply trust primarily reacts to deviations in the "wrong" direction
+(unemployment/inflation too high).
+PolicyImpactt represents the perceived negative impact of current policies, such
+as high tariffs. This could be proxied by the average tariff level, the estimated
+consumer welfare loss from tariffs, or the negative impact of unpopular fiscal
+consolidation measures.
+τu ,τπ ,τg ,τpolicy are positive sensitivity parameters determining how strongly trust
+reacts to each factor.
+τdecay represents a natural tendency for trust to decay or revert to a mean level
+over time if not sustained by positive performance.
+ϵtrust,t captures other unmodeled factors influencing trust (e.g., political events,
+scandals, social trends).
+Parameters (τ coefficients): Estimating these parameters empirically is challenging
+and highly context-dependent. They require careful calibration within the simulation
+to achieve plausible dynamics and desired gameplay effects. The relative magnitudes
+should reflect established findings: unemployment and inflation often have
+particularly strong negative impacts on government approval/trust.
+72 The impact of
+growth (τg ) should be positive. The impact of tariffs (τpolicy ) should be negative if
+they are perceived as harming consumers.
+6.2. Linking Trust to Game Outcomes
+Concept: The level of citizen trust or political capital should have tangible
+consequences within the simulation, influencing political outcomes, policy feasibility,
+and potentially the effectiveness of government actions.
+Evidence: Low levels of public trust can undermine government legitimacy, making it
+harder to govern and potentially leading to political instability.
+141 Conversely, high trust
+enhances state capacity by increasing voluntary compliance with laws and policies.
+155
+Economic performance is a key driver of government popularity and election
+outcomes.
+145 Political instability, in turn, is detrimental to economic growth, creating a
+potential feedback loop.
+152
+Implementation Ideas:
+●
+Elections/Approval: The Trustt level can directly influence the probability of the
+incumbent government (player or AI) winning an election or maintaining a certain
+approval rating threshold.●
+●
+●
+Policy Constraints: Implementing policies perceived as highly unpopular (e.g.,
+imposing very high tariffs across many sectors, enacting severe austerity
+measures) could require a minimum level of Trustt to be feasible, or attempting
+such policies could trigger a substantial immediate drop in Trustt .
+Political Stability Module: Low or rapidly falling Trustt could increase the
+probability of triggering negative "political instability" events within the
+simulation. These events could manifest as temporary shocks that reduce
+productivity, increase risk premia on interest rates, or disrupt trade flows,
+reflecting real-world consequences of instability.
+152 The likelihood or severity of
+these events could be scaled based on the Trustt level relative to historical norms
+or critical thresholds, potentially informed by indices of political stability.
+153
+Policy Effectiveness Feedback: The effectiveness of certain government actions
+could be subtly influenced by the Trustt level. For example, the effective tax
+revenue collected might be slightly lower than implied by the official TaxRate
+when trust is very low (reflecting lower compliance). Similarly, the multiplier effect
+of government spending (G) could be slightly enhanced when trust is high
+(reflecting greater public buy-in or smoother implementation).
+Trust as Endogenous State Capacity: A key takeaway from the literature is that trust
+is not merely a passive outcome of economic performance but an active ingredient in
+state capacity.
+155 When citizens trust their government, they are more likely to
+cooperate and comply voluntarily with its policies. This reduces the need for costly
+enforcement and makes policies more effective. For example, tax compliance is likely
+higher, adherence to regulations smoother, and public response to initiatives more
+positive when trust is high. This creates a potential feedback loop: good economic
+performance builds trust, which enhances state capacity, potentially enabling policies
+that further support good performance. Conversely, poor performance erodes trust,
+weakening state capacity and making it harder to implement corrective policies,
+potentially locking in poor outcomes. Modeling this feedback, even in a simplified way
+(e.g., linking tax efficiency or the government spending multiplier to the Trust index),
+can add significant depth and realism to the simulation's political economy dynamics.
+Table 6: Trust Dynamics Parameters (Illustrative)
+Parameter
+Symbol
+Description Equation Ref. Value/Range Source
+Snippet(s)
+(Conceptual
+Links)τu Trust Sensitivity
+to
+Unemployment
+Gap
+Sec 6.1 Positive (Calib.) 72
+τπ Trust Sensitivity
+to Inflation
+Deviation
+Sec 6.1 Positive (Calib.) 72
+τg Trust Sensitivity
+to Growth
+Deviation
+Sec 6.1 Positive (Calib.) 146
+τpolicy Trust Sensitivity
+to Negative
+Policy Impact
+Sec 6.1 Positive (Calib.) 144
+τdecay Trust
+Decay/Mean
+Reversion Rate
+Sec 6.1 Positive (Calib.)
+Note: Calib.
+= Requires Calibration. Parameters determine the responsiveness of
+citizen trust to economic and policy outcomes.
+Section 7: Parameter Summary and Implementation Guidance
+Objective: To provide a consolidated overview of the key equations and parameters
+discussed throughout the report, offer guidance on calibration and data sources, and
+highlight important considerations for implementation.
+7.1. Consolidated Equation Summary
+This section would ideally list the final forms of the core equations decided upon for
+implementation, drawing from Sections 1 through 6. For brevity here, refer back to the
+equations presented within each relevant section:
+●
+Import Price (Pimport,s,j ): Section 1.1
+●
+Domestic Price Level (Pd ): Section 1.2
+●
+Foreign Price Level (Pf,i ): Section 1.3
+●
+Exchange Rate (ΔValutakurst ): Section 1.4
+●
+Imports / Exports (Importss , Exportss ): Section 1.5 / 3.1
+●
+Unemployment (Δut or ut
+−ut∗
+): Section 2.1
+●
+Inflation (πt ): Section 2.2●
+●
+●
+●
+●
+●
+●
+Sectoral Output / Employment (ΔYs , ΔLs ): Section 3.2
+Aggregate GDP / Unemployment (Y, u): Section 3.3
+Sectoral Capital / Investment (Ks,t+1 , Is ): Section 3.4
+Consumption (Ct ): Section 4.1
+Investment (It ): Section 4.2
+Budget Balances / Debt (dt ): Sections 5.2, 5.3
+Citizen Trust (ΔTrustt ): Section 6.1
+7.2. Consolidated Parameter Table
+The following table consolidates the key parameters identified, providing a central
+reference for implementation. Values are indicative starting points, primarily for
+advanced economies, and require calibration.
+Table 7: Master Parameter List
+Parameter Description Section Value/Range Key Source
+Snippets
+Trade & Prices
+ϕ Tariff
+Pass-through
+(Border,
+Med-Term)
+1.1 ≈1 1
+wd Weight of
+Domestic Goods
+in Pd
+1.2 Calibration Req.
+13
+k1 Exch. Rate
+Sensitivity to
+Interest Diff.
+1.4 Small Pos
+(Calib.)
+48
+k2 Exch. Rate
+Sensitivity to
+$\Delta$NX/GDP
+1.4 Positive (Calib.) 50
+ϵM,Y Income
+Elasticity of
+Imports
+1.5 1.0 - 2.5 54ϵX,Y Income
+Elasticity of
+Exports
+ϵM,P Price Elasticity
+of Imports (Agg.
+LR)
+ϵX,P Price Elasticity
+of Exports (Agg.
+LR)
+Output,
+Unemp, Infl.
+β Okun Coeff.
+(Difference Ver.)
+α Phillips Curve
+Expectation
+Weight (α=1
+Fwd)
+ϕ Phillips Curve
+Slope (Output
+Gap)
+γ Import Price
+Pass-through to
+Dom. Inflation
+Sectoral
+es / ηs Sectoral Labor
+Coeff. / Output
+Elast. of Emp.
+δs Sectoral
+Depreciation
+Rate
+Agg. Demand
+1.5 1.5 1.5 2.1 2.2 2.2 2.2 3.2 3.4 1.0 - 2.5 54
+-0.8 to -2.0 6
+-1.0 to -2.0 58
+0.3 - 0.5 64
+0.0 - 1.0 (Calib.) 73
+0.1 - 0.3 (Calib.) 74
+0.05 - 0.15
+(Calib.)
+10
+Calibration Req.
+88
+Calibration Req.A Autonomous
+Consumption
+MPC Marginal
+Propensity to
+Consume
+γW Wealth Effect
+Sensitivity
+γConf Consumption
+Sensitivity to
+Confidence
+Ibase Autonomous
+Investment
+i1 Investment
+Sensitivity to
+Real Interest
+Rate
+i2 Accelerator
+Coefficient
+i3 Investment
+Sensitivity to
+Tobin's Q
+Fiscal & Debt
+TaxRate Average Net Tax
+Rate
+dthreshold Debt/GDP
+Threshold for
+Risk Premium
+kdebt Sensitivity of
+Risk Premium to
+Debt Ratio
+4.1 4.1 4.1 4.1 4.2 4.2 4.2 4.2 5.1 5.4 5.4 Calibration Req.
+0.5 - 0.7 0.03 - 0.09 Positive (Calib.) Calibration Req.
+Positive (Calib.) 0.5 - 1.5 (Calib.) Positive (Calib.) Policy Var./Calib.
+~90% (AEs) Positive (Calib.) 111
+114
+120
+121
+108
+99
+101
+132
+130Trust
+τu ,τπ ,τg ,... Trust Sensitivity
+Parameters
+6.1 Calibration Req.
+72
+7.3. Data Sources and Calibration
+While this report provides empirically grounded parameter ranges based on the
+supplied research, implementing a complex simulation necessitates further
+calibration. Real-world data sources can inform this process:
+●
+Macroeconomic Aggregates: IMF World Economic Outlook (WEO), World Bank
+World Development Indicators (WDI), OECD Statistics provide data on GDP,
+inflation, unemployment, trade balances, government debt, interest rates, etc., for
+many countries.
+●
+Sectoral Data: National statistical agencies often publish Input-Output tables
+(e.g., US Bureau of Economic Analysis (BEA) 28), which are invaluable for
+parameterizing sectoral linkages, value added, and potentially labor coefficients.
+OECD STAN database also contains sectoral data.
+●
+Trade Data: UN Comtrade, WITS (World Bank), and national sources provide
+detailed bilateral trade data. Tariff data can be found via WTO, TRAINS (UNCTAD),
+and national customs agencies.
+●
+Elasticities & Coefficients: Academic literature and empirical studies specific to
+the countries/regions being simulated are the best source, though values often
+vary.
+Calibration Process: Calibration involves adjusting parameters iteratively to ensure
+the simulation produces plausible behavior:
+1. Steady State: Ensure the model converges to a reasonable long-run equilibrium
+consistent with baseline economic ratios (e.g., C/GDP, I/GDP, Debt/GDP).
+2.
+Dynamic Response: Test the model's response to standard shocks (e.g.,
+monetary policy shock, demand shock, tariff shock). Do key variables (output,
+inflation, unemployment, exchange rate) move in the expected direction and with
+plausible magnitudes and persistence? Compare impulse responses to empirical
+VAR studies or established macro models where possible.
+3. Gameplay Balance: Adjust parameters to ensure the simulation is challenging
+but manageable, and that policy levers have meaningful effects without being
+overly sensitive or ineffective.
+7.4. Implementation Notes●
+●
+●
+●
+Simultaneity and Iteration: Many variables are interdependent within a single
+time step (e.g., prices, exchange rates, trade flows across multiple countries). The
+simulation's solution algorithm must handle this, either through simultaneous
+equation solving or iterative convergence within each step. Failure to do so (e.g.,
+calculating all of country A's variables before country B's) can lead to inaccurate
+dynamics.
+Dynamic Adjustment: Avoid modeling instantaneous adjustments where theory
+or evidence suggests gradual responses. Key areas for dynamic modeling include:
+○
+Trade flow response to price/tariff changes (Section 1.5).
+○
+Pass-through of border price changes to retail prices (Section 1.1).
+○
+Capital stock adjustment (investment takes time to build capacity) (Section
+3.4).
+○
+Gradual adjustment of expectations (if not using fully rational expectations).
+Stochastic Shocks: The ϵ terms in the equations represent exogenous shocks.
+Implementing these stochastic elements (drawing from appropriate distributions)
+is essential for generating realistic variability and creating unpredictable
+scenarios for the player. The relative size (variance) of different shocks (e.g.,
+demand vs. supply vs. financial) influences the simulated business cycles.
+Simplifications and Extensions: This report outlines a complex but still
+simplified representation of reality. Functional forms are generally linear or
+log-linear. Non-linearities (e.g., state-dependent Phillips curve slope, asymmetric
+Okun's Law) could be added for greater realism. Modeling expectations formation
+more explicitly (beyond simple adaptive or lagged values) is another area for
+potential extension. The level of sectoral disaggregation is also a key choice
+affecting complexity and data requirements.
+Conclusion
+This report has outlined a framework for implementing a significantly enhanced
+macroeconomic engine for a trade war simulation game. By incorporating
+evidence-based mechanisms for tariff pass-through, dynamic exchange rates,
+sectoral linkages, refined aggregate demand functions, public debt dynamics, and
+endogenous citizen trust, the simulation can achieve greater realism and depth.
+The core enhancements focus on:
+1.
+2.
+Explicitly modeling the impact of tariffs on import prices (with near-complete
+border pass-through) and the subsequent effects on domestic prices and
+inflation, distinguishing this from exchange rate pass-through.
+Introducing dynamic foreign prices and exchange rates to capture crucial3.
+4.
+5.
+6.
+7.
+global interdependencies and feedback loops.
+Implementing empirically grounded relationships for unemployment (Okun's
+Law) and inflation (Augmented Phillips Curve), including the vital channel of
+import price shocks.
+Establishing sectoral linkages to show how trade policies affect specific
+industries' output and employment, aggregating to influence macroeconomic
+outcomes.
+Refining consumption and investment functions to include determinants like
+disposable income, wealth, confidence, interest rates, and growth expectations
+(accelerator).
+Modeling public debt accumulation and its potential consequences for interest
+rates and growth.
+Introducing citizen trust as a dynamic variable responding to economic
+performance and policy, potentially influencing political stability and policy
+effectiveness.
+The provided equations and parameter ranges, derived from the reviewed economic
+literature and empirical studies, serve as a robust starting point for implementation.
+However, the complexity of macroeconomic interactions necessitates careful
+calibration and testing. Fine-tuning parameters to match desired simulation behavior,
+ensuring stability, and achieving balanced gameplay will be crucial steps following the
+initial implementation based on this guide. The resulting model should provide a richer
+and more insightful platform for exploring the multifaceted consequences of trade
+policy and international economic conflict.
+Citerede værker
+1. Tariffs: Estimating the Economic Impact of the 2025 Measures and Proposals -
+Federal Reserve Bank of Richmond, tilgået april 18, 2025,
+https://www.richmondfed.org/publications/research/economic
+brief/2025/eb
+_
+_
+12
+25-
+2. 3. 4. 5. www.nber.org, tilgået april 18, 2025,
+https://www.nber.org/system/files/working_papers/w29315/w29315.pdf
+Tariff Passthrough at the Border and at the Store: Evidence from US Trade Policy,
+tilgået april 18, 2025,
+https://www.bostonfed.org/publications/research-department-working-paper/20
+19/tariff-passthrough-at-the-border-and-at-the-store-evidence-from-us-trade-
+policy.aspx
+Tariff Passthrough at the Border and at the Store: Evidence from US Trade Policy -
+VoxChina, tilgået april 18, 2025, https://voxchina.org/show-3-194.html
+Tariff Pass-Through at the Border and at the Store: Evidence from ..., tilgået april
+18, 2025, https://www.aeaweb.org/articles?id=10.1257/aeri.201905366. www.elibrary.imf.org, tilgået april 18, 2025,
+https://www.elibrary.imf.org/downloadpdf/view/journals/001/2024/013/001.2024.is
+sue-013-en.pdf
+7. The Macroeconomic Consequences of Import Tariffs and Trade Policy
+Uncertainty in, tilgået april 18, 2025,
+https://www.elibrary.imf.org/view/journals/001/2024/013/article-A001-en.xml
+8. Reciprocal Tariff Calculations | United States Trade Representative, tilgået april 18,
+2025, https://ustr.gov/issue-areas/reciprocal-tariff-calculations
+9. How will the trade war hit the economy? - Bank of Finland Bulletin, tilgået april 18,
+2025,
+https://www.bofbulletin.fi/en/2025/1/how-will-the-trade-war-hit-the-economy/
+10. The Fed - How Do Trade Disruptions Affect Inflation?, tilgået april 18, 2025,
+https://www.federalreserve.gov/econres/notes/feds-notes/how-do-trade-disrupti
+ons-affect-inflation-20250228.html
+11. The Fiscal and Economic Effects of the Revised April 9 Tariffs | The ..., tilgået april
+18, 2025,
+tariffs
+https://budgetlab.yale.edu/research/fiscal-and-economic-effects-revised-april-9-
+use
+12. US tariffs: What's the impact on global trade and the economy? - J.P. Morgan,
+tilgået april 18, 2025,
+https://www.jpmorgan.com/insights/global-research/current-events/us-tariffs
+13. Using Price Indexes - Minnesota House of Representatives, tilgået april 18, 2025,
+https://www.house.mn.gov/hrd/pubs/priceindex.pdf
+14. What is the Consumer Price Index (CPI)? - Windward, tilgået april 18, 2025,
+https://windward.ai/glossary/what-is-the-consumer-price-index-cpi/
+15. Handbook of Methods Consumer Price Index Calculation - Bureau of Labor
+Statistics, tilgået april 18, 2025, https://www.bls.gov/opub/hom/cpi/calculation.htm
+16. Producer Price Index (PPI): What It Is and How It's Calculated - Investopedia,
+tilgået april 18, 2025, https://www.investopedia.com/terms/p/ppi.asp
+17. Supply and use tables for individual countries - Statistics Explained - European
+Commission, tilgået april 18, 2025,
+https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Supply_
+and
+_
+tables
+for
+individual
+countries
+_
+_
+_
+_
+18. Measuring the Share of Imports in Final Consumption - ResearchGate, tilgået april
+18, 2025,
+https://www.researchgate.net/publication/370996009
+_
+Measuring_
+the
+Share
+of
+_
+_
+_
+mports
+in
+Final
+_
+_
+_
+Consumption
+19. Supply and Use Tables - Data - OECD, tilgået april 18, 2025,
+https://www.oecd.org/en/data/datasets/supply-and-use-tables.html
+20. GDP and Non-financial Accounts | OECD, tilgået april 18, 2025,
+https://www.oecd.org/en/data/datasets/gdp-and-non-financial-accounts.html
+21. Imports of goods and services (current US$) - European Union - World Bank
+Open Data, tilgået april 18, 2025,
+https://data.worldbank.org/indicator/NE.IMP.GNFS.CD?locations=EU
+22. MYS.OECD Trade | WITS | Text, tilgået april 18, 2025,
+Ihttps://wits.worldbank.org/countrysnapshot/en/MYS.OECD/textview
+23. Trade in Intermediate Goods and Services - OECD, tilgået april 18, 2025,
+https://www.oecd.org/en/publications/trade-in-intermediate-goods-and-services
+5kmlcxtdlk8r-en.html
+_
+24. The Rise of Trade in Intermediates: Policy Implications, tilgået april 18, 2025,
+https://carnegieendowment.org/research/2011/02/the-rise-of-trade-in-intermedi
+ates-policy-implications?lang=en¢er=middle-east
+25. Intermediate Goods Imports in Key U.S. Manufacturing Sectors | United States
+International Trade Commission, tilgået april 18, 2025,
+https://www.usitc.gov/research
+and
+_
+_
+analysis/trade
+shifts
+_
+_
+2017/specialtopic.htm
+26. Trade in intermediates and economic policy - CEPR, tilgået april 18, 2025,
+https://cepr.org/voxeu/columns/trade-intermediates-and-economic-policy
+27. MYS.OECD Trade | WITS Data, tilgået april 18, 2025,
+https://wits.worldbank.org/countrysnapshot/en/MYS.OECD
+28. Input-Output Accounts | U.S. Bureau of Economic Analysis (BEA), tilgået april 18,
+2025, https://www.bea.gov/data/industries/input-output-accounts-data
+29. Mathematical Derivation of the Domestic Requirements Tables for Input-Output
+Analysis, tilgået april 18, 2025,
+https://www.bea.gov/system/files/2018-04/domestic-requirements-derivation.pdf
+30. Make, Supply, and Use Tables - IMPLAN - Support, tilgået april 18, 2025,
+https://support.implan.com/hc/en-us/articles/27904573644955-Make-Supply-and
+-Use-Tables
+31. Where can I find more information about imports in the I-O accounts? | U.S.
+Bureau of Economic Analysis (BEA), tilgået april 18, 2025,
+https://www.bea.gov/help/faq/453
+32. Input-Output Accounts: Who Sells What to Whom | U.S. Bureau of Economic
+Analysis (BEA), tilgået april 18, 2025,
+https://www.bea.gov/news/blog/2021-03-15/input-output-accounts-who-sells-w
+hat-whom
+33. Input-Output Accounts Data | U.S. Bureau of Economic Analysis (BEA), tilgået april
+18, 2025, https://www.bea.gov/industry/input-output-accounts-data
+34. The Flexible System of Global Models – FSGM; by Michal Andrle, Patrick Blagrave,
+Pedro Espaillat, Keiko Honjo, Benjamin Hunt,
+- International Monetary Fund (IMF),
+tilgået april 18, 2025, https://www.imf.org/external/pubs/ft/wp/2015/wp1564.pdf
+35. Getting to Know the Global Economy Model and Its Philosophy - International
+Monetary Fund (IMF), tilgået april 18, 2025,
+https://www.imf.org/external/pubs/ft/staffp/2008/02/pdf/laxton.pdf
+36. The Global Economy Model (GEM): Theoretical Framework - Federal Reserve
+Bank of New York, tilgået april 18, 2025,
+https://www.newyorkfed.org/medialibrary/media/research/economists/pesenti/ge
+m15.pdf
+37. ECB-Global 2.0: a global macroeconomic model with dominant-currency pricing,
+tariffs and trade diversion, tilgået april 18, 2025,
+https://www.ecb.europa.eu/pub/pdf/scpwps/ecb.wp2530~e5f2c33c35.en.pdf
+38. World Bank Group Macroeconomic Models for Climate Policy Analysis, tilgåetapril 18, 2025,
+https://documents1.worldbank.org/curated/en/490571642086593026/pdf/World-B
+ank-Group-Macroeconomic-Models-for-Climate-Policy-Analysis.pdf
+39. A Macroeconometric Model for Developing Countries - IMF eLibrary, tilgået april
+18, 2025,
+https://www.elibrary.imf.org/view/journals/024/1990/003/article-A004-en.pdf
+40. G3MOD: A Multi-Country Global Forecasting Model - International Monetary
+Fund (IMF), tilgået april 18, 2025,
+https://www.imf.org/en/Publications/WP/Issues/2024/12/14/G3MOD-A-Multi-Coun
+try-Global-Forecasting-Model-559489
+41. Dynamic Modeling and Applications for Global Economic Analysis - Cambridge
+University Press & Assessment, tilgået april 18, 2025,
+https://www.cambridge.org/core/books/dynamic-modeling-and-applications-for-
+global-economic-analysis/722E6BE662BB4EBC375ED72FAC308D5B
+42. www.elibrary.imf.org, tilgået april 18, 2025,
+https://www.elibrary.imf.org/downloadpdf/display/book/9781589060944/ch10.pdf
+43. 10 Determinants of Nominal Exchange Rates: A Survey of the Literature in - IMF
+eLibrary, tilgået april 18, 2025,
+https://www.elibrary.imf.org/display/book/9781589060944/ch10.xml
+44. 11 Lessons From Empirical Models of Exchange Rates in - IMF eLibrary, tilgået april
+18, 2025, https://www.elibrary.imf.org/display/book/9781557755544/ch012.xml
+45. Exchange Rate Uncertainty in Money-Based Stabilization Programs, tilgået april
+18, 2025, https://www.imf.org/external/pubs/ft/wp/wp9803.pdf
+46. The Equilibrium Exchange Rate: Alternative Concepts and Their ..., tilgået april 18,
+2025,
+https://ieo.imf.org/-/media/IEO/Files/evaluations/completed/05-17-2007-ieo-evalu
+ation-of-imf-exchange-rate-policy-advice-1999-2005/05172007erp-background
+3.ashx
+47. Uncovered Interest Rate Parity (UIP): Definition and Calculation - Investopedia,
+tilgået april 18, 2025,
+https://www.investopedia.com/terms/u/uncoveredinterestrateparity.asp
+48. Exchange Rates, Interest Rates, and the Risk Premium, tilgået april 18, 2025,
+https://www.ssc.wisc.edu/~cengel/PublishedPapers/AERExchangeRates.pdf
+49. www.e-jei.org, tilgået april 18, 2025,
+https://www.e-jei.org/upload/Y65U27122610618H.pdf
+50. Exchange Rate Disconnect and the Trade Balance - Federal Reserve Board, tilgået
+april 18, 2025, https://www.federalreserve.gov/econres/ifdp/files/ifdp1391.pdf
+51. NBER WORKING PAPER SERIES EMPIRICAL EXCHANGE RATE MODELS OF THE
+NINETIES, tilgået april 18, 2025,
+https://www.nber.org/system/files/working_papers/w9393/w9393.pdf
+52. Methodology for Current Account and Exchange Rate Assessments - IMF
+eLibrary, tilgået april 18, 2025,
+https://www.elibrary.imf.org/downloadpdf/book/9781589060814/9781589060814.
+pdf
+53. empirical studies of exchange rates: price behavior, rate determination - andthorb
+_
+_
+Levchenko
+P
+market efficiency, tilgået april 18, 2025,
+https://www.nber.org/system/files/working_papers/w1112/w1112.pdf
+54. FRB: Estimating Elasticities for U.S. Trade in Services, tilgået april 18, 2025,
+https://www.federalreserve.gov/pubs/ifdp/2005/836/ifdp836.htm
+55. Product-Level Trade Elasticities: Worth Weighting For - CEPII, tilgået april 18,
+2025, https://www.cepii.fr/PDF
+_
+PUB/wp/2019/wp2019-17.pdf
+56. The exposure of U.S. manufacturing industries to exchange rates - The Growth
+Lab, tilgået april 18, 2025,
+https://growthlab.hks.harvard.edu/files/growthlab/files/exchange
+rates
+iref
+_
+ecke.pdf
+57. The Long and Short (Run) of Trade Elasticities, tilgået april 18, 2025,
+https://econ.wisc.edu/wp-content/uploads/sites/89/2021/09/Boehm
+_
+_
+andalaiNayar-1.pdf
+58. www.aeaweb.org, tilgået april 18, 2025,
+https://www.aeaweb.org/conference/2011/retrieve.php?pdfid=84
+59. unctad.org, tilgået april 18, 2025,
+https://unctad.org/system/files/official-document/gds2012d2
+_
+_
+en.pdf
+60. Gravity model of international trade | International Economics Class Notes -
+Fiveable, tilgået april 18, 2025,
+https://library.fiveable.me/international-economics/unit-2/gravity-model-internati
+onal-trade/study-guide/01fDf84WQRIAshf0
+61. Gravity-Based Tools to Assess the Impact of Tariff Changes: An Application to
+Armenia | Asian Development Bank, tilgået april 18, 2025,
+https://www.adb.org/sites/default/files/publication/996656/adr-vol41no2-10-gravit
+y-based-tools-tariff-changes-armenia.pdf
+62. Trade policy analysis with a gravity model - CPB.nl, tilgået april 18, 2025,
+https://www.cpb.nl/sites/default/files/omnidownload/CPB-Background-Document
+-July2020-Trade-policy-analysis-with-a-gravity-model.pdf
+63. Gravity Model–Based Export Potential - Open Knowledge Repository, tilgået april
+18, 2025,
+https://openknowledge.worldbank.org/server/api/core/bitstreams/04a2f32c-7051-
+5bba-a42a-cd5b62c39a65/content
+ch3
+64. Okun's Law, Development, and Demographics: Differences in the Cyclical
+Sensitivities of Unemployment Across Economy and Work, tilgået april 18, 2025,
+https://www.imf.org/-/media/Files/Publications/WP/2021/English/wpiea2021270-pr
+int-pdf.ashx
+65. Okun's Law, Development, and Demographics: Differences in the Cyclical
+Sensitivities of Unemployment Across Economy and Worker Groups in - IMF
+eLibrary, tilgået april 18, 2025,
+https://www.elibrary.imf.org/view/journals/001/2021/270/article-A001-en.xml
+66. Okun's law - Wikipedia, tilgået april 18, 2025,
+https://en.wikipedia.org/wiki/Okun%27s
+law
+_
+67. Okun's Law: Definition, Formula, History, and Limitations - Investopedia, tilgået
+april 18, 2025, https://www.investopedia.com/terms/o/okunslaw.asp
+68. Okun's Law: Economic Growth and Unemployment - Investopedia, tilgået april 18,INST&filePi
+2025, https://www.investopedia.com/articles/economics/12/okuns-law.asp
+69. Okun's Law - EconEdLink, tilgået april 18, 2025,
+https://econedlink.org/resources/okuns-law/
+70. Okun in the Euro: New Evidence from Structural Okun Law's Estimates for the
+Euro Area, 1979-2019 in - IMF eLibrary, tilgået april 18, 2025,
+https://www.elibrary.imf.org/view/journals/001/2024/172/article-A001-en.xml
+71. whaT has haPPened To okUn's law in The UniTed sTaTes and eUroPe? insighTs from
+The global financial and economic crisis and long-Term Trends - ILO Research
+Repository, tilgået april 18, 2025,
+https://researchrepository.ilo.org/view/pdfCoverPage?instCode=41ILO
+_
+d=13132247180002676&download=true
+72. How Inflation and Unemployment Are Related - Investopedia, tilgået april 18,
+2025,
+https://www.investopedia.com/articles/markets/081515/how-inflation-and-unemp
+loyment-are-related.asp
+73. Do professional forecasters behave as if they believed in the new Keynesian
+Phillips Curve for the euro area? - European Central Bank, tilgået april 18, 2025,
+https://www.ecb.europa.eu/pub/pdf/scpwps/ecbwp1763.en.pdf
+74. Optimal Inflation and the Identification of the Phillips Curve: NBER
+Macroeconomics Annual, tilgået april 18, 2025,
+https://www.journals.uchicago.edu/doi/full/10.1086/707181
+75. Working Paper Series - The Phillips Curve at the ECB, tilgået april 18, 2025,
+https://www.ecb.europa.eu/pub/pdf/scpwps/ecb.wp2400~6e8bfb6fd2.en.pdf
+76. Anatomy of the Phillips Curve: Micro Evidence and Macro Implications - NYU
+Stern, tilgået april 18, 2025,
+https://pages.stern.nyu.edu/~slenzu/Papers/GGLT
+_
+Anatomy_
+of
+the
+_
+_
+Phillips
+_
+_
+v2.pdf
+77. Time Varying Pass-Through from Import Prices to Consumer Prices - Federal
+Reserve Bank of New York, tilgået april 18, 2025,
+https://www.newyorkfed.org/medialibrary/media/research/staff
+_
+reports/sr228.pdf
+78. Exchange Rate Pass-Through into Import Prices - National Bureau of Economic
+Research, tilgået april 18, 2025,
+https://www.nber.org/system/files/working_papers/w8934/w8934.pdf
+79. World Economic Outlook, October 2024; Chapter 2: The Great Tightening:
+Insights from the Recent Inflation Episode - International Monetary Fund (IMF),
+tilgået april 18, 2025,
+https://www.imf.org/-/media/Files/Publications/WEO/2024/October/English/ch2.as
+hx
+Curve
+80. Breaks in the Phillips Curve: Evidence from Panel Data - Federal Reserve Board,
+tilgået april 18, 2025,
+https://www.federalreserve.gov/econres/feds/files/2023015pap.pdf
+81. Appendix: Model Documentation - ers.usda.gov, tilgået april 18, 2025,
+https://ers.usda.gov/sites/default/files/
+_
+laserfiche/publications/40898/32579
+_
+1r
+_
+002.pdf?v=75167
+82. Computable general equilibrium - Wikipedia, tilgået april 18, 2025,
+aer77https://en.wikipedia.org/wiki/Computable
+_general
+_
+equilibrium
+83. A Practical Guide to Trade Policy Analysis, Chapter 5 - UNCTAD, tilgået april 18,
+2025, https://unctad.org/system/files/official-document/gds2012d2
+ch5
+_
+_
+en.pdf
+84. Computable general equilibrium models for trade policy analysis in developing
+countries: A survey - ResearchGate, tilgået april 18, 2025,
+https://www.researchgate.net/publication/222745227
+_
+Computable
+_general
+_
+equili
+brium
+models
+for
+trade
+_
+_
+_
+_policy_
+analysis
+in
+_
+_
+developing_
+countries
+A
+_
+_
+survey
+85. Resource Display: Linking Partial and General Equilibrium Models - Global Trade
+Analysis Project (GTAP), tilgået april 18, 2025,
+https://www.gtap.agecon.purdue.edu/resources/res
+_
+display.asp?RecordID=3192
+86. Approximating Terms of Trade Effects in Single Country CGE Models | US EPA,
+tilgået april 18, 2025,
+https://www.epa.gov/environmental-economics/approximating-terms-trade-effe
+cts-single-country-cge-models
+87. Dynamic input-output models | Intro to Mathematical Economics Class Notes -
+Fiveable, tilgået april 18, 2025,
+https://library.fiveable.me/introduction-to-mathematical-economics/unit-5/dyna
+mic-input-output-models/study-guide/ZzLNY JUfm5n0doKd
+88. MEASURING THE EMPLOYMENT EFFECT OF SECTORS BY USING EMPLOYMENT
+MULTIPLIER Assist.Prof.Dr. Senay Sarac Bulent Ecevit University,, tilgået april 18,
+2025,
+20120430101
+https://www.iioa.org/conferences/20th/papers/files/699
+_
+_
+SenaySara
+c.pdf
+89. Input-output models and increasing economic output - SPICe Spotlight, tilgået
+april 18, 2025,
+https://spice-spotlight.scot/2019/08/26/input-output-models-and-increasing-eco
+nomic-output/
+90. Input-Output Analysis: A Primer, 2nd ed.
+- WVU Research Repository - West
+Virginia University, tilgået april 18, 2025,
+https://researchrepository.wvu.edu/cgi/viewcontent.cgi?article=1012&context=rri-
+web-book
+91. IR-99-073 Land Use Change in China: A Scenario Analysis based on Input-Output
+Modeling - IIASA PURE, tilgået april 18, 2025,
+https://pure.iiasa.ac.at/5876/1/IR-99-073.pdf
+92. Handbook of Methods Employment Projections Calculation - Bureau of Labor
+Statistics, tilgået april 18, 2025,
+https://www.bls.gov/opub/hom/emp/archive/20180213/calculation.htm
+93. 3.2 Measuring the aggregate economy: Gross domestic product - CORE Econ,
+tilgået april 18, 2025,
+https://www.core-econ.org/the-economy/macroeconomics/03-aggregate-dema
+nd-02-gross-domestic-product.html
+94. Gross Domestic Product: An Economy's All - International Monetary Fund (IMF),
+tilgået april 18, 2025,
+https://www.imf.org/en/Publications/fandd/issues/Series/Back-to-Basics/gross-do
+mestic-product-GDPMeth
+95. Gross Domestic Product by State Estimation Methodology - Bureau of Economic
+Analysis, tilgået april 18, 2025,
+https://www.bea.gov/sites/default/files/methodologies/0417
+GDP
+_
+_
+by_
+State
+_
+odology.pdf
+96. Elizabeth Kelly Answers to Homework #3 Due 3/4/2013 1. Calculation of GDP. This
+problem will give, tilgået april 18, 2025,
+https://www.ssc.wisc.edu/~ekelly/econ102/answerstohomework3spring2013.pdf
+97. Factor Investing & Analysis Guide - Venn by Two Sigma, tilgået april 18, 2025,
+https://www.venn.twosigma.com/resources/factor-investing-analysis
+98. How Macroeconomic Variables Impact Sector Performance - State Street Global
+Advisors, tilgået april 18, 2025,
+https://www.ssga.com/us/en/individual/insights/how-macroeconomic-variables-i
+mpact-sector-performance
+99. Accelerator Theory: Overview and Examples - Investopedia, tilgået april 18, 2025,
+https://www.investopedia.com/terms/a/acceleratortheory.asp
+100. The Accelerator Effect - Economics Help, tilgået april 18, 2025,
+https://www.economicshelp.org/blog/glossary/accelerator-effect/
+101. The Q Theory of Housing Investment By, tilgået april 18, 2025,
+https://libres.uncg.edu/ir/uncg/f/D
+winkler
+Q
+2003%20(MULTI%20UNCG%20Auth
+_
+_
+_
+ors).pdf
+102. Q Ratio or Tobin's Q: Definition, Formula, Uses, and Examples - Investopedia,
+tilgået april 18, 2025, https://www.investopedia.com/terms/q/qratio.asp
+103. The Q theory of investment, the capital asset pricing model, and asset
+valuation - mcdonald, tilgået april 18, 2025,
+https://mcdonald.people.uic.edu/ftp/14%202004%20j%20zhejiang%20univ%20Q
+%20&%20capm.pdf
+104. Tobin's q - Wikipedia, tilgået april 18, 2025,
+https://en.wikipedia.org/wiki/Tobin%27s
+_q
+105. Sector Investing: A Powerful Portfolio Construction Tool - State Street Global
+Advisors, tilgået april 18, 2025,
+https://www.ssga.com/library-content/pdfs/etf/us/sector-investing-a-powerful-p
+ortfolio-investing-tool.pdf
+106. A Macroeconomic Model with a Financial Sector - Princeton University, tilgået
+april 18, 2025,
+https://www.princeton.edu/~markus/research/papers/macro
+_
+finance.pdf
+107. The financial accelerator effect: concept and challenges, tilgået april 18, 2025,
+https://hrcak.srce.hr/file/106537
+108. The Interest Rate Sensitivity of Investment, tilgået april 18, 2025,
+https://d-nb.info/127001403X/34
+109. The Interest Rate Sensitivity of Investment - EconStor, tilgået april 18, 2025,
+https://www.econstor.eu/bitstream/10419/222283/1/intrate
+_
+sens.pdf
+110. Consumption Function: Formula, Assumptions, and Implications -
+Investopedia, tilgået april 18, 2025,
+https://www.investopedia.com/terms/c/consumptionfunction.asp
+111. The Consumption Function The consumption function is an equationdescribing how a household's level of consumption varies with, tilgået april 18,
+2025,
+https://home.uchicago.edu/~kanit/kanitk/Teaching_
+(UW-Madison)/Entries/2015/1/
+21
+ECON
+102
+_
+_
+__
+Principles
+of
+_
+_
+Macroeconomics(Spring_
+2015)
+_
+files/handout7.pdf
+112. Determining the Level of Consumption, tilgået april 18, 2025,
+https://saylordotorg.github.io/text
+_principles-of-economics-v2.0/s31-01-determin
+ing-the-level-of-consu.html
+113. Marginal Propensity to Consume (MPC) in Economics, With Formula -
+Investopedia, tilgået april 18, 2025,
+https://www.investopedia.com/terms/m/marginalpropensitytoconsume.asp
+114. Estimation of consumption functions using savings motive hypothesis (SMH) -
+EconStor, tilgået april 18, 2025,
+https://www.econstor.eu/bitstream/10419/290167/1/1818069806.pdf
+115. Permanent income hypothesis - Wikipedia, tilgået april 18, 2025,
+https://en.wikipedia.org/wiki/Permanent
+income
+_
+_
+hypothesis
+116. Permanent-Income Hypothesis - Mark Aguiar, tilgået april 18, 2025,
+https://www.markaguiar.com/files/pih.pdf
+117. Permanent Income Hypothesis: Definition, How It Works, and Impact -
+Investopedia, tilgået april 18, 2025,
+https://www.investopedia.com/terms/p/permanent-income-hypothesis.asp
+118. What Is the Life-Cycle Hypothesis in Economics? - Investopedia, tilgået april
+18, 2025, https://www.investopedia.com/terms/l/life-cycle-hypothesis.asp
+119. Life-Cycle Hypothesis - Economics Help, tilgået april 18, 2025,
+https://www.economicshelp.org/blog/27080/concepts/life-cycle-hypothesis/
+120. The sudden increase in the wealth effect and its impact on spending - Visa,
+tilgået april 18, 2025,
+https://usa.visa.com/partner-with-us/visa-consulting-analytics/economic-insights
+/the-sudden-increase-in-the-wealth-effect-and-its-impact-on-spending.html
+121. The Wealth Effect: Definition and Examples - Investopedia, tilgået april 18,
+2025, https://www.investopedia.com/terms/w/wealtheffect.asp
+122. Real Wealth Effect - (AP Macroeconomics) - Vocab, Definition, Explanations |
+Fiveable, tilgået april 18, 2025,
+https://library.fiveable.me/key-terms/ap-macro/real-wealth-effect
+123. How Important Is the Stock Market Effect on Consumption, tilgået april 18,
+2025,
+https://www.newyorkfed.org/medialibrary/media/research/epr/99v05n2/9907ludv.
+pd
+124. (PDF) The Interest Rate Sensitivity of Investment - ResearchGate, tilgået april
+18, 2025,
+https://www.researchgate.net/publication/333737604
+The
+Interest
+Rate
+Sensitivi
+_
+_
+_
+_
+ty_
+of
+Investment
+_
+125. (PDF) Estimation of Investment Function using Accelerator Theory -
+ResearchGate, tilgået april 18, 2025,
+https://www.researchgate.net/publication/312303715
+Estimation
+of
+_
+_
+_
+_
+Function
+_
+using_
+Accelerator
+_
+Theory
+Investment126. Investment, growth and competitiveness: The multiplier-accelerator in the
+21st century Paulo Jorge Reis Mourão, Irina Alina Popescu, tilgået april 18, 2025,
+https://www.cjournal.cz/files/495.pdf
+127. Interest rate-growth differential and government debt dynamics - European
+Central Bank, tilgået april 18, 2025,
+https://www.ecb.europa.eu/press/economic-bulletin/focus/2019/html/ecb.ebbox2
+01902
+06~0c96ee6f7c.en.html
+128. 129. 130. _
+A Practical Guide to Public Debt Dynamics, Fiscal Sustainability, and Cyclical
+Adjustment of Budgetary Aggregates - International Monetary Fund (IMF), tilgået
+april 18, 2025, https://www.imf.org/external/pubs/ft/tnm/2010/tnm1002.pdf
+10 Public Debt | Intermediate Macroeconomics, tilgået april 18, 2025,
+https://fgeerolf.com/econ102/public-debt.html
+Chapter 1. Putting a Lid on Public Debt. Fiscal Monitor, October 2024 -
+International Monetary Fund (IMF), tilgået april 18, 2025,
+https://www.imf.org/-/media/Files/Publications/fiscal-monitor/2024/October/Engli
+sh/Ch1.ashx
+131. The Fiscal and Financial Risks of a High-Debt, Slow-Growth World, tilgået april
+132. 18, 2025,
+https://www.imf.org/en/Blogs/Articles/2024/03/28/the-fiscal-and-financial-risks-o
+f-a-high-debt-slow-growth-world
+The Impact of Public Debt on Economic Growth | Cato Institute, tilgået april 18,
+2025,
+https://www.cato.org/cato-journal/fall-2021/impact-public-debt-economic-growt
+134. Revisiting the role of public debt in economic growth: The case of OECD
+countries - Cerge-Ei, tilgået april 18, 2025,
+https://www.cerge-ei.cz/pdf/gdn/rrc/RRC14
+34
+_
+_paper
+_
+01.pdf
+The Inflationary Risks of Rising Federal Deficits and Debt | The Budget Lab at
+Yale, tilgået april 18, 2025,
+https://budgetlab.yale.edu/research/inflationary-risks-rising-federal-deficits-and-
+debt
+h
+133. 135. 136. 137. Ricardo-Barro Effect: Meaning, Arguments Against, Evidence - Investopedia,
+tilgået april 18, 2025,
+https://www.investopedia.com/terms/r/ricardobarroeffect.asp
+Ricardian Equivalence: Definition, History, and Validity Theories - Investopedia,
+tilgået april 18, 2025,
+https://www.investopedia.com/terms/r/ricardianequivalence.asp
+Ricardian Equivalence | Macroeconomics - Lumen Learning, tilgået april 18,
+2025,
+https://courses.lumenlearning.com/wm-macroeconomics/chapter/ricardian-equiv
+alence/
+138. 139. What is Ricardian Equivalence? | Reference Library | Economics - Tutor2u,
+tilgået april 18, 2025,
+https://www.tutor2u.net/economics/reference/what-is-ricardian-equivalence
+Ricardian Equivalence - Economics Online, tilgået april 18, 2025,140. https://www.economicsonline.co.uk/definitions/ricardian-equivalence.html/
+Economic Performance and Political Trust - Tom van der Meer, tilgået april 18,
+2025,
+https://www.tomvandermeer.nl/wp-content/uploads/2020/10/oxfordhb
+_
+74801
+_
+chapter
+_
+25.pdf
+141. Economic performance and Political Trust: The impact of the Financial Crisis
+on European citizens - NTNU Open, tilgået april 18, 2025,
+https://ntnuopen.ntnu.no/ntnu-xmlui/handle/11250/268620?locale-attribute=en
+142. Slowing growth, higher prices: A deeper dive into our U.S. forecasts, tilgået
+april 18, 2025,
+https://thoughtleadership.rbc.com/slowing-growth-higher-prices-a-deeper-dive
+-into-our-u-s-forecasts/
+97801902
+143. Full article: Inflation, Unemployment, and Inequality: Beyond the Traditional
+Phillips Curve, tilgået april 18, 2025,
+https://www.tandfonline.com/doi/full/10.1080/09538259.2024.2351827
+144. Economist: Tariffs could dampen GDP growth; raise unemployment, inflation,
+tilgået april 18, 2025,
+https://insurancenewsnet.com/innarticle/economist-tariffs-could-dampen-gdp-g
+rowth-raise-unemployment-inflation
+145. Trump's declining popularity, tariff reactions, a third term, and the economy:
+April 5-8, 2025 Economist/YouGov Poll, tilgået april 18, 2025,
+https://today.yougov.com/politics/articles/51986-donald-trump-declining-populari
+ty-tariffs-third-term-the-economy-april-5-8-2025-economist-yougov-poll
+146. Government Ideology and Unemployment in the U.S. States - Nathan Kelly,
+tilgået april 18, 2025,
+https://nathanjkelly.utk.edu/wp-content/uploads/2017/10/Kelly-witko-2014.pdf
+147. Full article: The impact of economic growth, inflation and unemployment on
+subjective financial satisfaction: A New global evidence - Taylor & Francis Online,
+tilgået april 18, 2025,
+https://www.tandfonline.com/doi/full/10.1080/23322039.2023.2287908
+148. Unemployment, inflation and government popularity — are there partisan
+effects? | Request PDF - ResearchGate, tilgået april 18, 2025,
+https://www.researchgate.net/publication/223124048
+_
+Unemployment
+inflation
+_
+_
+nd
+_government
+_popularity_
+-
+are
+there
+_
+_
+_partisan
+effects
+_
+149. Inflation, unemployment, and public opinion polls - DSpace@MIT, tilgået april
+18, 2025,
+https://dspace.mit.edu/bitstream/handle/1721.1/66616/inflationunemplo256fisc.pdf
+?sequence=1
+150. Public Concern about Inflation and Unemployment in the United States:
+Trends, Correlates, and Political Implications, tilgået april 18, 2025,
+https://www.nber.org/system/files/chapters/c11460/c11460.pdf
+151. A Political Model of Trust - the SIOE members area, tilgået april 18, 2025,
+https://extranet.sioe.org/uploads/sioe2021/agranov
+eilat
+_
+_
+sonin.pdf
+152. GROWTH AND POLITICAL INSTABILITY: A THEORETICAL APPROACH WITH
+MACRO-DYNAMIC SIMULATION - Granthaalayah Publications, tilgået april 18,
+a2025,
+d/IJRG20
+https://www.granthaalayahpublication.org/journals/granthaalayah/article/downloa
+B04
+3241/24/122
+153. of
+Pol
+_
+_
+154. 156. 157. _
+_
+Country Risk: Determinants, Measures, and Implications | AnalystPrep - FRM
+Part 1, tilgået april 18, 2025,
+https://analystprep.com/study-notes/frm/part-1/valuation-and-risk-management/
+country-risk-determinants-measures-and-implications/
+Determinant Effects of Political and Economic Factors on Country Risk: An
+Evidence from the EU Countries - ResearchGate, tilgået april 18, 2025,
+https://www.researchgate.net/publication/339696783
+Determinant
+_
+_
+itical
+and
+Economic
+Factors
+on
+Country_
+Risk
+An
+Evidence
+from
+Effects
+the
+EU
+_
+_
+Coun
+_
+_
+_
+_
+_
+_
+_
+_
+_
+tries
+An Agent-Based Model of the Interaction Between Inequality, Trust, and
+Communication in Common Pool Experiments - JASSS, tilgået april 18, 2025,
+https://www.jasss.org/25/4/3.html
+Trust as state capacity: The political economy of compliance - EconStor, tilgået
+april 18, 2025, https://www.econstor.eu/bitstream/10419/273938/1/1826631070.pdf
+Trust and State Effectiveness: The Political Economy of Compliance - Oxford
+Academic, tilgået april 18, 2025,
+https://academic.oup.com/ej/advance-article-abstract/doi/10.1093/ej/ueae030/76
+43648
+155. 158. Agent-Based Modeling in Policy Analysis - SmythOS, tilgået april 18, 2025,
+https://smythos.com/ai-industry-solutions/government/agent-based-modeling-in
+-policy-analysis/
+159. YSI @ Agent based models for political economy, tilgået april 18, 2025,
+https://ysi.ineteconomics.org/event/ysi-agent-based-models-for-political-econo
+my/
+160. Ian S. Lustick: Agent-based modelling of collective identity - JASSS, tilgået
+april 18, 2025, https://jasss.org/3/1/1.html
+161. Agent-based simulation | Review of Artificial Societies and Social Simulation,
+tilgået april 18, 2025, https://rofasss.org/tag/agent-based-simulation/
+162. (PDF) Agent-based models and self-organisation: Addressing common
+criticisms and the role of agent-based modelling in urban planning -
+ResearchGate, tilgået april 18, 2025,
+https://www.researchgate.net/publication/303468415
+_
+Agent-based
+_
+_
+self-organisation
+_
+Addressing_
+common
+criticisms
+and
+the
+role
+of
+_
+_
+_
+_
+_
+agent-base
+d
+_
+modelling_
+in
+urban
+_
+_planning
+How Does Political Instability Affect Economic Growth?; by Ari Aisen and
+Francisco Jose Veiga, tilgået april 18, 2025,
+https://www.imf.org/external/pubs/ft/wp/2011/wp1112.pdf
+164. Economic Determinants of Within-Country Political Instability and Violence: A
+Panel Data Examination of Central and South America, tilgået april 18, 2025,
+https://digitalcommons.bryant.edu/cgi/viewcontent.cgi?article=1189&context=eeb
+165. Long Live Democracy: The Determinants of Political Instability in Latin America
+- Pepperdine Digital Commons, tilgået april 18, 2025,
+models
+and
+_
+_
+163. 166. 167. 168. https://digitalcommons.pepperdine.edu/cgi/viewcontent.cgi?article=1034&contex
+t=sppworkingpapers
+The relationship between political instability and economic growth in
+advanced economies: Empirical evidence from a panel VAR an - EconStor, tilgået
+april 18, 2025, https://www.econstor.eu/bitstream/10419/269231/1/1838864911.pdf
+An Agent-Based Dynamic Model of Politics, Fertility and Economic
+Development - The Computational Social Science Society of the Americas, tilgået
+april 18, 2025,
+http://computationalsocialscience.org/wp-content/uploads/2015/10/CSSSA
+2015
+_
+_
+submission
+_
+3.pdf
+An Econometric Study of the Role of the Political Stability on the Relationship
+between Democracy and Economic Growth - Semantic Scholar, tilgået april 18,
+2025,
+https://pdfs.semanticscholar.org/94a4/ce9f1610f779cb0398fb46cbbcef898a2cf1.
+pdf
+169. Political stability and economic growth: the role of exchange rate regime -
+Munich Personal RePEc Archive, tilgået april 18, 2025,
+https://mpra.ub.uni-muenchen.de/104586/1/MPRA
+_paper
+_
+104586.pdf

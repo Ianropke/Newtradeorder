@@ -1,0 +1,1144 @@
+[
+  {
+    "name": "United States",
+    "iso_code": "USA",
+    "gdp": 25460000,
+    "population": 333,
+    "industries": {
+      "manufacturing": 0.2,
+      "services": 0.7,
+      "agriculture": 0.1
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 5092000,
+        "employment": 12000,
+        "import_share": 0.35,
+        "price": 1.0,
+        "capital_stock": 1000,
+        "potential_output": 6000000,
+        "import_price": 1.0,
+        "export": 800000,
+        "import_": 900000,
+        "unemployment_rate": 3.0
+      },
+      {
+        "name": "services",
+        "output": 17822000,
+        "employment": 25000,
+        "import_share": 0.15,
+        "price": 1.0,
+        "capital_stock": 2000,
+        "potential_output": 20000000,
+        "import_price": 1.0,
+        "export": 2000000,
+        "import_": 1500000,
+        "unemployment_rate": 2.5
+      },
+      {
+        "name": "agriculture",
+        "output": 2546000,
+        "employment": 2000,
+        "import_share": 0.25,
+        "price": 1.0,
+        "capital_stock": 500,
+        "potential_output": 3000000,
+        "import_price": 1.0,
+        "export": 300000,
+        "import_": 200000,
+        "unemployment_rate": 4.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 3.5,
+    "growth_rate": 1.5,
+    "approval_rating": 50,
+    "government_type": "democracy"
+  },
+  {
+    "name": "China",
+    "iso_code": "CHN",
+    "gdp": 17730000,
+    "population": 1412,
+    "industries": {
+      "manufacturing": 0.4,
+      "services": 0.5,
+      "agriculture": 0.1
+    },
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.2,
+    "growth_rate": 4.0,
+    "approval_rating": 85,
+    "government_type": "autocracy"
+  },
+  {
+    "name": "Denmark",
+    "iso_code": "DNK",
+    "gdp": 400000,
+    "population": 6,
+    "industries": {
+      "manufacturing": 0.25,
+      "services": 0.7,
+      "agriculture": 0.05
+    },
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 4.5,
+    "growth_rate": 1.2,
+    "approval_rating": 60,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "Germany",
+    "iso_code": "DEU",
+    "gdp": 4300000,
+    "population": 84,
+    "industries": {
+      "manufacturing": 0.27,
+      "services": 0.68,
+      "agriculture": 0.05
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 1161000,
+        "employment": 8000,
+        "import_share": 0.35,
+        "price": 1.0,
+        "capital_stock": 600,
+        "potential_output": 1200000,
+        "import_price": 1.0,
+        "export": 700000,
+        "import_": 600000,
+        "unemployment_rate": 3.5
+      },
+      {
+        "name": "services",
+        "output": 2924000,
+        "employment": 35000,
+        "import_share": 0.18,
+        "price": 1.0,
+        "capital_stock": 1200,
+        "potential_output": 3000000,
+        "import_price": 1.0,
+        "export": 900000,
+        "import_": 800000,
+        "unemployment_rate": 3.0
+      },
+      {
+        "name": "agriculture",
+        "output": 215000,
+        "employment": 1000,
+        "import_share": 0.25,
+        "price": 1.0,
+        "capital_stock": 200,
+        "potential_output": 250000,
+        "import_price": 1.0,
+        "export": 100000,
+        "import_": 90000,
+        "unemployment_rate": 4.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 3.2,
+    "growth_rate": 1.0,
+    "approval_rating": 55,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "Japan",
+    "iso_code": "JPN",
+    "gdp": 5100000,
+    "population": 125,
+    "industries": {
+      "manufacturing": 0.29,
+      "services": 0.68,
+      "agriculture": 0.03
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 1479000,
+        "employment": 9000,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 700,
+        "potential_output": 1500000,
+        "import_price": 1.0,
+        "export": 800000,
+        "import_": 700000,
+        "unemployment_rate": 2.8
+      },
+      {
+        "name": "services",
+        "output": 3468000,
+        "employment": 40000,
+        "import_share": 0.15,
+        "price": 1.0,
+        "capital_stock": 1400,
+        "potential_output": 3500000,
+        "import_price": 1.0,
+        "export": 1000000,
+        "import_": 900000,
+        "unemployment_rate": 2.5
+      },
+      {
+        "name": "agriculture",
+        "output": 153000,
+        "employment": 1200,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 180,
+        "potential_output": 180000,
+        "import_price": 1.0,
+        "export": 60000,
+        "import_": 70000,
+        "unemployment_rate": 3.5
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 2.6,
+    "growth_rate": 0.8,
+    "approval_rating": 60,
+    "government_type": "democracy"
+  },
+  {
+    "name": "United Kingdom",
+    "iso_code": "GBR",
+    "gdp": 3200000,
+    "population": 68,
+    "industries": {
+      "manufacturing": 0.18,
+      "services": 0.79,
+      "agriculture": 0.03
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 576000,
+        "employment": 4000,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 300,
+        "potential_output": 600000,
+        "import_price": 1.0,
+        "export": 250000,
+        "import_": 300000,
+        "unemployment_rate": 3.5
+      },
+      {
+        "name": "services",
+        "output": 2528000,
+        "employment": 25000,
+        "import_share": 0.13,
+        "price": 1.0,
+        "capital_stock": 900,
+        "potential_output": 2600000,
+        "import_price": 1.0,
+        "export": 600000,
+        "import_": 500000,
+        "unemployment_rate": 3.0
+      },
+      {
+        "name": "agriculture",
+        "output": 96000,
+        "employment": 500,
+        "import_share": 0.25,
+        "price": 1.0,
+        "capital_stock": 80,
+        "potential_output": 120000,
+        "import_price": 1.0,
+        "export": 20000,
+        "import_": 30000,
+        "unemployment_rate": 4.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 3.7,
+    "growth_rate": 0.9,
+    "approval_rating": 52,
+    "government_type": "democracy"
+  },
+  {
+    "name": "France",
+    "iso_code": "FRA",
+    "gdp": 3000000,
+    "population": 65,
+    "industries": {
+      "manufacturing": 0.20,
+      "services": 0.76,
+      "agriculture": 0.04
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 600000,
+        "employment": 4000,
+        "import_share": 0.30,
+        "price": 1.0,
+        "capital_stock": 320,
+        "potential_output": 650000,
+        "import_price": 1.0,
+        "export": 220000,
+        "import_": 250000,
+        "unemployment_rate": 4.0
+      },
+      {
+        "name": "services",
+        "output": 2280000,
+        "employment": 22000,
+        "import_share": 0.14,
+        "price": 1.0,
+        "capital_stock": 800,
+        "potential_output": 2300000,
+        "import_price": 1.0,
+        "export": 500000,
+        "import_": 400000,
+        "unemployment_rate": 3.2
+      },
+      {
+        "name": "agriculture",
+        "output": 120000,
+        "employment": 800,
+        "import_share": 0.22,
+        "price": 1.0,
+        "capital_stock": 90,
+        "potential_output": 130000,
+        "import_price": 1.0,
+        "export": 30000,
+        "import_": 40000,
+        "unemployment_rate": 4.5
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 4.1,
+    "growth_rate": 0.8,
+    "approval_rating": 50,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "India",
+    "iso_code": "IND",
+    "gdp": 3700000,
+    "population": 1420,
+    "industries": {
+      "manufacturing": 0.17,
+      "services": 0.54,
+      "agriculture": 0.29
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 629000,
+        "employment": 35000,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 250,
+        "potential_output": 700000,
+        "import_price": 1.0,
+        "export": 200000,
+        "import_": 250000,
+        "unemployment_rate": 5.5
+      },
+      {
+        "name": "services",
+        "output": 1998000,
+        "employment": 60000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 600,
+        "potential_output": 2100000,
+        "import_price": 1.0,
+        "export": 400000,
+        "import_": 300000,
+        "unemployment_rate": 4.5
+      },
+      {
+        "name": "agriculture",
+        "output": 1073000,
+        "employment": 45000,
+        "import_share": 0.12,
+        "price": 1.0,
+        "capital_stock": 150,
+        "potential_output": 1100000,
+        "import_price": 1.0,
+        "export": 100000,
+        "import_": 120000,
+        "unemployment_rate": 6.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.8,
+    "growth_rate": 6.0,
+    "approval_rating": 60,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Brazil",
+    "iso_code": "BRA",
+    "gdp": 2100000,
+    "population": 216,
+    "industries": {
+      "manufacturing": 0.20,
+      "services": 0.70,
+      "agriculture": 0.10
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 420000,
+        "employment": 12000,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 200,
+        "potential_output": 450000,
+        "import_price": 1.0,
+        "export": 100000,
+        "import_": 120000,
+        "unemployment_rate": 7.0
+      },
+      {
+        "name": "services",
+        "output": 1470000,
+        "employment": 40000,
+        "import_share": 0.12,
+        "price": 1.0,
+        "capital_stock": 500,
+        "potential_output": 1500000,
+        "import_price": 1.0,
+        "export": 200000,
+        "import_": 180000,
+        "unemployment_rate": 6.0
+      },
+      {
+        "name": "agriculture",
+        "output": 210000,
+        "employment": 9000,
+        "import_share": 0.18,
+        "price": 1.0,
+        "capital_stock": 100,
+        "potential_output": 220000,
+        "import_price": 1.0,
+        "export": 80000,
+        "import_": 70000,
+        "unemployment_rate": 8.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 7.2,
+    "growth_rate": 2.0,
+    "approval_rating": 48,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Russia",
+    "iso_code": "RUS",
+    "gdp": 1800000,
+    "population": 144,
+    "industries": {
+      "manufacturing": 0.23,
+      "services": 0.62,
+      "agriculture": 0.15
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 414000,
+        "employment": 9000,
+        "import_share": 0.30,
+        "price": 1.0,
+        "capital_stock": 180,
+        "potential_output": 420000,
+        "import_price": 1.0,
+        "export": 120000,
+        "import_": 110000,
+        "unemployment_rate": 5.5
+      },
+      {
+        "name": "services",
+        "output": 1116000,
+        "employment": 25000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 400,
+        "potential_output": 1150000,
+        "import_price": 1.0,
+        "export": 150000,
+        "import_": 140000,
+        "unemployment_rate": 5.0
+      },
+      {
+        "name": "agriculture",
+        "output": 270000,
+        "employment": 12000,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 90,
+        "potential_output": 280000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 6.5
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.7,
+    "growth_rate": 1.5,
+    "approval_rating": 70,
+    "government_type": "autocracy"
+  },
+  {
+    "name": "Canada",
+    "iso_code": "CAN",
+    "gdp": 2100000,
+    "population": 39,
+    "industries": {
+      "manufacturing": 0.18,
+      "services": 0.75,
+      "agriculture": 0.07
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 378000,
+        "employment": 3000,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 120,
+        "potential_output": 400000,
+        "import_price": 1.0,
+        "export": 150000,
+        "import_": 140000,
+        "unemployment_rate": 4.5
+      },
+      {
+        "name": "services",
+        "output": 1575000,
+        "employment": 12000,
+        "import_share": 0.13,
+        "price": 1.0,
+        "capital_stock": 300,
+        "potential_output": 1600000,
+        "import_price": 1.0,
+        "export": 250000,
+        "import_": 200000,
+        "unemployment_rate": 4.0
+      },
+      {
+        "name": "agriculture",
+        "output": 147000,
+        "employment": 800,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 160000,
+        "import_price": 1.0,
+        "export": 60000,
+        "import_": 50000,
+        "unemployment_rate": 5.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 4.3,
+    "growth_rate": 1.7,
+    "approval_rating": 65,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Italy",
+    "iso_code": "ITA",
+    "gdp": 2100000,
+    "population": 59,
+    "industries": {
+      "manufacturing": 0.23,
+      "services": 0.73,
+      "agriculture": 0.04
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 483000,
+        "employment": 5000,
+        "import_share": 0.30,
+        "price": 1.0,
+        "capital_stock": 180,
+        "potential_output": 500000,
+        "import_price": 1.0,
+        "export": 180000,
+        "import_": 170000,
+        "unemployment_rate": 5.0
+      },
+      {
+        "name": "services",
+        "output": 1533000,
+        "employment": 18000,
+        "import_share": 0.14,
+        "price": 1.0,
+        "capital_stock": 400,
+        "potential_output": 1550000,
+        "import_price": 1.0,
+        "export": 300000,
+        "import_": 250000,
+        "unemployment_rate": 4.5
+      },
+      {
+        "name": "agriculture",
+        "output": 84000,
+        "employment": 800,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 90000,
+        "import_price": 1.0,
+        "export": 30000,
+        "import_": 25000,
+        "unemployment_rate": 6.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 4.8,
+    "growth_rate": 0.7,
+    "approval_rating": 48,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "South Korea",
+    "iso_code": "KOR",
+    "gdp": 1800000,
+    "population": 52,
+    "industries": {
+      "manufacturing": 0.28,
+      "services": 0.68,
+      "agriculture": 0.04
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 504000,
+        "employment": 4000,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 160,
+        "potential_output": 520000,
+        "import_price": 1.0,
+        "export": 250000,
+        "import_": 200000,
+        "unemployment_rate": 3.5
+      },
+      {
+        "name": "services",
+        "output": 1224000,
+        "employment": 12000,
+        "import_share": 0.13,
+        "price": 1.0,
+        "capital_stock": 300,
+        "potential_output": 1250000,
+        "import_price": 1.0,
+        "export": 200000,
+        "import_": 180000,
+        "unemployment_rate": 3.0
+      },
+      {
+        "name": "agriculture",
+        "output": 72000,
+        "employment": 600,
+        "import_share": 0.18,
+        "price": 1.0,
+        "capital_stock": 40,
+        "potential_output": 80000,
+        "import_price": 1.0,
+        "export": 20000,
+        "import_": 25000,
+        "unemployment_rate": 4.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 3.2,
+    "growth_rate": 2.2,
+    "approval_rating": 62,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Australia",
+    "iso_code": "AUS",
+    "gdp": 1700000,
+    "population": 26,
+    "industries": {
+      "manufacturing": 0.13,
+      "services": 0.78,
+      "agriculture": 0.09
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 221000,
+        "employment": 1000,
+        "import_share": 0.30,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 230000,
+        "import_price": 1.0,
+        "export": 70000,
+        "import_": 80000,
+        "unemployment_rate": 4.0
+      },
+      {
+        "name": "services",
+        "output": 1326000,
+        "employment": 8000,
+        "import_share": 0.12,
+        "price": 1.0,
+        "capital_stock": 200,
+        "potential_output": 1350000,
+        "import_price": 1.0,
+        "export": 150000,
+        "import_": 120000,
+        "unemployment_rate": 3.5
+      },
+      {
+        "name": "agriculture",
+        "output": 153000,
+        "employment": 900,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 40,
+        "potential_output": 160000,
+        "import_price": 1.0,
+        "export": 60000,
+        "import_": 50000,
+        "unemployment_rate": 5.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 4.1,
+    "growth_rate": 1.5,
+    "approval_rating": 67,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Spain",
+    "iso_code": "ESP",
+    "gdp": 1600000,
+    "population": 48,
+    "industries": {
+      "manufacturing": 0.18,
+      "services": 0.77,
+      "agriculture": 0.05
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 288000,
+        "employment": 2000,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 70,
+        "potential_output": 300000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 6.0
+      },
+      {
+        "name": "services",
+        "output": 1232000,
+        "employment": 9000,
+        "import_share": 0.13,
+        "price": 1.0,
+        "capital_stock": 180,
+        "potential_output": 1250000,
+        "import_price": 1.0,
+        "export": 200000,
+        "import_": 180000,
+        "unemployment_rate": 5.5
+      },
+      {
+        "name": "agriculture",
+        "output": 80000,
+        "employment": 700,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 30,
+        "potential_output": 90000,
+        "import_price": 1.0,
+        "export": 30000,
+        "import_": 25000,
+        "unemployment_rate": 7.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.8,
+    "growth_rate": 1.1,
+    "approval_rating": 54,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "Mexico",
+    "iso_code": "MEX",
+    "gdp": 1500000,
+    "population": 128,
+    "industries": {
+      "manufacturing": 0.20,
+      "services": 0.67,
+      "agriculture": 0.13
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 300000,
+        "employment": 6000,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 90,
+        "potential_output": 320000,
+        "import_price": 1.0,
+        "export": 120000,
+        "import_": 110000,
+        "unemployment_rate": 5.0
+      },
+      {
+        "name": "services",
+        "output": 1005000,
+        "employment": 18000,
+        "import_share": 0.14,
+        "price": 1.0,
+        "capital_stock": 200,
+        "potential_output": 1050000,
+        "import_price": 1.0,
+        "export": 200000,
+        "import_": 180000,
+        "unemployment_rate": 4.5
+      },
+      {
+        "name": "agriculture",
+        "output": 195000,
+        "employment": 9000,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 200000,
+        "import_price": 1.0,
+        "export": 70000,
+        "import_": 60000,
+        "unemployment_rate": 6.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.3,
+    "growth_rate": 2.0,
+    "approval_rating": 55,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Indonesia",
+    "iso_code": "IDN",
+    "gdp": 1400000,
+    "population": 277,
+    "industries": {
+      "manufacturing": 0.20,
+      "services": 0.45,
+      "agriculture": 0.35
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 280000,
+        "employment": 12000,
+        "import_share": 0.25,
+        "price": 1.0,
+        "capital_stock": 70,
+        "potential_output": 300000,
+        "import_price": 1.0,
+        "export": 80000,
+        "import_": 90000,
+        "unemployment_rate": 5.5
+      },
+      {
+        "name": "services",
+        "output": 630000,
+        "employment": 20000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 120,
+        "potential_output": 650000,
+        "import_price": 1.0,
+        "export": 100000,
+        "import_": 90000,
+        "unemployment_rate": 5.0
+      },
+      {
+        "name": "agriculture",
+        "output": 490000,
+        "employment": 35000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 500000,
+        "import_price": 1.0,
+        "export": 60000,
+        "import_": 70000,
+        "unemployment_rate": 6.5
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.7,
+    "growth_rate": 5.0,
+    "approval_rating": 60,
+    "government_type": "democracy"
+  },
+  {
+    "name": "Turkey",
+    "iso_code": "TUR",
+    "gdp": 1100000,
+    "population": 86,
+    "industries": {
+      "manufacturing": 0.22,
+      "services": 0.65,
+      "agriculture": 0.13
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 242000,
+        "employment": 5000,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 250000,
+        "import_price": 1.0,
+        "export": 70000,
+        "import_": 80000,
+        "unemployment_rate": 7.0
+      },
+      {
+        "name": "services",
+        "output": 715000,
+        "employment": 12000,
+        "import_share": 0.12,
+        "price": 1.0,
+        "capital_stock": 120,
+        "potential_output": 730000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 6.0
+      },
+      {
+        "name": "agriculture",
+        "output": 143000,
+        "employment": 7000,
+        "import_share": 0.18,
+        "price": 1.0,
+        "capital_stock": 40,
+        "potential_output": 150000,
+        "import_price": 1.0,
+        "export": 30000,
+        "import_": 25000,
+        "unemployment_rate": 8.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 7.2,
+    "growth_rate": 3.0,
+    "approval_rating": 50,
+    "government_type": "autocracy"
+  },
+  {
+    "name": "Saudi Arabia",
+    "iso_code": "SAU",
+    "gdp": 1100000,
+    "population": 36,
+    "industries": {
+      "manufacturing": 0.18,
+      "services": 0.52,
+      "agriculture": 0.30
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 198000,
+        "employment": 2000,
+        "import_share": 0.25,
+        "price": 1.0,
+        "capital_stock": 40,
+        "potential_output": 210000,
+        "import_price": 1.0,
+        "export": 60000,
+        "import_": 70000,
+        "unemployment_rate": 5.0
+      },
+      {
+        "name": "services",
+        "output": 572000,
+        "employment": 4000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 80,
+        "potential_output": 600000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 4.5
+      },
+      {
+        "name": "agriculture",
+        "output": 330000,
+        "employment": 3000,
+        "import_share": 0.10,
+        "price": 1.0,
+        "capital_stock": 30,
+        "potential_output": 340000,
+        "import_price": 1.0,
+        "export": 40000,
+        "import_": 50000,
+        "unemployment_rate": 6.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 5.3,
+    "growth_rate": 2.5,
+    "approval_rating": 70,
+    "government_type": "autocracy"
+  },
+  {
+    "name": "Netherlands",
+    "iso_code": "NLD",
+    "gdp": 1100000,
+    "population": 18,
+    "industries": {
+      "manufacturing": 0.19,
+      "services": 0.77,
+      "agriculture": 0.04
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 209000,
+        "employment": 1500,
+        "import_share": 0.32,
+        "price": 1.0,
+        "capital_stock": 40,
+        "potential_output": 220000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 3.5
+      },
+      {
+        "name": "services",
+        "output": 847000,
+        "employment": 6000,
+        "import_share": 0.13,
+        "price": 1.0,
+        "capital_stock": 100,
+        "potential_output": 850000,
+        "import_price": 1.0,
+        "export": 120000,
+        "import_": 100000,
+        "unemployment_rate": 3.0
+      },
+      {
+        "name": "agriculture",
+        "output": 44000,
+        "employment": 400,
+        "import_share": 0.20,
+        "price": 1.0,
+        "capital_stock": 20,
+        "potential_output": 50000,
+        "import_price": 1.0,
+        "export": 20000,
+        "import_": 15000,
+        "unemployment_rate": 4.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 3.4,
+    "growth_rate": 1.2,
+    "approval_rating": 68,
+    "government_type": "democracy",
+    "is_eu_member": true
+  },
+  {
+    "name": "Switzerland",
+    "iso_code": "CHE",
+    "gdp": 900000,
+    "population": 9,
+    "industries": {
+      "manufacturing": 0.20,
+      "services": 0.76,
+      "agriculture": 0.04
+    },
+    "sectors": [
+      {
+        "name": "manufacturing",
+        "output": 180000,
+        "employment": 800,
+        "import_share": 0.28,
+        "price": 1.0,
+        "capital_stock": 20,
+        "potential_output": 190000,
+        "import_price": 1.0,
+        "export": 70000,
+        "import_": 60000,
+        "unemployment_rate": 2.5
+      },
+      {
+        "name": "services",
+        "output": 684000,
+        "employment": 4000,
+        "import_share": 0.12,
+        "price": 1.0,
+        "capital_stock": 60,
+        "potential_output": 700000,
+        "import_price": 1.0,
+        "export": 90000,
+        "import_": 80000,
+        "unemployment_rate": 2.0
+      },
+      {
+        "name": "agriculture",
+        "output": 36000,
+        "employment": 200,
+        "import_share": 0.18,
+        "price": 1.0,
+        "capital_stock": 10,
+        "potential_output": 40000,
+        "import_price": 1.0,
+        "export": 10000,
+        "import_": 9000,
+        "unemployment_rate": 3.0
+      }
+    ],
+    "trade_partners": {},
+    "tariffs": {},
+    "unemployment_rate": 2.3,
+    "growth_rate": 1.1,
+    "approval_rating": 75,
+    "government_type": "democracy"
+  }
+]

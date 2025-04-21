@@ -1,0 +1,660 @@
+﻿Vejledning i Bedste Praksis for Udvikling af en Webbaseret Trade War Simulator med AI Assistance
+Introduktion
+Formål
+Udviklingen af komplekse webapplikationer, især dem der involverer avancerede simuleringer som en trade war simulator, kræver en struktureret tilgang og overholdelse af etablerede bedste praksisser inden for softwareudvikling. Selvom projektet udføres i en mere uformel "vibe coding"-kontekst, er et solidt fundament baseret på klare retningslinjer afgørende for at sikre projektets vedligeholdelsesvenlighed, skalerbarhed og den overordnede succes. Denne vejledning har til formål at levere et omfattende sæt af bedste praksisser, der dækker hele udviklingsprocessen fra projektstruktur til testning og versionskontrol.
+AI Samarbejdskontekst
+Brugen af en AI-kodningsassistent kan markant accelerere udviklingsprocessen, men effektiviteten afhænger i høj grad af kvaliteten og klarheden af de instruktioner, den modtager. Ved at definere eksplicitte, velbegrundede retningslinjer baseret på branchestandarder, kan AI-assistenten instrueres til at generere kode, der ikke kun er funktionel, men også robust, læsbar og vedligeholdelsesvenlig. Det er dog essentielt at anerkende, at AI-genereret kode kræver omhyggelig menneskelig overvågning og gennemgang. AI'er kan producere syntaktisk korrekt kode, der indeholder subtile logiske fejl, sikkerhedshuller eller afviger fra projektets overordnede arkitektur. Denne vejledning tjener som grundlag for at give AI-assistenten præcise instruktioner og for den efterfølgende menneskelige validering.1
+Rapportstruktur
+Denne vejledning dækker otte centrale områder inden for softwareudvikling for at sikre en holistisk tilgang til opbygningen af trade war simulatoren:
+1. Projektstruktur: Etablering af en logisk og skalerbar mappestruktur.
+2. Kodestandarder og Stil: Skrivning af ren, konsistent og læsbar kode.
+3. Modulært Design og Genbrugelighed: Anvendelse af designprincipper og mønstre for fleksibilitet.
+4. Backend Arkitektur for Økonomisk Simulering: Håndtering af kompleksiteten i simuleringsmotoren.
+5. Frontend Arkitektur for Interaktiv Simulering: Opbygning af en responsiv brugergrænseflade.
+6. API Design: Sikring af robust kommunikation mellem frontend og backend.
+7. Teststrategier: Implementering af omfattende testning for at sikre kvalitet.
+8. Versionskontrol med Git: Effektiv styring af kodeændringer og samarbejde.
+1. Projektstruktur: Lægning af Fundamentet
+En veldefineret projektstruktur er afgørende for organisering, vedligeholdelse og skalerbarhed af enhver webapplikation, især en med adskilte frontend- og backend-komponenter.
+Frontend/Backend Adskillelse
+* Rationale: Det grundlæggende princip er at adskille brugergrænsefladen (frontend), som brugeren interagerer med, fra kerneforretningslogikken, databehandlingen og simuleringsmotoren (backend).2 Denne adskillelse af ansvarsområder (Separation of Concerns) fremmer modularitet, hvilket gør det muligt at udvikle, teste og deployere frontend og backend uafhængigt af hinanden.2 Det letter også specialisering inden for teknologistakke; for eksempel kan man bruge moderne JavaScript-frameworks som React, Vue eller Angular til at bygge en dynamisk og interaktiv brugergrænseflade, mens backend kan implementeres i Python eller Node.js, som måske er bedre egnet til den komplekse økonomiske simulering.3
+* Kommunikation: Frontend (klienten) og backend (serveren) kommunikerer primært gennem et veldefineret Application Programming Interface (API), typisk ved hjælp af HTTP-anmodninger (f.eks. REST eller GraphQL) eller realtidsprotokoller som WebSockets for simuleringsopdateringer.4
+Repository Strategi: Monorepo vs. Multi-repo
+Valget mellem at organisere koden i et enkelt repository (Monorepo) eller flere separate repositories (Multi-repo) har betydelige konsekvenser for udviklingsworkflowet, især når en AI-assistent er involveret.
+* Definitioner: Et Monorepo er et enkelt, centraliseret repository, der indeholder koden for flere projekter eller moduler (f.eks. både frontend og backend). Et Multi-repo setup indebærer, at hvert projekt eller service (f.eks. frontend og backend) har sit eget dedikerede repository.
+* Analyse og Anbefaling:
+   * Monorepo Fordele: Forenklet afhængighedsstyring (nemmere at dele biblioteker/typer), øget synlighed og kode-deling på tværs af projektet, potentielt simplere CI/CD-opsætning for hele applikationen. For en AI-assistent kan et monorepo give en samlet kontekst, hvilket potentielt forenkler importstier og afhængighedsforståelse.
+   * Monorepo Ulemper: Kan blive komplekst at administrere ved stor skala, øget risiko for utilsigtet kobling mellem frontend og backend, potentielt langsommere build-tider og pull-operationer, mere kompleks adgangskontrol. Uden en klar intern struktur (f.eks. veldefinerede mapper og linting-regler) kan en AI utilsigtet skabe uhensigtsmæssige afhængigheder mellem frontend og backend.
+   * Multi-repo Fordele: Klar projektisolering, uafhængig versionering og release-cyklusser, potentielt hurtigere build-tider for individuelle dele, skalerbarhed. Håndhæver en stærk adskillelse mellem frontend og backend.
+   * Multi-repo Ulemper: Øget overhead til koordinering af ændringer og afhængigheder mellem repositories, risiko for duplikering af kode og afhængigheder, potentiel dannelse af siloer. Kræver eksplicit opsætning af delt kode/typer, hvilket skal instrueres tydeligt til AI'en.
+   * Anbefaling: For et enkeltmands-projekt (selv med AI-assistance) er et Monorepo med en klar mappestruktur (f.eks. client/ og server/) ofte den mest pragmatiske start. Det forenkler den indledende opsætning og deling af f.eks. TypeScript-typer. Det er dog afgørende at instruere AI'en om at respektere mappegrænserne og undgå direkte import mellem client og server udover via definerede API-kontrakter.
+* Tabel: Monorepo vs. Multi-repo
+Funktion
+	Monorepo
+	Multi-repo
+	Fordele
+	Forenklet afhængighedsstyring, Nemmere kodedeling, Bedre synlighed, Potentielt simplere CI/CD
+	Projektisolering, Uafhængig versionering, Bedre build-tider, Skalerbarhed
+	Ulemper
+	Øget kompleksitet, Risiko for kobling, Længere build-tider, Adgangskontrol, Performance
+	Kode/afhængighedsduplikering, Koordineringsoverhead, Kode-siloer
+	AI Instruktion
+	Simpel kontekst, men kræver klare grænser for import.
+	Kræver eksplicit opsætning af delte afhængigheder/pakker.
+	Anbefalet til projekt
+	Ofte simplere start for solo-projekter eller tæt forbundne moduler.
+	Bedre for store teams, uafhængige microservices, eller genbrugelige pakker.
+	Eksempel Mappestrukturer
+Uanset Monorepo eller Multi-repo, er en klar intern struktur essentiel. Følgende er eksempler på typiske strukturer, der adskiller frontend og backend.
+* Generel Struktur (Monorepo):
+Plaintext
+projekt-rod/
+├── client/                 # Frontend App (React/Vue/Angular)
+│   ├── node_modules/
+│   ├── public/
+│   ├── src/                # Frontend kildekode
+│   │   ├── components/
+│   │   ├── pages/        # Eller views/routes
+│   │   ├── services/     # API kald
+│   │   ├── store/        # State management (Redux/Vuex/Zustand)
+│   │   ├── assets/
+│   │   └── index.js      # Eller main.js/main.ts
+│   ├── package.json
+│   ├── tsconfig.json     # Hvis TypeScript
+│   └──...
+├── server/                 # Backend App (Node.js/Python)
+│   ├── node_modules/       # Eller venv/
+│   ├── src/                # Backend kildekode (eller app/)
+│   │   ├── controllers/    # Request handlers (eller routes/)
+│   │   ├── services/     # Forretningslogik
+│   │   ├── models/       # Datamodeller/skemaer
+│   │   ├── repositories/ # Dataadgangslag (hvis Repository Pattern bruges)
+│   │   ├── middleware/   # Express middleware (hvis Node.js)
+│   │   ├── config/       # Konfigurationsfiler
+│   │   └── server.js     # Eller app.py, index.js
+│   ├── package.json        # Eller requirements.txt
+│   ├── tsconfig.json     # Hvis TypeScript
+│   └──...
+├── shared/                 # (Valgfri) Delt kode (f.eks. typer, validering)
+│   └── src/
+│   └── package.json        # Hvis det er en separat pakke
+├──.gitignore
+├── README.md
+└──... (Rod konfigurationsfiler f.eks. prettier, eslint)
+
+Kilder: 3
+* Specifikke Eksempler:
+   * React + Node.js/Express (MERN-lignende): Strukturen ovenfor er direkte anvendelig. client/src ville indeholde React-specifikke mapper som hooks. server/src ville typisk have routes (der bruger controllere), models (Mongoose-skemaer), og middleware.3
+   * Vue + Python/Flask: Strukturen er lignende. client/src ville have Vue-specifikke mapper som views. server/ ville typisk have en hoved app.py fil, og mapper for models, routes (eller blueprints), og services.5 Python bruger en venv/ mappe til virtuelle miljøer og requirements.txt til afhængigheder.
+   * Angular + Node.js/Express: Angular CLI genererer en standard frontend-struktur. server/ mappen ville eksistere ved siden af denne struktur i monorepoet.
+   * Delt Kode (shared/): Hvis der er behov for at dele kode, især TypeScript-typer eller valideringslogik, mellem frontend og backend i et monorepo, kan en dedikeret shared/ mappe oprettes. Denne mappe kan konfigureres som sin egen pakke for at sikre klare importstier.
+Instruer AI'en til at oprette og vedligeholde den valgte mappestruktur konsekvent.
+2. Skrivning af Ren og Konsistent Kode
+Konsistens og renlighed i koden er afgørende for ethvert softwareprojekt, uanset om det skrives af mennesker eller AI. Det forbedrer læsbarhed, reducerer fejl og letter fremtidig vedligeholdelse.
+Vigtigheden af Konsistens
+En ensartet kodestil og struktur gør det nemmere for både mennesker og AI at navigere, forstå og modificere koden. Når AI-assistenten instrueres til at følge specifikke standarder, bliver dens output mere forudsigeligt og af højere kvalitet.
+Sprogspecifikke Stilvejledninger
+Det er essentielt at vælge og konsekvent anvende anerkendte stilvejledninger for de anvendte programmeringssprog.
+   * JavaScript/TypeScript:
+   * Valg af Guide: Vælg en etableret stilguide som Airbnb eller Google (Google anbefaler nu at følge deres TypeScript guide). Konsistens er nøglen.
+   * Navngivning: Brug camelCase til variabler og funktioner, PascalCase til klasser/typer/interfaces. Undgå enkeltbogstavsnavne undtagen for simple tællere.
+   * Deklarationer: Foretræk const som standard, brug let for variabler, der skal gen Zuweisung, og undgå var.
+   * Formatering: Vælg konsekvent brug af anførselstegn (enkelt '' er ofte foretrukket i JS/TS-fællesskabet), semikoloner (anbefales for at undgå ASI-problemer), indrykning (2 eller 4 mellemrum, 2 er almindeligt i JS, 4 i TS, men konsistens er vigtigst), og linjelængde.
+   * TypeScript Specifikt: Brug type annotationer aktivt. Undgå any typen så vidt muligt; brug mere specifikke typer eller unknown. Definer interfaces eller typer for komplekse objekter og API-svar. Brug UTF-8 encoding.
+   * Python:
+   * PEP 8: Følg PEP 8 som den primære stilguide.
+   * Indrykning: Brug 4 mellemrum pr. indrykningsniveau. Brug aldrig tabulatorer.
+   * Linjelængde: Begræns linjer til 79 tegn for kode og 72 for docstrings/kommentarer. Længere linjer (op til 99 tegn) kan accepteres internt i et team, hvis der er enighed. Brug implicit linjefortryllelse inden i parenteser, klammer og krøllede parenteser frem for backslash \.
+   * Blank Lines: Brug 2 blanke linjer omkring top-level funktioner og klasser, og 1 blank linje omkring metoder inden i klasser. Brug blanke linjer sparsomt internt i funktioner for at adskille logiske sektioner.
+   * Navngivning: Brug snake_case for funktioner, metoder og variabler. Brug CamelCase (eller StudlyCaps) for klasser. Brug UPPER_CASE_WITH_UNDERSCORES for konstanter. Undgå at bruge l, O, eller I som enkeltbogstavs-variabelnavne.
+   * Kommentarer: Skriv klare og præcise kommentarer. Inline-kommentarer skal adskilles med mindst to mellemrum fra koden og starte med #. Block-kommentarer skal have samme indrykning som den kode, de beskriver. Docstrings ("""Docstring""") bruges til at dokumentere moduler, klasser, funktioner og metoder.
+   * Encoding: Brug UTF-8 (standard i Python 3) eller ASCII.
+Automatiseret Formatering (Det "Hvad")
+Kodeformateringsværktøjer sikrer automatisk, at koden overholder specifikke stilregler relateret til whitespace, linjeskift, semikoloner osv., uden at ændre kodens logik.
+   * Formål: At fjerne subjektivitet og manuelt arbejde fra kodestil, sikre ensartethed på tværs af projektet og undgå stil-relaterede diskussioner under kode-gennemgang.
+   * Værktøjer:
+   * JavaScript/TypeScript: Prettier er de facto standarden. Det er "opinionated" og understøtter mange sprog udover JS/TS (HTML, CSS, JSON, etc.).
+   * Python: Black er et populært, meget "opinionated" valg, der sikrer ensartethed med minimal konfiguration. Ruff tilbyder også formatering og er kendt for sin hastighed og integration med linting.
+   * Anvendelse: Konfigurer formateringsværktøjet til at køre automatisk, f.eks. ved gem ("format on save") i VS Code.
+Automatiseret Linting (Det "Hvorfor")
+Linters går et skridt videre end formatters. De analyserer koden statisk for at finde potentielle fejl, logiske problemer, "code smells" (dårlige praksisser) og overtrædelser af kodestandarder, der ikke nødvendigvis er syntaksfejl.6
+   * Formål: At fange fejl tidligt, forbedre kodens kvalitet og pålidelighed, håndhæve bedste praksis og reducere teknisk gæld.6 Linters kan identificere problemer som ubrugte variabler, potentielle null pointer-fejl, forkert API-brug og sikkerhedssårbarheder.
+   * Værktøjer:
+   * JavaScript/TypeScript: ESLint er den mest udbredte linter. Den er yderst konfigurerbar og har et stort økosystem af plugins (f.eks. for React, Vue, Node.js, TypeScript). typescript-eslint muliggør linting-regler, der udnytter typeinformation.
+   * Python: Flake8 (kombinerer PyFlakes for fejl og pycodestyle for PEP 8-stil), Pylint (mere omfattende, tjekker for flere "code smells" og tilbyder refactoring-forslag), og Ruff (ekstremt hurtig linter skrevet i Rust, kan erstatte Flake8, isort, og dele af Pylint/Bandit).
+   * Konfiguration: Det er afgørende at konfigurere linters korrekt. Dette involverer:
+   * At vælge et grundlæggende regelsæt (f.eks. eslint:recommended, eslint-config-airbnb-typescript, eller Flake8/Pylint standardregler).
+   * At tilpasse reglerne til projektets specifikke behov (f.eks. deaktivere eller ændre sværhedsgraden af visse regler).
+   * At integrere med formateringsværktøjet for at undgå konflikter. For ESLint og Prettier bruges eslint-config-prettier til at deaktivere ESLints formateringsregler, så Prettier kan håndtere dem. eslint-plugin-prettier kan bruges til at køre Prettier som en ESLint-regel.
+Integration af Linters/Formatters i VS Code
+Integration af disse værktøjer direkte i udviklingsmiljøet (IDE) som VS Code giver en markant produktivitetsforbedring og sikrer, at retningslinjerne følges løbende.
+   * Opsætning:
+   1. Installer Extensions: Installer de relevante VS Code extensions: "ESLint" (dbaeumer.vscode-eslint), "Prettier - Code formatter" (esbenp.prettier-vscode) 7, "Python" (ms-python.python), "Ruff" (charliermarsh.ruff) og/eller "Flake8" (ms-python.flake8).8
+   2. Installer Værktøjer: Sørg for, at de underliggende værktøjer (ESLint, Prettier, Flake8/Black/Ruff) er installeret i projektet (via npm/yarn/pip) eller globalt.8
+   3. Konfigurer VS Code settings.json:
+   * Angiv standardformatter for hvert sprog (f.eks. Prettier for JS/TS, Black/Ruff for Python).
+   * Aktiver "Format on Save": "editor.formatOnSave": true.
+   * Konfigurer linter-specifikke indstillinger (f.eks. stier, argumenter, ignoreringsmønstre) som beskrevet i extension-dokumentationen.8
+   * Aktiver eventuelt "Code Actions on Save" for automatisk at rette visse linter-fejl: "editor.codeActionsOnSave": { "source.fixAll.eslint": true }.
+   * Fordele ved Integration: Den primære fordel er den øjeblikkelige feedback-loop.6 Når AI-assistenten genererer kode, vil linteren straks markere potentielle fejl eller stilovertrædelser i editoren. Format-on-save sikrer, at koden automatisk formateres korrekt.7 Dette omdanner stilguides og linting-regler fra passive dokumenter til aktive begrænsninger under kodegenerering. AI'en (eller brugeren, der styrer den) kan rette problemerne under udviklingen, hvilket er langt mere effektivt end at vente til en senere kodegennemgang. Dette reducerer debugging-tid og sikrer en højere grad af konsistens og kvalitet fra starten.
+Instruer AI'en om at respektere de konfigurationer, der er sat op i VS Code og i projektets konfigurationsfiler (.eslintrc.*, .prettierrc.*, pyproject.toml, etc.).
+3. Design for Modularitet og Genbrugelighed
+At designe software med modularitet og genbrugelighed for øje er afgørende for at håndtere kompleksitet, lette vedligeholdelse og fremme skalerbarhed. Dette opnås gennem anvendelse af grundlæggende designprincipper og anerkendte arkitektoniske mønstre.
+Kerne Designprincipper
+Disse principper danner grundlaget for et godt modulært design:
+   * Separation of Concerns (SoC): Dette princip foreskriver, at et system skal opdeles i distinkte sektioner, hvor hver sektion adresserer et specifikt ansvarsområde.2 I en webapplikation betyder det typisk at adskille præsentationslogik (UI), forretningslogik (domæne/services) og dataadgangslogik (repositories/persistence). Dette gør systemet lettere at forstå, da hver del har et klart formål, og det gør det lettere at modificere eller udskifte en del uden at påvirke andre unødigt.
+   * High Cohesion (Høj Samhørighed): Cohesion refererer til graden af, hvor tæt relaterede og fokuserede elementerne (f.eks. funktioner, klasser) inden for et enkelt modul er på at udføre en specifik, veldefineret opgave.2 Høj samhørighed er ønskeligt. Et modul med høj samhørighed (f.eks. et modul, der udelukkende håndterer bruger-autentificering) er lettere at forstå, genbruge og vedligeholde end et modul med lav samhørighed (f.eks. et "utils"-modul, der indeholder urelaterede hjælpefunktioner til strengmanipulation, datovalgidering og fil-I/O). Funktionel samhørighed, hvor alle elementer bidrager til én enkelt funktion, anses for at være den stærkeste og mest ønskelige form.2
+   * Low Coupling (Lav Kobling): Kobling måler graden af afhængighed mellem forskellige moduler.2 Lav kobling betyder, at moduler er relativt uafhængige og interagerer gennem stabile, veldefinerede interfaces. Ændringer i implementeringsdetaljerne i ét modul bør have minimal eller ingen indvirkning på andre moduler, så længe interfacet forbliver det samme. Høj kobling, hvor moduler har dyb kendskab til hinandens interne opbygning, gør systemet skrøbeligt og svært at ændre. Lav kobling fremmer modularitet og gør det muligt at udvikle, teste og udskifte moduler uafhængigt.
+Arkitektoniske Mønstre
+Disse mønstre anvender kerne principperne til at strukturere applikationen:
+   * Model-View-Controller (MVC): Et klassisk mønster, der adskiller applikationen i tre hovedkomponenter 9:
+   * Model: Håndterer data og forretningslogik. Interagerer med databasen og indeholder applikationens kernefunktionalitet.9
+   * View: Ansvarlig for præsentationen af data til brugeren (UI). Modtager data fra modellen.9 I webapps er dette typisk HTML/CSS genereret af frontend-frameworket.
+   * Controller: Modtager brugerinput (f.eks. fra View), interagerer med Modellen for at opdatere data eller udføre handlinger, og vælger typisk den næste View, der skal vises.9 I en webapp med separat frontend/backend, fungerer backend API-endepunkter ofte som Controllers, der modtager HTTP-anmodninger, kalder services/modeller, og returnerer data (som View'en så bruger). MVC fremmer SoC ved at adskille datahåndtering, præsentation og kontrolflow.
+   * Repository Pattern: Dette mønster abstraherer dataadgangslogikken væk fra forretningslogikken.10
+   * Funktion: Fungerer som en mellemmand mellem domænelaget (hvor forretningslogikken bor) og datakilden (f.eks. en database). Det præsenterer sig som en in-memory samling af domæneobjekter.10
+   * Implementering: Man definerer et interface (kontrakt) for repository'et i domænelaget (f.eks. IUserRepository med metoder som getById, save, findByEmail). Den konkrete implementering (f.eks. MongoUserRepository, SqlAlchemyUserRepository) placeres i infrastruktur-laget og indeholder den specifikke kode til at interagere med databasen.10
+   * Fordele: Fremmer lav kobling mellem forretningslogik og datalager. Gør det muligt at skifte datalagerteknologi uden at ændre forretningslogikken (kun repository-implementeringen skal ændres). Forbedrer testbarheden markant, da repositories nemt kan mockes.10 I Domain-Driven Design (DDD) anbefales ét repository pr. Aggregate Root.10
+   * Service Layer Pattern: Dette mønster introducerer et lag, der orkestrerer forretningslogik og use cases.10
+   * Placering: Sidder typisk mellem præsentationslaget (f.eks. API-controllere) og domæne/dataadgangslagene (inklusive repositories).
+   * Ansvar: Encapsulerer applikationsspecifik forretningslogik. Koordinerer kald til flere repositories eller domæneobjekter for at opfylde en bestemt anmodning. Kan håndtere transaktioner, validering af input (før det når domænet), og mapping mellem Data Transfer Objects (DTOs) og domæneobjekter.
+   * Fordele: Holder controllere tynde og fokuserede på HTTP-håndtering. Centraliserer forretningslogik, hvilket gør den genbrugelig og lettere at teste. Fremmer SoC ved at adskille use case-logik fra både præsentation og dataadgang.
+Dependency Injection (DI) og dens Rolle
+Dependency Injection er et afgørende princip og mønster for at opnå lav kobling og høj testbarhed.
+   * Koncept: I stedet for at en klasse selv opretter sine afhængigheder (andre klasser eller services, den har brug for), bliver disse afhængigheder "injiceret" udefra, typisk af et framework eller en dedikeret container.12 Dette kaldes også "Inversion of Control" (IoC).12 De mest almindelige former er Constructor Injection (afhængigheder gives i konstruktøren) og Setter Injection (afhængigheder gives via set-metoder).12
+   * Fordele for Modularitet: DI reducerer koblingen drastisk. Klassen afhænger kun af interfacet (kontrakten) for sin afhængighed, ikke af den specifikke implementering.12 Dette gør det nemt at udskifte implementeringer (f.eks. skifte fra en MongoDB-repository til en PostgreSQL-repository) uden at ændre den klasse, der bruger repository'et. Komponenter bliver mere genbrugelige i forskellige kontekster.
+   * Fordele for Testbarhed: DI er essentielt for unit testing. Når man tester en klasse, kan man nemt injicere mock eller stub implementeringer af dens afhængigheder.12 Dette isolerer den enhed, der testes, fra eksterne systemer (som databaser eller netværkskald), hvilket gør tests hurtigere, mere pålidelige og fokuserede på den specifikke logik, der testes.11 For eksempel kan man injicere en mock IUserRepository i en UserService for at teste servicens logik uden at røre databasen.
+Anvendelsen af DI er særligt vigtig, når man arbejder med en AI-kodningsassistent. AI'en kan have en tendens til at skabe direkte afhængigheder mellem komponenter, hvis den ikke eksplicit instrueres anderledes. Ved at definere klare interfaces for afhængigheder (som repository-interfaces eller service-interfaces) og instruere AI'en om at forvente disse afhængigheder via injektion (f.eks. gennem konstruktøren), tvinges AI'en til at arbejde med de definerede abstraktioner. Dette forhindrer AI'en i at skabe tæt koblet kode og sikrer, at den genererede kode forbliver modulær og testbar. Det giver klare "samlingspunkter", hvor menneskelig kontrol og testning kan indsættes effektivt, da mock-afhængigheder let kan substitueres for de AI-genererede komponenters reelle afhængigheder under test.12
+Instruer AI'en til at:
+   * Implementere Repository Pattern for al dataadgang.
+   * Implementere Service Layer for at orkestrere forretningslogik.
+   * Anvende Dependency Injection (fortrinsvis Constructor Injection) for alle afhængigheder mellem lag (Controllere -> Services -> Repositories).
+   * Altid programmere mod interfaces, ikke konkrete implementeringer, hvor det er relevant.
+4. Backend Arkitektur for Økonomisk Simulering
+Backend'en udgør kernen i trade war simulatoren, hvor den komplekse økonomiske model og agent-interaktioner afvikles. Designet af denne del kræver særlig opmærksomhed på datamodellering, state management og performance.
+Agent-Based Modeling (ABM) Fundamentaler
+ABM er en beregningsmæssig tilgang, der modellerer systemer nedefra og op ("bottom-up") ved at fokusere på de enkelte, autonome enheder – agenterne – og deres interaktioner.13
+   * Kernekoncepter i ABM:
+   * Agenter: Autonome enheder (f.eks. lande, virksomheder, forbrugere, markeder) med egne attributter (data, tilstand) og adfærdsregler.13 De træffer beslutninger baseret på deres tilstand og lokale information.
+   * Heterogenitet: Agenter er typisk forskellige (heterogene) med varierende attributter og adfærd, hvilket er centralt for at modellere realistiske systemer.13
+   * Interaktioner: Agenter interagerer med hinanden og med miljøet baseret på definerede regler og netværksstrukturer (topologi).13 Disse interaktioner driver systemets dynamik.
+   * Miljø: Konteksten, hvori agenterne opererer. Kan være et simpelt gitter, et netværk, et geografisk rum (GIS) eller abstrakt.13 Miljøet kan have egne tilstandsvariable og påvirke agenterne.
+   * Emergens: Komplekse makroskopiske mønstre og adfærd (f.eks. markedsudsving, handelsblokke) opstår fra de simple, lokale interaktioner mellem agenter, uden at være eksplicit programmeret på systemniveau.13
+   * Relevans for Økonomiske Simuleringer: ABM er velegnet til at modellere økonomiske systemer, da det kan håndtere heterogene aktører, begrænset rationalitet ("bounded rationality"), komplekse interaktionsnetværk (f.eks. forsyningskæder, finansielle markeder) og emergent adfærd som f.eks. konjunkturcykler eller markedskrak, som traditionelle top-down modeller ofte har svært ved at fange. Det muliggør "what-if" analyser og stress-tests af politikker.
+   * Typisk ABM Arkitektur: En ABM-implementering består typisk af:
+   * Agent Definitioner: Klasser eller strukturer, der definerer agenternes attributter (tilstand) og metoder (adfærd, beslutningsregler).
+   * Miljø Repræsentation: En struktur til at repræsentere det rum eller den kontekst, agenterne befinder sig i, og eventuelle miljømæssige variable.
+   * Interaktionsregler: Logik, der definerer, hvordan og hvornår agenter interagerer.
+   * Simuleringsmotor/Scheduler: En central mekanisme, der styrer simuleringsforløbet, typisk i diskrete tidssteps eller via en event-kø. Motoren aktiverer agenter, udfører deres handlinger, håndterer interaktioner og opdaterer tiden. Frameworks som krABMaga og AnyLogic tilbyder sådanne motorer. Simuleringsløkken er kernen, der iterativt opdaterer agent- og miljøtilstande.
+Datamodelleringsstrategier
+En effektiv datamodel er essentiel for at repræsentere den komplekse tilstand og historie i en økonomisk simulering.
+   * Entiteter og Attributter: Identificer kerneenhederne: Agenter (lande, virksomheder, centralbank, regering), Markeder (varer, arbejdskraft, finans), Politikker (told, subsidier), Ressourcer osv. Definer deres attributter (f.eks. BNP, befolkningstal, politisk stabilitet for et land; kapital, arbejdskraft, produktionsfunktion for en virksomhed) og tilstandsvariable, der ændrer sig over tid.
+   * Relationer: Modeller de komplekse relationer: handelsaftaler, forsyningskæder, politiske alliancer, finansielle strømme. Netværksstrukturer er ofte centrale i ABM.
+   * Tidsseriedata: Simuleringer genererer i sagens natur tidsserier af data: agenttilstande, økonomiske indikatorer, interaktionslogs osv. over simuleringsforløbet. Databasen skal kunne håndtere og forespørge effektivt på disse tidsafhængige data.
+   * Agenttilstandens Evolution: Definer klart, hvordan en agents tilstand (dens data, attributter, interne modeller/metoder) ændrer sig fra et tidspunkt til det næste, baseret på dens egne regler og interaktioner med andre agenter og miljøet. Dette er kernen i simuleringslogikken.
+Databaseovervejelser
+Valget af database(r) afhænger af, hvordan data skal lagres, tilgås og analyseres.
+   * Relational (SQL):
+   * Fordele: Stærk konsistens (ACID), moden teknologi, velegnet til strukturerede data og komplekse forespørgsler med joins. God til at lagre definitioner af agenter og deres faste attributter.
+   * Ulemper: Skemastivhed kan være en udfordring for modeller under udvikling. At lagre og forespørge på tidsserier af agenttilstande kan blive ineffektivt med mange joins og store tabeller. Kræver vertikal skalering.
+   * NoSQL (Dokument/Key-Value - f.eks. MongoDB):
+   * Fordele: Fleksibelt skema er ideelt til at repræsentere heterogene agenter med varierende attributter og til modeller under udvikling. God horisontal skalerbarhed. MongoDB er et populært valg i MERN-stacken.3
+   * Ulemper: Forespørgselssprog kan være mindre standardiserede. Eventuel konsistens kan være et problem for visse typer data (selvom MongoDB understøtter ACID-transaktioner). Mindre egnet til komplekse relationelle forespørgsler end SQL.
+   * Grafdatabaser (f.eks. Neo4j):
+   * Fordele: Fremragende til at modellere og forespørge på komplekse, sammenkoblede relationer, som er typiske i økonomiske systemer (f.eks. handelsnetværk, afhængighedskæder). Gør traversering af relationer intuitiv og potentielt hurtigere end SQL joins for dybe relationer.
+   * Ulemper: Relativt nyere teknologi, færre eksperter, potentielle performance-udfordringer ved meget store datasæt (TB-størrelse), begrænset horisontal skalering for nogle implementeringer, færre integrationsværktøjer. Måske overkill hvis fokus primært er på tidsserier frem for komplekse relationsanalyser.
+   * Tidsseriedatabaser (TSDB - f.eks. TimescaleDB, InfluxDB):
+   * Fordele: Optimeret specifikt til lagring og forespørgsel på store mængder tidsstemplet data. Effektive til ingestion (skrivning) af data-streams fra simuleringen. Indeholder typisk funktioner til tidsbaserede aggregeringer, downsampling og datalagringspolitikker (automatisk sletning/komprimering af gamle data).
+   * Ulemper: Kan være mindre egnede til komplekse, ikke-tidsrelaterede forespørgsler på tværs af forskellige agenttyper.
+   * Anbefaling: En standard relationel eller dokumentdatabase er ofte utilstrækkelig alene, da den typisk kun gemmer den nuværende tilstand. En trade war simulator kræver analyse af historiske data og agentinteraktioner over tid for at forstå dynamikker og udføre "what-if"-scenarier. Derfor er en Tidsseriedatabase (TSDB) stærkt anbefalet til at lagre de tidsafhængige simuleringsresultater (agenttilstande, økonomiske variable over tid). Den nuværende konfiguration og agentdefinitioner kan evt. ligge i en SQL- eller NoSQL-database. Alternativt kan Event Sourcing (se næste afsnit) anvendes, hvilket implicit gemmer hele historikken.14 Hvis analyse af komplekse netværksrelationer er central, kan en Grafdatabase overvejes som supplement.
+Håndtering af Kompleks Tilstand
+Simuleringer, især ABM, genererer kompleks, dynamisk tilstand, der udvikler sig over tid. Effektiv håndtering heraf er afgørende.
+   * Udfordringer: At opretholde konsistens på tværs af mange interagerende agenters tilstande, at spore ændringshistorik for analyse og debugging, og effektivt at kunne forespørge på systemets tilstand på tidligere tidspunkter er udfordrende med traditionelle metoder, der overskriver den nuværende tilstand.14
+   * State Management Mønstre:
+   * Event Sourcing (ES): Dette mønster ændrer fundamentalt state management ved at gemme tilstanden som en sekvens af uforanderlige hændelser (events), der repræsenterer hver ændring.14
+   * Fordele:
+   * Fuld Audit Log: Giver en 100% pålidelig historik over alle ændringer for hver agent/entitet.14
+   * Temporale Forespørgsler: Gør det muligt at rekonstruere tilstanden på ethvert givet tidspunkt ved at afspille hændelser op til det tidspunkt.14
+   * Atomicitet: At gemme en hændelse er en atomisk handling. Kan kombineres med event-udgivelse for at sikre, at tilstandsændring og notifikation sker samlet.14
+   * Debugging/Analyse: Letter debugging og analyse af, hvordan systemet nåede en bestemt tilstand.
+   * Passer Godt til Simulering: Simulationer er i sagens natur en sekvens af hændelser og tilstandsændringer.
+   * Ulemper:
+   * Læringskurve: Kræver en anden tankegang end traditionel CRUD.14
+   * Forespørgselskompleksitet: At forespørge på den nuværende tilstand kan være ineffektivt, da det kræver afspilning af hændelser.14
+   * CQRS Behov: Kombineres ofte med Command Query Responsibility Segregation (CQRS), hvor en separat, optimeret læsemodel (f.eks. i en SQL/NoSQL DB) opdateres baseret på hændelserne. Dette introducerer eventuel konsistens.14
+   * Implementering: En agents tilstand opdateres ved at anvende nye hændelser. Den nuværende tilstand beregnes ved at afspille alle hændelser for agenten (optimeret med periodiske snapshots).14
+   * Anbefaling: For en kompleks økonomisk simulering, hvor historisk analyse og auditabilitet er vigtig, er Event Sourcing et stærkt mønster at overveje, potentielt i kombination med CQRS for at muliggøre effektive forespørgsler på den seneste tilstand til frontend.
+Performance Optimering for Beregningstunge Opgaver
+Simuleringslogikken, især agenternes beslutningsprocesser og interaktioner i hver tidsstep, kan være beregningstung.
+   * Identificer Flaskehalse: Brug profileringværktøjer til at identificere de dele af koden, der bruger mest CPU-tid. Dette er ofte selve simuleringsløkken eller komplekse beregninger inden for agenternes adfærd.
+   * Python Optimering:
+   * NumPy/Pandas: Brug disse biblioteker til vektoriserede operationer på numeriske data. Undgå manuelle loops over lister/arrays, hvor det er muligt; NumPy's C-implementerede funktioner er langt hurtigere.
+   * Multiprocessing: Til reelt CPU-bundne opgaver (som komplekse økonomiske beregninger pr. agent), brug multiprocessing-modulet til at køre beregninger parallelt på flere CPU-kerner.15 Dette omgår Python's Global Interpreter Lock (GIL), som forhindrer ægte parallelisme i tråde for CPU-bundet arbejde.15 concurrent.futures.ProcessPoolExecutor er en brugervenlig måde at implementere dette på.15
+   * Asyncio: Mens asyncio er kraftfuldt til I/O-bundne opgaver (f.eks. håndtering af mange samtidige netværksforbindelser), giver det ikke performancefordele for CPU-bundne beregninger på en enkelt kerne.15 Det kan dog bruges til at orkestrere parallelle opgaver startet med multiprocessing.
+   * Node.js Optimering:
+   * Undgå at Blokere Event Loop: Den primære tråd i Node.js (event loop) må ikke blokeres af lange, synkrone beregninger, da det forhindrer håndtering af andre anmodninger.17
+   * Worker Threads: Brug worker_threads-modulet til at flytte CPU-intensive beregninger væk fra hovedtråden.17 Hver worker thread kører i sit eget V8-isolat med sin egen event loop, hvilket muliggør ægte parallelisme på multi-core systemer.17 Hovedtråden kommunikerer med workers via message passing.
+   * Partitionering: Hvis en beregning skal køre på hovedtråden, men er for lang, kan den opdeles i mindre bidder ved hjælp af setImmediate eller process.nextTick for at give event loop'en mulighed for at behandle andre hændelser indimellem.17
+   * Asynkrone Operationer: Brug asynkrone API'er til I/O (filsystem, netværk), men husk, at dette ikke hjælper på CPU-bundet arbejde udført i JavaScript-koden selv.17
+   * Generelt: Overvej at implementere de mest beregningstunge dele af simuleringsmotoren i et mere performance-orienteret sprog (som Rust eller C++) og integrere det med Python/Node.js via f.eks. CFFI (Python) eller N-API (Node.js).17
+Kernen i simuleringsløkken, hvor hver agents tilstand opdateres, og interaktioner behandles, er ofte den mest kritiske del for performance. Da ABM involverer iteration over potentielt mange agenter, der hver især udfører beregninger, bliver evnen til at parallelisere disse beregninger afgørende for at udnytte moderne multi-core processorer. Uden parallelisering begrænses hastigheden af den enkelte kerne.15 Derfor er brugen af multiprocessing i Python 15 eller worker_threads i Node.js 17 essentiel for at opnå rimelige køretider for komplekse, CPU-bundne simuleringer.
+Instruer AI'en til at:
+   * Designe datamodeller for agenter og deres tilstande, med fokus på tidsserier.
+   * Implementere state management ved hjælp af Event Sourcing (eller en TSDB-baseret tilgang).
+   * Bruge NumPy/Pandas (Python) eller effektive datastrukturer (Node.js) til beregninger.
+   * Anvende multiprocessing (Python) eller worker_threads (Node.js) til at parallelisere den centrale simuleringsløkke og agent-beregninger.
+5. Frontend Arkitektur for Interaktiv Simulering
+Frontend'en er brugerens vindue til simulatoren. Den skal effektivt kunne visualisere komplekse data, tillade brugerinteraktion (f.eks. justering af parametre, start/stop af simulering) og opdatere i realtid baseret på data fra backend'en.
+Valg af Frontend Frameworks/Biblioteker
+Moderne JavaScript-frameworks tilbyder robuste løsninger til at bygge interaktive brugergrænseflader.
+   * Populære Valg: React, Vue, og Angular er de mest udbredte valg, hver med sit eget økosystem og tilgang til komponenter og state management.
+   * Overvejelser for Simuleringer:
+   * Komponentmodel: Alle tre tilbyder en komponentbaseret arkitektur, hvilket er velegnet til at opbygge UI-elementer for simuleringskontrol og datavisualisering.
+   * State Management: Vælg et framework med god integration til state management-biblioteker, da simuleringsdata kan være komplekse og opdateres hyppigt.
+   * Performance: Vurder frameworkets rendering performance, især ved hyppige opdateringer af visualiseringer. Virtuel DOM (React, Vue) hjælper med at optimere opdateringer.
+   * Datavisualisering: Undersøg integrationen med datavisualiseringsbiblioteker (se nedenfor).
+   * AI-Assistance: AI-assistenter har generelt god support til de mest populære frameworks (React, Vue, Angular).
+Client-Side State Management Strategier
+Håndtering af tilstanden på klientsiden er afgørende, især når man modtager streaming data fra en kompleks backend-simulering.
+   * Behovet: Frontend skal holde styr på brugerinput (simuleringsparametre), den seneste modtagne simuleringsdata, UI-tilstand (f.eks. hvilke grafer der vises, loading-indikatorer) og potentielt en historik af simuleringsresultater for lokal analyse eller visualisering.18 Uden en struktureret tilgang bliver dette hurtigt uoverskueligt.18
+   * Biblioteker:
+   * React: Redux (klassisk, forudsigelig state container baseret på Flux/ES 18), Zustand (simplere, hook-baseret), Jotai (atomar state management).
+   * Vue: Vuex (officielt, centraliseret state management), Pinia (nyere, officielt anbefalet, mere modulært og TypeScript-venligt).
+   * Angular: RxJS (til reaktiv programmering og state management), NgRx (Redux-inspireret).
+   * Strategier for Simuleringsdata:
+   * Modtagelse: Brug WebSockets 4 til at modtage realtidsopdateringer fra backend.
+   * Lagring: Gem den seneste tilstand og potentielt en begrænset historik i state management-biblioteket. Undgå at gemme enorme mængder rå simuleringsdata i frontend-hukommelsen; hent aggregerede eller specifikke data fra backend efter behov.
+   * Normalisering: Overvej at normalisere data i storen (f.eks. gemme agenter i et opslagsobjekt efter ID) for at undgå redundans og lette opdateringer.
+   * Selektorer: Brug selektorfunktioner (f.eks. med reselect for Redux eller computed properties i Vue) til effektivt at udlede data til UI-komponenter fra storen.
+Datavisualiseringsbiblioteker
+Effektiv visualisering er essentiel for at fortolke resultaterne af en økonomisk simulering.
+   * Vigtighed: Grafer og diagrammer kan illustrere trends, korrelationer, agentadfærd og effekten af forskellige scenarier på en måde, som rå data ikke kan.
+   * Populære JS Biblioteker:
+   * D3.js: Meget kraftfuldt og fleksibelt bibliotek til at skabe custom datavisualiseringer. Giver fuld kontrol over SVG-, Canvas- og HTML-elementer. Har dog en stejl læringskurve og kræver mere kode for at opnå standarddiagrammer. Plotly.js er bygget oven på D3.19
+   * Chart.js: Nemt at bruge til at skabe almindelige diagramtyper (linje-, søjle-, lagkage-, radar-, scatter-diagrammer osv.) ved hjælp af HTML Canvas.20 God dokumentation og et godt valg til standardvisualiseringer.
+   * Plotly.js: Et deklarativt bibliotek, der understøtter et bredt udvalg af diagramtyper, herunder videnskabelige, statistiske, finansielle, 3D-diagrammer og kort.19 Tilbyder god interaktivitet (zoom, pan, hover). Kan rendere via SVG eller WebGL (for performance, især scattergl og 3D).19 God balance mellem brugervenlighed og avancerede funktioner.19
+   * Anbefaling: For standard tidsseriegrafer, søjlediagrammer osv. er Chart.js eller Plotly.js gode valg. Plotly.js tilbyder flere avancerede diagramtyper, der kan være relevante for økonomiske data. Hvis der er behov for meget specifikke, unikke visualiseringer, er D3.js det mest fleksible værktøj.
+Effektiv Opdatering af Visualiseringer med Streaming Data
+Simuleringer kan generere data hyppigt, og frontend skal opdatere visualiseringerne uden at gå ned i performance eller give en hakkende brugeroplevelse.
+   * Udfordringen: At gen-renderere hele diagrammer ved hver ny datapunkt er ineffektivt og kan blokere UI-tråden.20
+   * Teknikker:
+   * Inkrementelle Opdateringer: De fleste biblioteker tilbyder metoder til at tilføje (og fjerne) data uden at genopbygge hele diagrammet. I Chart.js kan man direkte manipulere data.labels og data.datasets[n].data arrays (ved hjælp af push for at tilføje, shift for at fjerne gamle punkter) og derefter kalde chart.update().20
+   * Undgå Animationer: Ved meget hyppige opdateringer (f.eks. flere gange i sekundet) bør animationer deaktiveres for at spare på ressourcer og undgå visuel støj. Chart.js' chart.update('none') gør dette.20 Plotly.js har lignende mekanismer.
+   * Data Windowing: Vis kun et glidende vindue af de seneste data (f.eks. de sidste 100 datapunkter) i stedet for hele historikken for at begrænse mængden af data, der skal renderes. Fjern gamle datapunkter fra diagrammets data-arrays, når nye tilføjes.20
+   * Throttling/Debouncing: Hvis backend sender data for hurtigt, kan man på frontend bruge throttling eller debouncing teknikker til at begrænse, hvor ofte UI'et (og dermed diagrammerne) rent faktisk opdateres (f.eks. højst én gang hvert 100ms).
+   * WebSockets: Brug WebSockets til at modtage data fra backend, da det er mere effektivt end konstant polling via HTTP.4
+   * Betydning: Ydeevnen af frontend-visualiseringen er afgørende for brugeroplevelsen. En træg eller hakkende grænseflade gør det svært at interagere med og forstå simuleringen. Ved at vælge biblioteker, der understøtter effektive opdateringsmekanismer, og ved at implementere strategier som deaktivering af animationer og data windowing, kan man håndtere realtidsdata fra simuleringen på en flydende måde.20
+Instruer AI'en til at:
+   * Vælge et passende frontend framework (f.eks. React eller Vue).
+   * Implementere et state management bibliotek (f.eks. Zustand eller Pinia) til at håndtere simuleringsdata modtaget via WebSockets.
+   * Integrere et passende datavisualiseringsbibliotek (f.eks. Plotly.js eller Chart.js).
+   * Implementere effektive opdateringsstrategier for diagrammer, herunder inkrementelle dataopdateringer og deaktivering af animationer ved hyppige opdateringer.
+6. Design af Robuste API'er
+API'et (Application Programming Interface) er den kontrakt, der definerer, hvordan frontend og backend kommunikerer. Et veldesignet API er afgørende for systemets integration, skalerbarhed og vedligeholdelse.
+API Stilarter: RESTful vs. GraphQL
+To dominerende stilarter for web API'er er REST og GraphQL.
+   * REST (Representational State Transfer):
+   * Principper: Baseret på ressourcer (identificeret ved URIs), standard HTTP-verber (GET, POST, PUT, DELETE, PATCH) til at udføre handlinger på ressourcer, og typisk JSON som dataformat.21 Stateless (hver anmodning indeholder al nødvendig information).21
+   * Fordele: Moden, bredt forstået, udnytter HTTP-standarder (caching, statuskoder), simpelt konceptuelt.
+   * Ulemper: Kan føre til over-fetching (henter mere data end nødvendigt) eller under-fetching (kræver flere kald for at hente relaterede data), hvilket kan skabe "chatty" API'er.21 Fast datastruktur pr. endpoint.
+   * GraphQL:
+   * Principper: Bruger typisk et enkelt endpoint. Klienten sender en forespørgsel, der specificerer præcis de data og relationer, den har brug for, baseret på et stærkt typet skema defineret på serveren.22 Serveren returnerer kun de data, der blev anmodet om.
+   * Fordele: Løser over/under-fetching problemer, giver fleksibilitet til klienten, stærkt typet skema fungerer som dokumentation.22
+   * Ulemper: Mere kompleks serverimplementering, caching er mere udfordrende end med HTTP-baseret REST, risiko for komplekse/dyre forespørgsler fra klienten (kræver query complexity analysis).22
+   * Anbefaling for Simulatoren:
+   * REST: Er ofte et godt udgangspunkt for funktionalitet som at starte/stoppe/konfigurere simuleringer og hente overordnede resultater. Dens ressourceorienterede natur passer godt til at repræsentere simuleringer og deres tilstande.
+   * GraphQL: Kan være fordelagtigt, hvis frontend har behov for meget fleksible og varierende forespørgsler til at udforske simuleringsresultater eller agenttilstande i dybden.
+   * WebSockets: Uanset valget af REST eller GraphQL til anmodning/svar-interaktioner, vil WebSockets sandsynligvis være nødvendige for at pushe realtidsopdateringer af simuleringsstatus og -resultater fra backend til frontend.4
+API Design Bedste Praksis (Fokus på REST)
+Hvis REST vælges, bør følgende praksisser følges for klarhed, konsistens og brugervenlighed:
+   * Endepunkter (URI Design):
+   * Brug substantiver (nouns), ikke verber, til at repræsentere ressourcer (f.eks. /simulations, /agents, /tradePolicies).21
+   * Brug flertal for samlinger (collections) (f.eks. /simulations).21
+   * Strukturer URIs hierarkisk for at vise relationer (f.eks. /simulations/{simId}, /simulations/{simId}/agents, /simulations/{simId}/agents/{agentId}).21 Hold hierarkiet relativt simpelt (undgå for mange niveauer).21
+   * Undgå at eksponere den interne database-struktur direkte i API'et.21
+   * Anmodninger/Svar:
+   * Brug standard HTTP-metoder korrekt:
+   * GET: Hent ressourcer (idempotent, sikker).
+   * POST: Opret nye ressourcer eller udløs handlinger.
+   * PUT: Erstat en eksisterende ressource fuldstændigt (idempotent).
+   * PATCH: Opdater en eksisterende ressource delvist (ikke nødvendigvis idempotent).
+   * DELETE: Slet en ressource (idempotent). 21
+   * Brug JSON som primært dataformat for request/response bodies.21
+   * Brug Content-Type headeren til at angive formatet af request body.21
+   * Brug Accept headeren til at lade klienten specificere ønskede response formater.21
+   * Statuskoder:
+   * Brug standard HTTP statuskoder til at angive resultatet af en anmodning præcist.21
+   * 2xx (Success): 200 OK, 201 Created (med Location header til den nye ressource), 204 No Content.
+   * 3xx (Redirection): Bruges sjældent direkte i API'er, men 303 See Other kan bruges ved asynkrone POST-operationer.
+   * 4xx (Client Error): 400 Bad Request (invalide data), 401 Unauthorized (manglende/ugyldig autentifikation), 403 Forbidden (autentificeret, men ingen adgang), 404 Not Found, 405 Method Not Allowed, 406 Not Acceptable (Accept header), 409 Conflict (f.eks. ved PUT/PATCH), 415 Unsupported Media Type (Content-Type header).
+   * 5xx (Server Error): 500 Internal Server Error (generisk serverfejl).
+   * Fejlhåndtering:
+   * Returner altid en meningsfuld fejlbesked i response body for 4xx og 5xx statuskoder.21
+   * Overvej en konsistent fejlrespons-struktur (f.eks. {"error": {"code": "INVALID_INPUT", "message": "Detaljer om fejlen", "details": [...]}}).
+API Versioneringsstrategier
+Når et API udvikler sig, kan der opstå "breaking changes" (ændringer, der bryder kompatibiliteten for eksisterende klienter). Versionering er nødvendig for at håndtere dette.
+   * Behov: Versionering tillader introduktion af breaking changes uden at ødelægge integrationen for eksisterende klienter, der stadig bruger en ældre version.23 Up-version kun ved breaking changes (f.eks. ændring af dataformat, fjernelse af felter/endpoints).23 Ikke-breaking changes (f.eks. tilføjelse af felter/endpoints) kræver typisk ikke en ny major version.23
+   * Strategier:
+   * URI Versioning: Versionen inkluderes i URI'en (f.eks. /api/v1/simulations). Meget almindeligt og eksplicit.23 Ulempe: URIs er ikke længere "permanente" ressource-identifikatorer.23
+   * Custom Request Header: Versionen specificeres i en custom header (f.eks. X-API-Version: 1).23 Holder URIs rene, men er ikke en standard header.
+   * Accept Header (Media Type Versioning): Versionen specificeres i Accept headeren via en custom media type (f.eks. Accept: application/vnd.example.v1+json).23 Følger HTTP-principper for content negotiation, men kan være mere kompleks for klienter at implementere.23
+   * Anbefaling: URI Versioning er ofte den mest pragmatiske og lettest forståelige metode for både klienter og servere.
+   * Tabel: API Versioneringsstrategier
+
+
+Strategi
+	Fordele
+	Ulemper
+	URI Versioning
+	Eksplicit, nem at implementere/cache 23
+	Bryder URI-princippet, "roder" URIs 23
+	Custom Header
+	Rene URIs 23
+	Ikke-standard header, mindre discoverable 23
+	Accept Header
+	Rene URIs, følger HTTP standard 23
+	Mere kompleks for klienter, potentielt sværere at cache/debugge 23
+	API Sikkerhed Essentielle Punkter
+API'er er ofte udsatte adgangspunkter til systemets data og funktionalitet og skal sikres omhyggeligt. Følg OWASP API Security Top 10 anbefalingerne.24
+   * Autentifikation (API2:2023): Implementer robuste mekanismer til at verificere, hvem klienten er (f.eks. API-nøgler, OAuth 2.0 med JWT tokens). Undgå svage eller fejlbehæftede implementeringer.24
+   * Autorisation (API1, API3, API5:2023): Håndhæv strenge kontroller for, hvad en autentificeret klient må gøre.
+   * Object Level (API1): Kontroller adgang til specifikke ressourcer (f.eks. må bruger A se simulation B?).
+   * Object Property Level (API3): Kontroller adgang til specifikke felter i en ressource (f.eks. må en almindelig bruger se admin-parametre for en simulation?). Undgå mass assignment-sårbarheder.
+   * Function Level (API5): Kontroller adgang til specifikke handlinger eller endpoints (f.eks. må en bruger starte en simulation, men ikke slette den?).
+   * Input Validering: Valider altid al data modtaget fra klienten (parametre, request body) for at forhindre injection-angreb, ugyldige værdier og andre sårbarheder relateret til bl.a. API7:2023 (SSRF).
+   * Rate Limiting (API4:2023): Implementer begrænsninger på antallet af anmodninger en klient kan sende inden for et tidsrum for at forhindre Denial of Service (DoS) og misbrug.24
+   * Resource Consumption (API4:2023): Vær opmærksom på, hvordan ressourcekrævende API-kald er (CPU, hukommelse, båndbredde) og implementer begrænsninger.24
+   * Sensitive Business Flows (API6:2023): Beskyt forretningskritiske flows mod automatiseret misbrug.24
+   * Security Misconfiguration (API8:2023): Sørg for korrekt og sikker konfiguration af server, database, framework og afhængigheder. Undgå standard-credentials, unødvendige features, og giv informative fejlbeskeder.24
+   * Improper Inventory Management (API9:2023): Hold styr på alle API-endpoints, versioner (inkl. gamle/beta) og deres dokumentation. Fjern eller beskyt ikke-produktionelle endpoints.24
+   * Unsafe Consumption of APIs (API10:2023): Vær forsigtig ved integration med tredjeparts API'er; valider og saniter data modtaget fra dem.24
+   * HTTPS: Brug altid HTTPS til at kryptere kommunikationen.
+   * Tabel: OWASP API Security Top 10 (2023)
+ID
+	Risiko
+	Kort Beskrivelse
+	API1:2023
+	Broken Object Level Authorization
+	Utilstrækkelig validering af, om brugeren har adgang til det specifikke objekt, de anmoder om.
+	API2:2023
+	Broken Authentication
+	Forkert implementerede autentifikationsmekanismer, der tillader kompromittering af identiteter.
+	API3:2023
+	Broken Object Property Level Authorization
+	Utilstrækkelig validering af adgang til specifikke felter (properties) i et objekt (inkl. mass assignment).
+	API4:2023
+	Unrestricted Resource Consumption
+	Manglende begrænsninger på ressourceforbrug (CPU, hukommelse, etc.), hvilket fører til DoS eller høje omkostninger.
+	API5:2023
+	Broken Function Level Authorization
+	Utilstrækkelig validering af, om brugeren har adgang til at udføre specifikke handlinger/funktioner.
+	API6:2023
+	Unrestricted Access to Sensitive Business Flows
+	Manglende beskyttelse mod automatiseret misbrug af forretningskritiske funktioner.
+	API7:2023
+	Server Side Request Forgery (SSRF)
+	API'et kan narres til at sende anmodninger til utilsigtede interne eller eksterne systemer.
+	API8:2023
+	Security Misconfiguration
+	Forkert konfiguration af sikkerhedsindstillinger i API'et eller dets underliggende infrastruktur.
+	API9:2023
+	Improper Inventory Management
+	Manglende overblik over og styring af alle API-endpoints og versioner, inkl. "skygge" eller gamle API'er.
+	API10:2023
+	Unsafe Consumption of APIs
+	Utilstrækkelig sikring ved integration med og forbrug af tredjeparts API'er.
+	
+
+
+
+
+
+*Kilde: [24]*
+
+Realtidskommunikation med WebSockets
+Til at sende simuleringsopdateringer fra backend til frontend i realtid er WebSockets en velegnet teknologi.
+   * Formål: WebSockets etablerer en vedvarende, tovejskommunikationskanal mellem klient og server over en enkelt TCP-forbindelse.4 Dette eliminerer behovet for konstant HTTP-polling fra klienten for at tjekke efter opdateringer.4
+   * Mekanisme: Starter med et HTTP-handshake for at opgradere forbindelsen til WebSocket-protokollen (ws:// eller wss://). Derefter kan begge parter sende beskeder (tekst eller binære) til hinanden når som helst.4 API'et er event-drevet med hændelser som onopen, onmessage, onclose, onerror.4
+   * Anvendelse i Simulering:
+   * Backend: Når simuleringsmotoren producerer nye resultater eller tilstandsændringer, kan backend'en pushe disse data som en besked (typisk JSON) til alle forbundne WebSocket-klienter.4
+   * Frontend: onmessage-handleren i frontend modtager opdateringerne og opdaterer UI-elementer og visualiseringer i overensstemmelse hermed.4 Frontend kan også sende beskeder til backend for at styre simuleringen (f.eks. start, stop, ændre parametre).4
+Instruer AI'en til at designe API'et (REST eller GraphQL) med klare endpoints/skemaer, korrekt brug af HTTP-metoder/statuskoder, robust fejlhåndtering, og en passende versioneringsstrategi (f.eks. URI-versionering). Implementer desuden WebSocket-kommunikation for realtidsopdateringer fra backend til frontend. Husk at instruere AI'en i at implementere grundlæggende sikkerhedsforanstaltninger (autentifikation, autorisation, rate limiting).
+7. Omfattende Teststrategier
+Testning er afgørende for at sikre kvaliteten, korrektheden og robustheden af trade war simulatoren. En lagdelt teststrategi, ofte visualiseret som testpyramiden, er essentiel.
+Testpyramiden
+Testpyramiden er en model, der illustrerer en sund balance mellem forskellige typer tests. Selvom den specifikke reference var utilgængelig 25, er konceptet velkendt:
+   * Unit Tests (Base): Udgør det største lag. Tester små, isolerede kodeenheder (funktioner, metoder, komponenter) uafhængigt af hinanden. De er hurtige at køre og billige at skrive. Afhængigheder mockes typisk.11
+   * Integration Tests (Middle): Tester interaktionen mellem flere enheder eller moduler (f.eks. servicekald til repository, API-endpoint til service). De er langsommere end unit tests og kræver ofte mere opsætning (f.eks. en testdatabase).
+   * End-to-End (E2E) Tests (Top): Udgør det mindste lag. Tester hele applikationsflowet fra brugergrænsefladen gennem backend til databasen og tilbage. Simulerer faktiske bruger-scenarier. De er de langsomste, dyreste og mest skrøbelige tests.
+Vigtighed: En god teststrategi har mange hurtige unit tests for at fange fejl tidligt og give hurtig feedback, færre integration tests for at verificere samspillet mellem komponenter, og kun et begrænset antal E2E tests for at validere kritiske brugerflows. Overdreven afhængighed af E2E tests fører til langsomme og ustabile test-suiter.
+Frontend Testværktøjer (JS/TS)
+   * Unit/Component Tests:
+   * Jest: Et populært og omfattende test-framework til JavaScript.26 Det inkluderer en test runner, assertion library (expect), og indbyggede mocking-faciliteter.
+   * React Testing Library (RTL) / Vue Testing Library: Biblioteker, der bruges sammen med Jest (eller et lignende framework) til at teste React/Vue-komponenter på en måde, der ligner, hvordan brugerne interagerer med dem, frem for at teste implementeringsdetaljer.
+   * End-to-End (E2E) Tests:
+   * Cypress: Et moderne E2E-testframework, der kører direkte i browseren og giver god debugging-oplevelse.
+   * Playwright: Et andet kraftfuldt E2E-framework (udviklet af Microsoft) med cross-browser support.
+Backend Testværktøjer (Python)
+   * Unit Tests:
+   * pytest: Et meget populært og fleksibelt test-framework.27 Kendt for sin simple assert-syntaks, auto-discovery af tests, og kraftfulde fixture-system til opsætning/nedtagning og dependency injection i tests.27 Kan også køre unittest-baserede tests.27
+   * unittest: Pythons indbyggede test-framework.27 Følger xUnit-stilen og kræver, at tests defineres i klasser, der arver fra unittest.TestCase.
+   * Mocking:
+   * unittest.mock: Pythons indbyggede bibliotek til at skabe mock-objekter og patche (midlertidigt erstatte) funktioner eller objekter under test.27 Er essentielt for at isolere enheder under test.
+   * pytest Fixtures: Pytests fixture-system kan også bruges til at levere mockede afhængigheder til tests.27 pytest-mock plugin'et giver nem adgang til unittest.mock funktionalitet som en fixture.
+   * Integration Tests: Kan skrives med pytest eller unittest. Kræver ofte opsætning af eksterne afhængigheder som en testdatabase (f.eks. ved hjælp af Docker-containere styret af test-fixtures).
+Testning af Simuleringer
+Testning af selve simuleringsmotoren og dens output kræver specifikke strategier ud over standard unit/integration tests.
+   * Validering af Modellen: Det er afgørende at validere, at simuleringsmodellen opfører sig som forventet og afspejler den virkelighed (eller teori), den prøver at modellere. Dette kan involvere:
+   * Sammenligning af simuleringsoutput med kendte historiske data eller empiriske "stylized facts" fra økonomisk litteratur.
+   * Verificering mod teoretiske modeller under simplificerede antagelser.
+   * Brug af standardiserede deskriptionsprotokoller som ODD (Overview, Design concepts, Details) til at dokumentere modellen klart, hvilket letter validering og replikation.28
+   * Scenario Testing: Dette er særligt relevant for komplekse systemer som simuleringer.29 Det involverer at definere realistiske end-to-end scenarier (f.eks. "indførsel af 20% told på stål mellem land A og B") og køre simuleringen for at observere og validere systemets adfærd og udfald under disse specifikke betingelser.29 Det hjælper med at verificere, at interaktionerne mellem agenter og systemets samlede respons er plausible.29
+   * Property-Based Testing (PBT): En kraftfuld teknik til simuleringer, især med biblioteker som Hypothesis for Python.30 I stedet for at teste med specifikke input, definerer man egenskaber (properties) eller invarianter, der altid skal gælde for simuleringen, uanset de specifikke (men gyldige) inputparametre eller stokastiske hændelser. Hypothesis genererer derefter mange forskellige, ofte uventede, inputs for at forsøge at falsificere disse egenskaber.30 Eksempler på properties i en økonomisk simulering kunne være: "den samlede globale rigdom skal forblive konstant, hvis der ikke er ekstern produktion/destruktion", "ingen agent kan have negativ beholdning af en ressource", "en handelsaftale mellem to lande skal altid resultere i øget handel mellem dem (under ceteris paribus antagelser)".
+Simuleringer involverer ofte stokastiske elementer og komplekse interaktioner, hvilket gør traditionelle unit tests baseret på eksakt input/output-matching mindre effektive for kernesimuleringslogikken. Fokus bør i stedet flyttes mod at verificere modellens overordnede adfærd, dens evne til at reproducere kendte mønstre, og at den overholder fundamentale regler eller invarianter. Derfor er Scenario Testing og Property-Based Testing særligt værdifulde. Scenario testing validerer systemets opførsel i realistiske situationer 29, mens property-based testing systematisk udforsker input-rummet for at finde edge cases, der bryder modellens grundlæggende antagelser eller invarianter.30
+Hvordan DI og Repository Patterns Hjælper Testning
+Som nævnt i afsnit 3, er disse mønstre fundamentale for testbarhed:
+   * Dependency Injection (DI): Gør det muligt at erstatte reelle afhængigheder (f.eks. en kompleks økonomisk model-komponent, en ekstern datakilde) med mocks eller stubs under unit testing.12 Dette isolerer den testede enhed.
+   * Repository Pattern: Giver en klar abstraktion over dataadgang. Under test kan IRepository-interfacet implementeres af en mock, der returnerer foruddefinerede data, hvilket eliminerer behovet for en databaseforbindelse i unit tests af services eller controllere.10
+Instruer AI'en til at:
+   * Skrive unit tests (med Jest/RTL for frontend, pytest for backend) for alle komponenter, funktioner og services.
+   * Bruge mocking (via unittest.mock eller Jest) til at isolere enheder under test, især ved at mocke repository-kald i service-tests.
+   * Implementere integration tests for at verificere samspillet mellem services og repositories (evt. mod en test-database).
+   * Overveje at skrive property-based tests (med Hypothesis) for kerne-simuleringslogikken for at teste invarianter.
+   * Skrive E2E tests (med Cypress/Playwright) for kritiske bruger-scenarier.
+8. Effektiv Versionskontrol med Git
+Versionskontrol, især med Git, er uundværligt for ethvert softwareprojekt, selv for solo-projekter med AI-assistance. Det muliggør sporing af ændringer, tilbagevenden til tidligere versioner, håndtering af parallel udvikling og faciliterer kodegennemgang.
+Vigtigheden af Git
+Git giver en robust mekanisme til at:
+   * Spore historik: Hver ændring gemmes som en commit, hvilket skaber en komplet historik over projektets udvikling.
+   * Samarbejde: Selvom AI'en koder, vil der være menneskelig interaktion, review og potentielt fremtidigt samarbejde. Git er standarden for dette.
+   * Eksperimentere sikkert: Branching tillader udvikling af nye features eller rettelser i isolation uden at påvirke den stabile hovedlinje.
+   * Gendanne: Gør det nemt at rulle tilbage til tidligere versioner, hvis fejl introduceres.
+Branching Strategier
+En konsistent branching-strategi organiserer udviklingsprocessen.
+   * Feature Branching: Den grundlæggende idé er at oprette en ny branch for hver ny feature eller bugfix, arbejde på den branch, og merge den tilbage, når arbejdet er færdigt.
+   * Gitflow: En mere struktureret model med langlivede master (produktion) og develop (integration) branches, samt kortlivede feature, release, og hotfix branches.31
+   * Fordele: Meget struktureret, god til projekter med planlagte releases og behov for at vedligeholde flere versioner i produktion. Klar adskillelse af arbejde.
+   * Ulemper: Kan opfattes som kompleks og bureaukratisk, især for mindre teams eller projekter med Continuous Deployment.
+   * GitHub Flow: En simplere model centreret omkring main (eller master) branchen, som altid er deployerbar.32 Features udvikles på separate branches, der oprettes fra main. Når en feature er klar, oprettes en Pull Request (PR) for review og diskussion. Efter godkendelse merges feature-branchen direkte tilbage til main, som derefter kan deployes.32
+   * Fordele: Simpel, let at forstå, fremmer Continuous Integration og Continuous Deployment (CI/CD). God til webapplikationer og mindre teams.
+   * Ulemper: Mindre struktureret omkring formelle releases, håndtering af hotfixes kræver disciplin (typisk laves de også som feature branches fra main). Kan være udfordrende uden et robust CI/CD-setup.
+   * GitLab Flow: En variation, der kombinerer elementer fra Gitflow og GitHub Flow, ofte med tilføjelse af miljøspecifikke branches (f.eks. staging, production) udover main.
+   * Anbefaling: For et projekt som dette (potentielt solo-udviklet med AI, web-baseret), er GitHub Flow sandsynligvis den mest passende og mindst komplekse strategi. Den er enkel at følge og passer godt til en iterativ udviklingsproces med hyppige (potentielle) deployments. Start med en main branch. Opret branches for hver logisk ændring (f.eks. feature/implement-trade-model, fix/ui-rendering-bug). Brug Pull Requests (selvom du merger dem selv) til at udløse CI-checks og som et review-punkt for AI-genereret kode.
+   * Tabel: Gitflow vs. GitHub Flow
+
+
+Kriterie
+	Gitflow
+	GitHub Flow
+	Primære Branches
+	master, develop 31
+	main (eller master) 32
+	Supporting Branches
+	feature/*, release/*, hotfix/* 31
+	feature/* (eller deskriptive navne) 32
+	Kompleksitet
+	Højere
+	Lavere
+	Release Håndtering
+	Struktureret via release branches 31
+	Typisk direkte fra main (CI/CD)
+	Hotfix Håndtering
+	Dedikerede hotfix branches fra master 31
+	Typisk som almindelige feature branches fra main
+	CI/CD Egnethed
+	Mindre egnet til Continuous Deployment
+	Meget egnet til Continuous Deployment
+	Ideel til
+	Projekter med planlagte releases, store teams, behov for versions-vedligehold
+	Webapps, CI/CD, mindre teams, hurtig iteration
+	
+
+
+
+
+
+*Kilder: [31, 32]*
+
+Skrivning af Meningsfulde Commit Beskeder
+Klare og informative commit-beskeder er afgørende for at forstå projektets historik.
+   * Vigtighed: Gode beskeder gør det nemmere at spore ændringer, debugge problemer (f.eks. med git bisect), forstå rationalet bag ændringer og potentielt auto-generere changelogs. Dette er kritisk, selv når AI skriver koden, da mennesket skal kunne forstå historikken.
+   * Atomicitet: Hver commit bør repræsentere en enkelt, logisk ændring. Undgå at samle urelaterede ændringer (f.eks. en bugfix og en ny feature) i én commit. Gør commits tidligt og ofte. Små, fokuserede commits er lettere at forstå, gennemgå og rulle tilbage.
+   * Conventional Commits Standard: Dette er en stærkt anbefalet standard for at strukturere commit-beskeder på en måde, der er både menneske- og maskinlæsbar.33
+   * Format: <type>[optional scope]: <description> efterfulgt af optional [body] og [footer(s)].33
+   * Type: Angiver typen af ændring (KRÆVET). Vigtigste typer:
+   * feat: En ny feature (korrelerer med SemVer MINOR bump).
+   * fix: En bugfix (korrelerer med SemVer PATCH bump).
+   * Andre Almindelige Typer: build, chore (vedligeholdelse, dependencies), ci, docs, style (formatering), refactor, perf (performance), test. Disse påvirker ikke SemVer, medmindre de indeholder en BREAKING CHANGE.
+   * Scope (Valgfri): Angiver den del af koden, ændringen påvirker (f.eks. feat(api):, fix(simulation-engine):).
+   * Description: Kort, præcis beskrivelse af ændringen (KRÆVET). Brug imperativ nutid (f.eks. "add", "fix", "change" ikke "added", "fixed", "changed"). Hold den kort (typisk < 50 tegn).
+   * Body (Valgfri): Mere detaljeret forklaring af ændringen og rationalet bag den. Adskilles fra description med en blank linje. Kan indeholde flere afsnit.
+   * Footer (Valgfri): Bruges til at angive BREAKING CHANGES eller referere til issue numre (f.eks. BREAKING CHANGE: User authentication API now requires JWT token., Fixes #123). BREAKING CHANGE: (eller BREAKING-CHANGE:) i footeren korrelerer med SemVer MAJOR bump.33 Et ! efter type/scope (f.eks. feat(auth)!:) indikerer også en breaking change.33
+   * Fordele: Muliggør automatisk generering af changelogs, automatisk bestemmelse af SemVer-bump, forbedret læsbarhed af historikken, og kan bruges til at trigge automatiserede processer.33
+   * Tabel: Almindelige Conventional Commit Typer
+
+
+Type
+	Formål
+	SemVer Effekt
+	feat
+	Introducerer en ny feature
+	MINOR
+	fix
+	Retter en bug
+	PATCH
+	docs
+	Ændringer kun i dokumentation
+	Ingen
+	style
+	Kode-stil ændringer (formatering, semikolon etc.)
+	Ingen
+	refactor
+	Kode-refaktorering uden ændring i funktionalitet
+	Ingen
+	perf
+	Kodeændring der forbedrer performance
+	Ingen
+	test
+	Tilføjelse/rettelse af tests
+	Ingen
+	build
+	Ændringer der påvirker build-system eller eksterne dependencies
+	Ingen
+	ci
+	Ændringer til CI konfiguration/scripts
+	Ingen
+	chore
+	Andre ændringer der ikke modificerer src/test filer (f.eks. deps)
+	Ingen
+	revert
+	Tilbageruller en tidligere commit
+	Ingen
+	! / BREAKING CHANGE:
+	Indikerer en breaking API change 33
+	MAJOR
+	
+
+
+
+
+
+*Kilder: [33]*
+
+Kodegennemgang (Code Review) Praksis (med AI)
+Selv i et projekt med AI-assistance er kodegennemgang (code review) en vital proces.
+   * Formål: At forbedre kodens kvalitet, fange fejl (både logiske og sikkerhedsmæssige), sikre konsistens med projektets standarder og arkitektur, dele viden og give feedback.1
+   * Proces: Brug Pull Requests (PRs) på platforme som GitHub/GitLab, selvom man arbejder alene eller primært med AI. Dette giver et formelt punkt for gennemgang, diskussion og kørsel af automatiserede checks (linters, tests via CI).
+   * Gennemgang af AI-genereret Kode: Dette er absolut nødvendigt. AI-kode kan være:
+   * Syntaktisk korrekt, men logisk forkert.
+   * Ineffektiv eller unødigt kompleks.
+   * Usikker (introducere sårbarheder).
+   * Ikke-idiomatisk for sproget/frameworket.
+   * Baseret på forældede praksisser eller biblioteker.
+   * Ufuldstændig eller ignorerer dele af prompten/konteksten. Menneskelig gennemgang skal fokusere på:
+   * Korrekthed: Gør koden det, den skal? Håndteres edge cases?.1
+   * Design: Passer koden ind i den overordnede arkitektur? Følger den designmønstre (MVC, Repository, DI)? Er den modulær?.1
+   * Kompleksitet: Er koden unødigt kompliceret? Kan den simplificeres?.1
+   * Testdækning: Er der tilstrækkelige og meningsfulde tests?.1
+   * Sikkerhed: Er der potentielle sårbarheder (jf. OWASP Top 10)?
+   * Læsbarhed/Vedligeholdelse: Følger koden stilguides? Er navngivning klar? Er kommentarer nødvendige og informative?.1
+   * AI-assistance i Gennemgang: AI-værktøjer kan assistere i kodegennemgang ved f.eks. at:
+   * Foreslå rettelser til simple fejl eller stilproblemer.
+   * Forklare komplekse kodestykker.
+   * Identificere potentielle bugs eller sikkerhedsproblemer (statisk analyse).
+   * Opsummere ændringer i en PR. Det er dog vigtigt at huske, at AI'en ikke erstatter den menneskelige reviewers dybe forståelse og kritiske vurdering.
+   * Samarbejde med AI'en:
+   * Klar Instruktion: Giv AI'en klare prompts, specificer krav, og definer "rules of engagement" (f.eks. "brug altid async/await", "implementer UserRepository interface", "følg PEP 8").
+   * Feedback Loop: Giv feedback på den genererede kode (både positiv og negativ) for at hjælpe AI'en med at forbedre sig. Stop og omformuler prompts, hvis AI'en går galt i byen.
+   * Mental Model: Betragt AI-assistenten som en dygtig, men uerfaren, junior udvikler. Mennesket (arkitekten/senioren) definerer opgaven, designet og begrænsningerne. AI'en implementerer. Mennesket gennemgår kritisk resultatet for korrekthed, sikkerhed, effektivitet og overensstemmelse med det overordnede design. Fokus i review bør være på de aspekter, hvor AI typisk fejler: logik, edge cases, sikkerhed, og integration med eksisterende kode.
+Instruer AI'en til at:
+   * Følge den valgte branching-strategi (f.eks. GitHub Flow).
+   * Oprette små, atomare commits.
+   * Skrive commit-beskeder i henhold til Conventional Commits standarden.
+   * Oprette Pull Requests for alle ændringer, selvom de merges med det samme.
+   * Forvente menneskelig gennemgang af al genereret kode.
+Konklusion
+Denne vejledning har præsenteret en række bedste praksisser for udviklingen af en webbaseret trade war simulator, med særligt fokus på at give klare instruktioner til en AI-kodningsassistent. Ved at følge disse retningslinjer kan projektet opnå en højere grad af struktur, kvalitet og vedligeholdelsesvenlighed.
+Centrale Anbefalinger:
+   * Struktur: Etabler en klar projektstruktur med adskilt frontend og backend, gerne i et monorepo i starten, men med bevidsthed om grænserne.
+   * Konsistens: Vælg og håndhæv konsekvent anerkendte kodestandarder (f.eks. PEP 8, Airbnb/Google TS) ved hjælp af integrerede linters (ESLint, Ruff/Flake8/Pylint) og formatters (Prettier, Black/Ruff) i VS Code. Dette skaber en essentiel feedback-loop for AI'en.
+   * Modularitet: Anvend designprincipper som SoC, høj samhørighed og lav kobling. Implementer arkitektoniske mønstre som MVC, Repository og Service Layer. Brug Dependency Injection stringent for at sikre testbarhed og fleksibilitet, især når AI genererer kode.
+   * Backend (Simulering): Udnyt Agent-Based Modeling. Vælg databaser (f.eks. TSDB eller Event Sourcing + CQRS) der understøtter historisk analyse af simuleringsdata. Optimer beregningstunge opgaver med parallelisering (Python multiprocessing, Node.js worker_threads).
+   * Frontend (Simulering): Vælg et moderne framework (React/Vue). Brug et dedikeret state management-bibliotek. Vælg visualiseringværktøjer (Plotly.js, Chart.js) der understøtter effektive opdateringer fra streaming data.
+   * API Design: Design et klart og robust API (REST anbefales som start), følg bedste praksis for endpoints, statuskoder og fejlhåndtering. Implementer versionering og grundlæggende sikkerhed (OWASP Top 10). Brug WebSockets til realtidsopdateringer.
+   * Testning: Følg testpyramiden. Brug passende værktøjer til unit, integration og E2E tests for både frontend og backend. Anvend scenario- og property-based testing til at validere selve simuleringsmodellens adfærd og invarianter. Udnyt DI og Repository-mønstret til at mocke afhængigheder.
+   * Versionskontrol: Brug Git effektivt. Vælg en simpel branching-strategi (GitHub Flow anbefales). Skriv atomare commits med Conventional Commits standarden.
+AI som Værktøj: Husk, at AI-kodningsassistenten er et kraftfuldt værktøj, men ikke en erstatning for solid softwarearkitektur og kritisk menneskelig dømmekraft. Dens output skal altid gennemgås omhyggeligt. Ved at give AI'en klare, velbegrundede instruktioner baseret på de bedste praksisser beskrevet her, maksimeres chancen for at opbygge en succesfuld, robust og vedligeholdelsesvenlig trade war simulator. Konsistens i anvendelsen af disse principper gennem hele projektets levetid er nøglen til succes.
+Citerede værker
+   1. How to do a code review | eng-practices - Google, tilgået april 21, 2025, https://google.github.io/eng-practices/review/reviewer/
+   2. Coupling and Cohesion – Software Engineering | GeeksforGeeks, tilgået april 21, 2025, https://www.geeksforgeeks.org/software-engineering-coupling-and-cohesion/
+   3. node.js - How to organise file structure of backend and frontend in ..., tilgået april 21, 2025, https://stackoverflow.com/questions/51126472/how-to-organise-file-structure-of-backend-and-frontend-in-mern
+   4. The WebSocket API (WebSockets) - Web APIs | MDN, tilgået april 21, 2025, https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
+   5. Developing a Single Page App with Flask and Vue.js | TestDriven.io, tilgået april 21, 2025, https://testdriven.io/blog/developing-a-single-page-app-with-flask-and-vuejs/
+   6. Boosting Developer Productivity Through Linters | Tower Blog, tilgået april 21, 2025, https://www.git-tower.com/blog/boosting-productivity-through-linters/
+   7. Editor Integration · Prettier, tilgået april 21, 2025, https://prettier.io/docs/en/editors.html#visual-studio-code
+   8. Flake8 - Visual Studio Marketplace, tilgået april 21, 2025, https://marketplace.visualstudio.com/items?itemName=ms-python.flake8
+   9. MVC - MDN Web Docs Glossary: Definitions of Web-related terms ..., tilgået april 21, 2025, https://developer.mozilla.org/en-US/docs/Glossary/MVC
+   10. Designing the infrastructure persistence layer - .NET | Microsoft Learn, tilgået april 21, 2025, https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design
+   11. Implementing the infrastructure persistence layer with Entity ..., tilgået april 21, 2025, https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-implementation-entity-framework-core
+   12. Inversion of Control Containers and the Dependency Injection pattern, tilgået april 21, 2025, https://martinfowler.com/articles/injection.html
+   13. faculty.sites.iastate.edu, tilgået april 21, 2025, https://faculty.sites.iastate.edu/tesfatsi/archive/tesfatsi/ABMTutorial.MacalNorth.JOS2010.pdf
+   14. Pattern: Event sourcing - Microservices.io, tilgået april 21, 2025, https://microservices.io/patterns/data/event-sourcing.html
+   15. Speed Up Your Python Program With Concurrency – Real Python, tilgået april 21, 2025, https://realpython.com/python-concurrency/
+   16. asyncio — Asynchronous I/O — Python 3.13.3 documentation, tilgået april 21, 2025, https://docs.python.org/3/library/asyncio.html
+   17. Node.js — Don't Block the Event Loop (or the Worker Pool), tilgået april 21, 2025, https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
+   18. Motivation | Redux, tilgået april 21, 2025, https://redux.js.org/understanding/thinking-in-redux/motivation
+   19. Plotly javascript graphing library in JavaScript, tilgået april 21, 2025, https://plotly.com/javascript/
+   20. Updating Charts | Chart.js, tilgået april 21, 2025, https://www.chartjs.org/docs/latest/developers/updates.html
+   21. Web API design best practices - Azure Architecture Center ..., tilgået april 21, 2025, https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design
+   22. GraphQL Best Practices | GraphQL, tilgået april 21, 2025, https://graphql.org/learn/best-practices/
+   23. REST API Versioning: How to Version a REST API?, tilgået april 21, 2025, https://restfulapi.net/versioning/
+   24. OWASP API Security Project | OWASP Foundation, tilgået april 21, 2025, https://owasp.org/www-project-api-security/
+   25. tilgået januar 1, 1970, https://www.browserstack.com/guide/testing-pyramid-for-web-applications
+   26. Getting Started · Jest, tilgået april 21, 2025, https://jestjs.io/docs/getting-started
+   27. pytest documentation, tilgået april 21, 2025, https://docs.pytest.org/en/stable/
+   28. ODD Protocol - CoMSES Net, tilgået april 21, 2025, https://www.comses.net/resources/standards/
+   29. What is Test Scenario in Software Testing (Examples) - Guru99, tilgået april 21, 2025, https://www.guru99.com/scenario-testing.html
+   30. Hypothesis 6.131.3 documentation, tilgået april 21, 2025, https://hypothesis.readthedocs.io/en/latest/
+   31. A successful Git branching model » nvie.com, tilgået april 21, 2025, https://nvie.com/posts/a-successful-git-branching-model/
+   32. GitHub flow - GitHub Docs, tilgået april 21, 2025, https://docs.github.com/en/get-started/quickstart/github-flow
+   33. Conventional Commits, tilgået april 21, 2025, https://www.conventionalcommits.org/en/v1.0.0/

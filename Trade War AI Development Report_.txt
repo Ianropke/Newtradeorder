@@ -1,0 +1,655 @@
+﻿AI Design Analysis for Trade War Simulator
+1. Introduction
+1.1. Project Context
+The "Trade War Simulator" project aims to create an engaging web-based simulation game centered on international trade dynamics, economic policy, and geopolitical maneuvering. The core of the simulation involves multiple nations, controlled either by human players or Artificial Intelligence (AI), interacting within a shared economic and political environment. This environment is governed by principles derived from Neoclassical economics, simulated through a turn-based system. The game employs an agent-based modeling (ABM) approach, where each nation acts as an autonomous agent pursuing its objectives within the simulated world.1
+1.2. The Critical Role of AI
+In such a simulation, the AI controlling non-player nations is paramount. It moves beyond being a mere placeholder; it becomes a dynamic participant that shapes the game's narrative and challenges human players. The quality of the AI directly determines the simulation's depth, replayability, and overall believability. For the "Trade War Simulator," AI agents must exhibit sophisticated strategic behavior, reacting intelligently to economic shifts, implementing trade policies like tariffs, managing domestic sectors, forming and breaking alliances, and pursuing political goals, all while navigating the constraints of the simulated world.7 The AI must be capable of interpreting economic indicators, predicting opponent actions (to some extent), and making decisions that align with its assigned national objectives and personality.
+1.3. Report Objectives
+This report provides a comprehensive analysis of potential AI techniques suitable for implementation in the "Trade War Simulator." The primary objective is to evaluate these techniques based on their ability to generate realistic and strategic economic and political behavior. A critical aspect of this evaluation is feasibility, specifically considering the constraints of a web-based platform and development by a potentially solo developer leveraging AI coding assistance. The report aims to furnish the development team with the necessary information to select an appropriate AI architecture and outlines a practical, phased implementation strategy.
+1.4. Scope and Structure
+The analysis encompasses a range of AI techniques commonly employed in strategy games and simulations, from traditional rule-based approaches to modern machine learning and large language model-based agents. Each technique is assessed based on criteria including implementation complexity, potential for strategic depth, data requirements, computational performance within a web context, and overall feasibility for the project scope. The report further explores how specific game mechanics (tariff responses, sector protection, alliance dynamics, political stability) can be modeled using the most promising techniques. Integration with the core simulation loop and the underlying Neoclassical economic model is examined. Strategies for implementing varying AI difficulty levels and distinct national personalities are discussed. Finally, the report provides concrete recommendations for a phased implementation strategy and offers guidance on effectively utilizing AI coding assistants throughout the development process.
+2. Analysis of AI Techniques for Economic Strategy Simulation
+Choosing the right AI technique is crucial for balancing behavioral complexity, development effort, and performance. This section analyzes several candidate techniques within the specific context of the Trade War Simulator.
+2.1. Rule-Based Systems (RBS) & Finite State Machines (FSM)
+Principles: Rule-Based Systems (RBS) operate on predefined sets of IF-THEN rules that dictate behavior based on specific conditions within the game state.7 Finite State Machines (FSMs) model behavior as a set of discrete states (e.g., 'Trading Freely', 'Retaliating', 'Seeking Alliance') with transitions between these states triggered by specific events or conditions evaluated using rules.12 An FSM defines when an agent changes its general behavior, while RBS often defines the specific actions within a state or the logic triggering a transition.11
+Pros:
+* Simplicity & Control: RBS and FSMs are conceptually straightforward and relatively easy to implement for basic behaviors, especially with AI coding assistance for boilerplate code.7 They offer high predictability and direct control over AI actions, which is useful for establishing baseline behaviors or ensuring specific scenarios play out as designed.7 Their computational overhead is typically low, making them suitable for performance-constrained web environments.7 FSM diagrams can be intuitive for design discussions, even with non-programmers.13
+* Low Data Requirements: These systems do not require training data, relying solely on explicitly programmed rules and states.
+Cons:
+* Scalability Issues: The primary drawback is managing complexity. As the number of economic factors, political states, and possible actions increases, the number of rules in an RBS or states/transitions in an FSM can grow exponentially, leading to tangled, hard-to-maintain code.12 This "combinatorial explosion" is a known limitation, particularly for FSMs.15
+* Limited Adaptability: Agents governed strictly by RBS/FSMs can appear repetitive or predictable.7 They struggle to handle novel situations or nuances not explicitly encoded in the rules or state transitions.11 Adapting to new game mechanics or player strategies often requires significant manual updates to the rule/state structure.16
+* Brittleness: The rigid structure means that adding new simulation elements (e.g., a new economic indicator, a new diplomatic action) later in development can necessitate extensive and error-prone refactoring of existing states and transition logic.12 For a solo developer, this lack of flexibility can significantly hinder iteration and expansion.
+Trade War Context: Suitable for foundational behaviors like basic tariff retaliation ("IF Player Tariff > 10% THEN Retaliate") or managing high-level diplomatic stances (Neutral, Allied, Hostile) via an FSM.7 However, capturing nuanced long-term economic planning, complex multi-party negotiations, or adaptive strategic shifts based on subtle indicators would be challenging and likely result in overly complex and brittle systems.
+Leveraging AI Assistance: AI coding assistants can be effective at generating the code for individual FSM states, transitions, or simple IF-THEN rules based on natural language descriptions.17 This can speed up the implementation of basic reactive behaviors. However, designing the overall architecture of the FSM or RBS to be robust, scalable, and maintainable, especially anticipating future game expansions, remains a significant challenge that AI assistants are currently less equipped to handle compared to experienced human designers.12
+2.2. Behavior Trees (BT)
+Principles: Behavior Trees (BTs) are hierarchical structures composed of different node types (Sequence, Selector, Parallel, Decorator, and leaf nodes representing Conditions or Actions).7 Execution, often called "ticking," typically starts at the root and traverses the tree according to the logic of the nodes, ultimately executing action nodes.14 They are frequently used as a more scalable alternative to complex FSMs, particularly in game AI.14
+Pros:
+* Modularity & Reusability: BTs encourage breaking down complex behaviors into smaller, self-contained sub-trees (e.g., a 'Negotiate Trade Deal' sub-tree) which can be reused in different parts of the AI's logic.14 This inherent modularity makes BTs generally easier to extend and maintain compared to FSMs, as adding new behaviors often involves adding new nodes or branches rather than rewriting complex transition logic.15
+* Structured Decision-Making: BTs naturally represent sequences of actions, prioritized choices (Selectors), and conditional logic (Decorators), making them well-suited for modeling planned behaviors or standard operating procedures.7
+* Designer-Friendliness (with Tooling): Visual BT editors allow designers to understand, create, and modify AI logic graphically, which can be more intuitive than reading code.14
+Cons:
+* Performance Considerations: The need to traverse the tree, potentially frequently (e.g., every game tick or turn), can become computationally expensive, especially for large, deep trees. Optimization techniques or careful design are often required.12
+* Complexity Management: Very large or deeply nested BTs can still become difficult to debug and understand, despite their modularity.26 Ensuring the logic flows correctly across many branches requires careful planning.
+* Event Handling: While BTs can react to changes in the environment via condition nodes, handling specific, instantaneous events might sometimes feel less direct than FSM transitions, depending on the implementation and ticking frequency.26
+Trade War Context: BTs are well-suited for modeling multi-step economic strategies or policy implementations. For example, a sequence node could represent the process: Sequence(Identify Trade Imbalance -> Select Target Goods -> Calculate Tariff Level -> Announce Tariff -> Monitor Economic Impact). Different strategic approaches (e.g., 'Aggressive Protectionism', 'Cooperative Trade') could be represented as distinct branches under a selector node, chosen based on the nation's goals and the current world state. Compared to FSMs, BTs offer a more natural way to represent these procedural strategies, whereas FSMs are better suited for distinct modes of operation like diplomatic stances.12
+Tooling Dependency: The practical advantage of BTs, particularly their designer-friendliness, is heavily dependent on the availability of a good visual editor.14 For a solo web developer, implementing such an editor from scratch is likely out of scope. Relying solely on code-based BTs diminishes the designer-friendliness advantage, and debugging complex trees in code can be challenging. Unless a suitable JavaScript/Python library with integrated visualization is available and easily integrated into the web stack, the practical benefit over code-based FSMs might be reduced. AI assistants can help generate BT structures in code but cannot replace a dedicated visual tool for intuitive design and debugging.17
+2.3. Utility AI & Goal-Oriented Action Planning (GOAP)
+Principles:
+* Utility AI: This technique involves assigning a numerical score (utility, typically normalized between 0 and 1) to every potential action an agent can take at a given moment.27 Scores are calculated based on the current game state ("context") evaluated through various "considerations".27 Each consideration often uses a "response curve" (a mathematical function) to map a specific input variable (e.g., current GDP growth, political stability level, distance to target) to a utility score.27 The action with the highest combined utility score is selected for execution.27
+* GOAP: In GOAP, agents have defined goals (desired world states) and a library of available actions, each specified with preconditions (world states required to perform the action) and effects (changes to the world state after the action is performed).29 A planning algorithm (commonly A* search or similar) searches for a sequence of actions that transforms the current world state into a state satisfying the desired goal.12
+Pros:
+* Flexibility & Adaptability: Utility AI allows for highly nuanced decisions by weighing multiple, potentially conflicting, factors simultaneously.27 It can smoothly adapt behavior as the game state changes, without needing explicit transitions for every possible situation. GOAP enables agents to generate novel plans dynamically to achieve goals, leading to less predictable and potentially emergent behaviors that can adapt to unforeseen circumstances.29
+* Decoupling & Modularity: In Utility AI, considerations can often be added or modified independently. In GOAP, actions can be defined modularly, and the planner connects them; adding a new action automatically makes it available for planning if its preconditions/effects are relevant.29 GOAP cleanly separates the what (goal) from the how (plan).32
+* Designer Control (Utility AI): Behavior can be finely tuned by adjusting consideration weights and shaping response curves, giving designers significant control over AI tendencies.27
+Cons:
+* Complexity & Debugging: Determining why a Utility AI chose a particular action (due to the interplay of many scores) can be difficult to debug.27 Similarly, understanding why a GOAP planner failed to find a plan or generated an undesirable one requires inspecting the planning process and action definitions.34
+* Predictability/Control (GOAP): The emergent nature of GOAP plans can sometimes lead to unexpected or suboptimal behavior if actions and goals are not carefully designed.29 Ensuring consistent and desirable behavior requires careful crafting of action costs, preconditions, and effects.
+* Performance: Utility AI may need to calculate scores for many potential actions each decision cycle, which can be computationally intensive.27 GOAP relies on search algorithms, and the planning phase can be computationally expensive and time-consuming, especially with a large number of possible actions or long plan lengths.12 This performance overhead is a significant concern for web-based applications, where server-side processing time per turn is often limited. Optimization techniques like simplifying utility functions, limiting plan depth, pruning the action space, or caching plans are often necessary.28
+Trade War Context: These techniques are highly relevant. Utility AI is excellent for selecting the best policy action at the current moment (e.g., choosing between imposing tariffs, offering subsidies, or initiating negotiations based on current economic indicators, political capital, and diplomatic relations).27 GOAP is better suited for multi-step strategic planning (e.g., Goal: 'Improve Domestic Tech Sector Competitiveness'; Plan: 'Increase R&D Funding' -> 'Offer Tax Breaks for Tech Firms' -> 'Negotiate IP Protection Treaties').29 The distinction lies in Utility AI's focus on immediate action selection versus GOAP's focus on sequential planning to reach a future state.27 A hybrid approach, where Utility AI selects high-level goals for GOAP to plan towards, is powerful but adds another layer of complexity.
+2.4. Machine Learning (Reinforcement Learning - RL)
+Principles: RL involves agents learning optimal strategies ("policies") through interaction with an environment.8 The agent takes actions, observes the resulting state changes and receives rewards (positive or negative feedback), and adjusts its policy over time to maximize cumulative reward.8 Deep Reinforcement Learning (DRL) uses deep neural networks to approximate the policy or value functions, enabling RL to handle complex, high-dimensional state and action spaces found in games.9
+Pros:
+* Adaptability & Emergence: RL agents can potentially discover complex and highly effective strategies that human designers might not anticipate, adapting their behavior based on experience within the simulation.8
+* Handling Complexity: DRL is designed to handle large state spaces, potentially learning policies for complex economic and political interactions that are difficult to hand-craft.9
+* Potential for Superhuman Performance: RL techniques have famously achieved or surpassed human expert performance in complex strategy games like Go, Chess, and StarCraft II.8
+Cons:
+* Implementation Complexity & Expertise: Implementing, training, and tuning DRL systems requires significant expertise in machine learning and substantial development effort.38
+* Data Requirements & Training Time: DRL typically requires vast amounts of interaction data generated through potentially millions or billions of simulation steps for effective training.8 This process is computationally intensive and time-consuming, often requiring specialized hardware (GPUs/TPUs) and distributed training infrastructure.8
+* Reward Function Design: Defining a reward signal that accurately guides the agent towards desired strategic behavior in a complex simulation like a trade war is notoriously difficult. Rewards are often sparse (e.g., only winning/losing the game) or delayed, making learning inefficient.8 Crafting intermediate rewards can bias the agent towards unintended behaviors.
+* Explainability & Debugging: DRL policies are often "black boxes," making it extremely difficult to understand why an agent made a particular decision or to debug undesired behavior.39
+* Feasibility for Web/Solo Dev: The significant data, computational resource, and expertise requirements make training a sophisticated DRL agent for a complex strategy simulation largely infeasible for a solo developer within a typical web project budget and timeframe.8 The successes seen in games like StarCraft II involved large research teams and massive computational resources 8, creating a substantial gap compared to the project's context.
+Trade War Context: While theoretically capable of learning sophisticated economic and diplomatic strategies, the practical hurdles associated with DRL (training cost, data needs, reward shaping, explainability) make it unsuitable for the core AI of the initial "Trade War Simulator" release. It might be considered for very specific, offline optimization tasks in later stages if resources permit, such as tuning parameters for a Utility AI system rather than learning end-to-end control. This hybrid approach could leverage RL's optimization power while mitigating the complexity of full policy learning.
+2.5. Large Language Models (LLMs) as Generative Agents
+Principles: This approach utilizes Large Language Models (LLMs) like GPT-4 or Claude as the central reasoning engine for an AI agent.40 The agent's behavior is driven by prompting the LLM with the current context (game state, agent's goals, memory) and asking it to decide on an action or generate dialogue. Architectures often include components for memory management (storing experiences), reflection (synthesizing memories), and planning, all orchestrated around the LLM.43 Interaction with the game world (reading state, executing actions) often requires specialized protocols or APIs, potentially like the Model Context Protocol (MCP).43
+Pros:
+* Believability & Nuance: LLMs excel at generating human-like natural language, enabling highly believable diplomatic interactions, justifications for actions, or even simulated news reports.40 They possess broad world knowledge and reasoning capabilities that could potentially lead to nuanced and creative strategies.42
+* Reduced Explicit Logic Coding (Potentially): For certain tasks, especially dialogue or interpreting natural language descriptions of situations, LLMs might reduce the need for complex hand-coded logic.40
+Cons:
+* Cost: LLMs operate via API calls, and each call incurs a cost based on input and output tokens. Simulating multiple agents making decisions over many turns can lead to substantial and potentially prohibitive operational costs, especially for a web game with many users.41 The cost scales directly with the number of agents and the frequency of their decisions.
+* Latency: LLM inference is relatively slow compared to traditional game AI algorithms. Relying on LLM calls for core decision-making in each turn could introduce significant delays, negatively impacting the user experience in a web-based game.41
+* Control & Consistency: LLM outputs are probabilistic and can be unpredictable. Ensuring agents consistently follow game rules, adhere to their assigned personality, make strategically sound decisions based on the economic model, and avoid nonsensical actions (hallucinations) is a major challenge.41 Achieving reliable strategic behavior often requires complex prompt engineering, fine-tuning, or elaborate agent architectures, potentially negating the initial appeal of simplicity.41
+* Context Window & Memory: LLMs have limited context windows. Feeding the entire history and relevant world state to the LLM for every decision is often impossible. Sophisticated memory retrieval and summarization techniques are needed, which adds complexity and is still an active area of research.43
+* Integration Complexity: Reliably integrating LLMs into the game loop, providing them with accurate state information, parsing their outputs into executable actions, and handling potential errors or malformed outputs is non-trivial.45
+Trade War Context: LLM agents could theoretically provide unparalleled depth in diplomacy, generate dynamic justifications for policies, or even attempt creative economic problem-solving. However, the significant drawbacks related to cost, latency, consistency, and control make them unsuitable for driving the core decision-making of nation agents in this project, particularly given the web-based, solo-developer context. Their use might be cautiously explored for non-critical, auxiliary functions like generating flavor text (e.g., news headlines, diplomatic communiqués) where occasional inconsistencies or latency are more tolerable.
+2.6. Comparative Analysis Table
+The following table summarizes the evaluation of the discussed AI techniques against key criteria for the Trade War Simulator project:
+AI Technique
+	Potential for Realistic/Strategic Behavior
+	Implementation Complexity (Solo Dev + AI Assist)
+	Data Requirements
+	Performance/Scalability (Web Context)
+	Overall Feasibility Score (MVP)
+	RBS/FSM
+	Low-Medium
+	Low
+	None
+	Good
+	High
+	Behavior Trees
+	Medium-High
+	Medium
+	None
+	Fair-Good (Optimization needed)
+	Medium-High
+	Utility AI
+	Medium-High
+	Medium-High
+	Low (Curves/Weights)
+	Fair (Scoring cost)
+	Medium-High
+	GOAP
+	High
+	High
+	Low (Action defs)
+	Poor-Fair (Planning cost)
+	Low
+	RL (DRL)
+	Very High (potential)
+	Very High
+	Very High
+	Poor (Inference cost, if complex)
+	Very Low
+	LLM Agents
+	High (potential, unpredictable)
+	Very High
+	High (Prompts)
+	Very Poor (Latency, API cost)
+	Very Low
+	Note: Feasibility score considers suitability for a Minimum Viable Product (MVP) by a solo developer on a web platform.
+This comparison underscores that while techniques like GOAP, RL, and LLMs offer higher potential for complex, adaptive behavior, their implementation complexity, data needs, and performance characteristics make them less feasible for the initial development phase compared to Utility AI, Behavior Trees, or well-structured FSM/RBS approaches.
+3. Modeling Core Game Behaviors
+Based on the analysis, a combination of Utility AI for decision selection and Behavior Trees (or FSMs) for state management and action execution appears most promising. This section outlines how core game behaviors could be modeled using these techniques.
+3.1. Implementing Strategic Tariff Responses
+* Goal: AI nations need to decide when to impose tariffs, on which goods/countries, and how to react to tariffs imposed by others.
+* Proposed Implementation (Utility AI + BT/FSM):
+   * Decision (Utility AI): At the start of an AI's turn, or in reaction to another nation's tariff action, a Utility AI system evaluates potential responses. Actions could include: "Impose Tariff," "Increase Existing Tariff," "Negotiate Tariff Removal," "Subsidize Affected Domestic Sector," "Seek Retaliation Support from Allies," "Do Nothing."
+   * Considerations: Key inputs would include:
+      * Direct economic impact of opponent's tariff on own GDP/specific sectors (from economic model).
+      * Projected impact of own potential tariff on target nation's economy (requires predictive capability or heuristics).
+      * Importance of affected sectors (e.g., employment, GDP contribution).
+      * Current political stability (imposing tariffs might be unpopular domestically).
+      * Diplomatic relations with the target nation and potential allies.
+      * Trade balance status.
+      * Availability of alternative suppliers/markets.
+   * Response Curves: Curves would map these inputs to utility scores. For example, a curve for "Economic Damage Received" might steeply increase the utility of "Impose Retaliatory Tariff" as damage rises.27 A curve for "Political Stability" might decrease the utility of imposing tariffs if stability is low.
+   * Execution (BT/FSM): Once Utility AI selects an action (e.g., "Impose Tariff"), a Behavior Tree or a simple FSM sequence could handle the execution steps:
+      * BT Sequence: Sequence(Select Target Goods -> Determine Tariff Rate -> Announce Tariff Policy -> Update Trade Relations)
+      * FSM States: Could transition through 'Analyzing Tariff Impact' -> 'Selecting Retaliation' -> 'Implementing Tariff'.
+* Integration: This requires the Utility AI module to query the current economic state (GDP, sector health, trade flows), political state (stability, relations), and opponent actions from the main simulation state.1 The chosen action and its parameters (e.g., target country, goods, tariff rate) are passed back to the simulation core for execution, which then updates the economic model inputs for the next turn.
+3.2. Modeling Sector Protection Mechanisms
+* Goal: AI should identify strategically important domestic sectors and take action (subsidies, protective tariffs) when they face threats (e.g., import surges, foreign subsidies).
+* Proposed Implementation (Utility AI):
+   * Decision (Utility AI): Periodically, or when triggered by alerts (e.g., sector employment drop), the AI evaluates actions like "Subsidize Sector X," "Impose Tariff on Competing Goods for Sector X," "Invest in R&D for Sector X."
+   * Considerations:
+      * Sector Importance: Weight based on contribution to GDP, employment, technology level, or strategic value (defined per nation personality).
+      * Threat Level: Measured by import penetration percentage, rate of job losses, evidence of foreign subsidies affecting the sector.
+      * Policy Cost: Financial cost of subsidies vs. potential tariff revenue vs. R&D investment cost (from budget simulation).
+      * Retaliation Risk: Likelihood and potential impact of other nations retaliating against protective tariffs.
+      * Political Impact: Domestic support for protecting the sector vs. consumer cost of tariffs.
+   * Response Curves: Map threat level and sector importance to the utility of protective actions. Map policy cost and retaliation risk to negatively impact utility scores.27
+* Integration: Requires access to detailed sector-level data (output, employment, import/export volumes, potentially productivity metrics) from the economic simulation, as well as government budget information and diplomatic status. The chosen action (e.g., subsidy amount, tariff level) feeds back into the economic model and budget simulation.
+3.3. Simulating Alliance Formation and Diplomacy
+* Goal: AI nations should evaluate potential allies and engage in diplomatic actions to form or break alliances based on strategic alignment and changing circumstances.
+* Proposed Implementation (FSM + Utility AI):
+   * State Management (FSM): Use an FSM to track the overall diplomatic stance between pairs of nations (e.g., 'Hostile', 'Neutral', 'Friendly', 'Allied').7 Transitions between states are triggered by significant events (e.g., joining a war together, trade disputes, successful/failed diplomatic actions).
+   * Decision (Utility AI): Within a given state (e.g., 'Neutral' or 'Friendly'), the AI uses Utility AI to decide on specific diplomatic actions: "Propose Alliance," "Offer Trade Deal," "Request Support," "Issue Condemnation," "Improve Relations (Gift/Statement)."
+   * Considerations:
+      * Relationship Score: Existing diplomatic score between the nations.
+      * Geopolitical Alignment: Shared rivals, common interests, ideological similarity (defined per nation).
+      * Economic Synergy: Potential benefits from trade deals or economic cooperation.
+      * Military Strength (Relative): Assessment of potential ally's strength vs. perceived threats.
+      * Trustworthiness/Reliability: Based on past actions or inherent personality traits.
+      * Cost/Benefit of Alliance: Potential obligations vs. security/economic gains.
+   * Response Curves: Map factors like shared threat level or economic synergy to the utility of proposing an alliance. Map conflicting interests or low trust to decrease utility.
+* Integration: Requires a system for tracking bilateral relationship scores, political alignments, shared threats, and historical interactions. Diplomatic actions chosen by the AI modify these relationship scores and can trigger FSM state transitions. LLMs could potentially be used here for generating diplomatic message text, adding flavor without driving the core decision.40
+3.4. Integrating Political Goals and Stability Influence
+* Goal: AI decisions across all domains (economic, diplomatic) should be influenced by the nation's overarching political objectives (e.g., maintain power, maximize global influence, adhere to ideology) and constrained by internal political stability.
+* Proposed Implementation (Utility AI Layer):
+   * Mechanism: Political goals and stability act as high-level modifiers or additional considerations within the Utility AI framework.27
+   * Stability as a Constraint/Consideration: Actions that negatively impact simulated political stability (e.g., highly unpopular tariffs, costly subsidies leading to budget deficits) have their utility scores reduced, potentially significantly if stability is already low.
+   * Goals as Weights/Considerations: Progress towards defined national goals (e.g., increasing exports, forming a regional bloc, maintaining low inflation) can provide a positive utility score bonus to actions that contribute to those goals. Different AI personalities would assign different weights to these goals.
+   * Example: An AI might calculate that imposing a specific tariff has high economic utility but significantly negative political stability utility. If stability is critical (e.g., election upcoming), the overall utility score might lead the AI to choose a less economically optimal but more politically safe action.
+* Integration: This requires the simulation to model political stability as a dynamic variable influenced by economic conditions (unemployment, inflation), AI policy decisions, and potentially simulated events. The AI needs access to the current stability level and metrics tracking progress towards its assigned long-term goals.
+The successful modeling of these interconnected behaviors underscores the necessity of a robust interface between the AI decision-making modules and the core simulation state. The AI requires continuous access to a wide range of frequently updated data points – from macroeconomic indicators and sector-specific performance to diplomatic relationship scores and internal political stability metrics – to make informed, context-aware decisions.1 The chosen AI architecture must support this efficient querying and integration of multifaceted state information.
+4. Integration with Simulation Architecture
+Effective AI requires seamless integration with the underlying simulation engine, encompassing how the AI perceives the world, executes actions, and interacts with the economic model.
+4.1. AI Perception of Game State
+The AI agents need a defined mechanism to "perceive" the current state of the simulated world at the beginning of each decision cycle (e.g., each turn). This perception forms the basis for their decision-making process.
+* Required Data: The specific data points required will depend on the complexity of the AI and the simulation, but will likely include:
+   * Macroeconomic Indicators: GDP, GDP growth rate, inflation rate, unemployment rate, overall trade balance, government budget balance/debt.3
+   * Sector-Specific Data: Output, employment levels, import/export volumes, prices, potentially productivity or competitiveness indices for key economic sectors.5
+   * Trade Data: Bilateral trade flows, existing tariffs (own and others'), subsidies impacting trade.
+   * Political Data: Internal political stability metric, public opinion (if simulated), upcoming elections, current diplomatic relationship scores with other nations, active alliances.70
+   * Opponent Actions: Significant actions taken by other nations in the previous turn (e.g., new tariffs imposed, alliances formed, diplomatic messages received).
+* Mechanism: The backend simulation loop is responsible for calculating the current state (including running the economic model) and then providing the relevant subset of this data to each AI agent. Common approaches include:
+   * Direct Access/Shared State: Providing the AI module direct read access to the relevant parts of the simulation state object. Simpler but can lead to tight coupling.
+   * Dedicated API: Defining a specific API that the AI module calls to request the necessary state information. Promotes better separation of concerns.72
+   * Message Passing: Sending state update messages to the AI agents via a queue or event bus. Suitable for more asynchronous or distributed architectures.
+   * Agent-based modeling principles suggest agents should operate based on their local or perceived state, which might be incomplete or slightly delayed compared to the global simulation state.2 The chosen mechanism should reflect this.
+* Link to Economic Model: The outputs of the Neoclassical economic model (e.g., predicted GDP change resulting from a proposed tariff, impact on sector employment) are crucial data points that must be included in the state information provided to the AI for its decision-making.
+4.2. Action Execution and Simulation Loop
+Once an AI agent decides on an action, a mechanism is needed to communicate this decision back to the simulation core for execution.
+* Mechanism: The AI module outputs a chosen action and its parameters (e.g., action_type='impose_tariff', target_country='NationB', goods_category='electronics', rate=0.15). The simulation core receives these intended actions from all AI agents.
+* API/MCP Structure: A simple backend API endpoint or function call is likely sufficient for this project's scope, e.g., SimulationCore.submit_action(agent_id, action_data). While the Model Context Protocol (MCP) 45 provides a standardized way for AI agents to interact with tools and resources, implementing a full MCP client/server structure solely for internal action execution within the simulation backend might be overly complex for an MVP developed by a solo developer. However, understanding MCP principles can inform the design of a clean internal API.
+* Turn Structure: A typical turn-based simulation loop incorporating AI decision-making would follow this sequence 74:
+   1. Start of Turn: Resolve events from the previous turn, update ongoing processes.
+   2. State Update: Run the core simulation logic, including the economic model, to calculate the new state based on the previous state and completed actions.
+   3. AI Perception: Provide each AI agent with the relevant parts of the updated game state.
+   4. AI Decision: Each AI agent runs its decision-making logic (e.g., Utility AI evaluation, BT execution) based on its perceived state and determines its action(s) for the turn.
+   5. Action Submission: AI agents submit their chosen actions to the simulation core.
+   6. Action Execution/Resolution: The simulation core executes all submitted actions, potentially resolving conflicts (e.g., simultaneous diplomatic proposals). The effects of these actions modify the game state, which will be fully realized in the State Update phase of the next turn.
+   7. End of Turn: Prepare for the next turn.
+4.3. Interaction with Economic Model
+The interaction between the AI and the Neoclassical economic model is a critical feedback loop.
+* AI Actions as Inputs: AI decisions (e.g., imposing tariffs, setting tax rates, implementing subsidies, investing in technology) directly modify the parameters or input conditions for the economic model simulation. For example, a tariff action changes the effective price of imported goods within the model.
+* Model Outputs as AI Perception: The economic model calculates the consequences of these actions (and other simulation events) on macroeconomic variables (GDP, inflation, trade flows) and sector-specific metrics. These calculated outputs become part of the updated game state that the AI perceives in subsequent turns, influencing its future decisions.1 An AI might observe that its previous tariff negatively impacted GDP more than expected and adjust its strategy accordingly.
+* Consistency and Constraints: The AI's available actions must be constrained by what the economic model can realistically simulate. The AI should not be able to enact policies whose effects cannot be represented or calculated by the underlying model. The design of AI actions must align with the inputs and capabilities of the economic simulation core.
+The design of the interface between the AI modules and the simulation core (including the economic model) is fundamental to the project's success. Adhering to principles of modular design, such as low coupling and high cohesion 81, is crucial here. A well-defined API or clear separation allows the AI logic to be developed, tested, and iterated upon independently from the core simulation engine. Employing patterns like Dependency Injection 82 or conceptually applying the Repository pattern 72 to abstract access to the simulation state enables the use of mock objects during testing. This allows rigorous testing of the AI's decision logic without needing to run the full simulation, significantly speeding up development and improving reliability.82
+5. Implementing AI Difficulty and Personalities
+To provide varied gameplay experiences, the AI should support different difficulty levels and distinct national personalities or strategic inclinations.
+5.1. Scaling Difficulty
+Difficulty levels should ideally reflect the AI's effectiveness and strategic competence, rather than just giving it arbitrary bonuses. Using the recommended Utility AI + BT/FSM approach, difficulty can be scaled through several mechanisms:
+* Parameter Tuning:
+   * Utility AI: Adjust the weights assigned to different considerations. A 'Hard' AI might weigh long-term economic growth higher, while an 'Easy' AI might overemphasize short-term stability. Response curves can be made sharper or more sensitive for harder difficulties, allowing the AI to react more optimally to smaller changes in game state.
+   * BT/FSM: Enable more complex or strategically deeper sub-trees or states only for higher difficulties. An 'Easy' AI might only have basic tariff retaliation logic, while a 'Hard' AI might have additional branches for negotiating exceptions or building counter-alliances.
+* Information Access: Simulate varying levels of intelligence or analytical capability by restricting the data available to lower-difficulty AIs. An 'Easy' AI might only see aggregate GDP figures, while a 'Hard' AI gets detailed sector breakdowns and potentially predictive forecasts from the economic model.
+* Strategic Depth: Limit the planning horizon or complexity for lower difficulties. In a BT context, this could mean limiting the depth of tree traversal. In Utility AI, it might involve using fewer, simpler considerations.
+* Action Space Restriction: Prevent lower-difficulty AIs from accessing certain complex actions (e.g., intricate financial maneuvers, complex diplomatic treaties).
+* Randomness/Suboptimal Choices: Introduce a higher degree of randomness or a bias towards slightly suboptimal choices (based on utility scores) for easier AIs. Harder AIs would more consistently choose the highest-scoring action.
+* Resource Bonuses (Use Sparingly): While less desirable than smarter logic, providing slight economic or stability bonuses to higher-difficulty AIs can be a simpler way to increase the challenge. This should be used cautiously to avoid making the AI feel unfair.
+5.2. Creating Personalities
+AI personalities define how an AI plays, its strategic preferences, and its typical behavior patterns, distinct from its raw effectiveness (difficulty).
+* Goal Weighting (Utility AI): Define different personality archetypes (e.g., 'Expansionist', 'Isolationist', 'Trade-Focused', 'Militarist', 'Ideologue') by assigning different baseline weights to high-level goals within the Utility AI system. An 'Expansionist' AI would highly value considerations related to increasing global influence or market share, while an 'Isolationist' might heavily penalize actions that increase foreign entanglements.
+* Behavioral Biases (Utility AI): Shape response curves to reflect personality traits. A 'Risk-Averse' AI might have curves that heavily penalize actions with high potential negative consequences (e.g., triggering a major trade war), even if the potential upside is large. An 'Aggressive' AI might have curves that amplify the utility of confrontational actions.
+* Rule/State Variations (FSM/BT): Implement different rule sets or BT structures tailored to specific personalities. A 'Free Trader' AI might have BT branches focused on negotiating trade deals and reducing barriers, while a 'Protectionist' AI would have branches prioritizing tariffs and subsidies.7 Diplomatic FSMs could have different transition triggers based on personality (e.g., an 'Ideologue' might transition to 'Hostile' more easily based on political differences).
+* Action Availability: Certain actions might only be available or preferred by specific personalities. A 'Militarist' AI might have access to unique espionage or destabilization actions not available to a 'Pacifist' AI.
+It is important to distinguish between difficulty and personality during design. Difficulty adjusts the AI's competence in pursuing its goals, while personality defines what those goals and preferred methods are. An 'Easy Protectionist' AI and a 'Hard Protectionist' AI share the same strategic bias towards protectionism, but the 'Hard' version will likely execute that strategy more effectively, anticipate consequences better, and exploit opportunities more efficiently. This separation allows for a richer matrix of AI opponents.
+6. Recommendations for AI Implementation Strategy
+Based on the analysis of AI techniques and the specific requirements of the "Trade War Simulator" (web-based, turn-based economic strategy, solo developer context), the following implementation strategy is recommended.
+6.1. Recommended Core AI Technique(s)
+A hybrid approach is recommended, leveraging the strengths of different techniques while managing complexity:
+1. Utility AI for Core Decision-Making: Use Utility AI as the primary mechanism for selecting actions or policies each turn. This allows for nuanced decision-making based on multiple economic, political, and diplomatic factors, which is essential for simulating trade-offs in economic strategy.27 Considerations should be carefully designed to reflect the Neoclassical economic model's variables and political constraints. Response curves provide a powerful way for designers (and potentially AI assistants) to tune AI behavior and personality.27
+2. Behavior Trees (or FSMs) for State Management & Action Execution: Complement Utility AI with either Behavior Trees or Finite State Machines to manage higher-level strategic states (e.g., 'Peacetime Trading', 'Trade Skirmish', 'All-out Trade War', 'Alliance Building') and to orchestrate the sequence of steps required to execute complex actions chosen by the Utility AI system.7 BTs are generally preferred for sequencing actions, while FSMs excel at managing distinct behavioral modes.12 The choice between BT and FSM for this secondary role can depend on developer preference and the availability of suitable libraries/tools.
+Justification:
+This hybrid approach offers a strong balance between behavioral sophistication and implementation feasibility for a solo developer:
+* Feasibility: Both Utility AI (with well-defined considerations) and BTs/FSMs are significantly more manageable to implement and debug within the project constraints than GOAP, DRL, or LLM-based agents.7 AI coding assistance can effectively support the implementation of these techniques.17
+* Flexibility & Nuance: Utility AI provides the necessary flexibility to weigh complex economic and political trade-offs, moving beyond simple rule-based reactions.27
+* Structure: BTs or FSMs provide a necessary structure for managing agent states and action sequences, preventing the AI logic from becoming purely reactive or disorganized.7
+* Performance: While Utility AI scoring requires computation, it is generally more predictable and easier to optimize for a turn-based web context compared to the potentially unbounded search times of GOAP or the high latency/cost of LLM calls.7
+6.2. Phased Implementation Plan
+A phased approach is strongly recommended to manage complexity and deliver a functional AI progressively.
+* Phase 1: Minimum Viable Product (MVP) AI:
+   * Focus: Implement basic reactivity and state management.
+   * Tasks:
+      * Develop a simple FSM for core diplomatic states (e.g., Neutral, Allied, Hostile) with basic transition triggers (e.g., declaring war, signing alliance).
+      * Implement a rudimentary Utility AI for 1-2 key decisions (e.g., basic tariff reaction, simple budget allocation between two options like 'spending' vs. 'debt reduction').
+      * Use a minimal set of Utility AI considerations based directly on primary economic indicators (e.g., GDP change, trade balance) and political stability.
+      * Employ simple linear response curves or basic thresholds for utility scoring.27
+      * Ensure the core feedback loop between AI actions, the economic model, and AI perception is functional.1
+      * Implement basic difficulty scaling via parameter adjustments (e.g., AI gets slightly more budget on higher difficulties).
+* Phase 2: Enhanced Strategic Behavior:
+   * Focus: Increase the depth and nuance of AI decision-making.
+   * Tasks:
+      * Expand the Utility AI system significantly: add more actions (subsidies, negotiations, diplomatic options), incorporate more considerations (sector health, political capital, alliance factors, predicted opponent responses based on heuristics), and design more sophisticated, non-linear response curves.27
+      * Implement Behavior Trees to handle the execution of multi-step actions selected by the Utility AI (e.g., a BT for 'Implement Sector Subsidy' involving budget checks, policy announcement, and monitoring).
+      * Refine the diplomatic FSM with more states (e.g., 'Trade Partner', 'Rival') and more complex transition logic influenced by Utility AI diplomatic action scores.
+      * Develop distinct AI personalities by creating different sets of goal weights and response curve configurations for the Utility AI system.
+      * Refine difficulty scaling based on information access or the complexity of Utility AI considerations available.
+* Phase 3: Advanced Features & Refinement (Optional/Future):
+   * Focus: Explore more complex AI capabilities if time and resources permit.
+   * Tasks:
+      * Consider limited GOAP for specific long-term strategic planning modules (e.g., planning a 5-year economic development strategy), potentially run less frequently (e.g., every few turns) to mitigate performance impact.29 The Utility AI could select the high-level goal for GOAP.
+      * Experiment with using LLMs for generating flavor text, such as diplomatic messages or news event descriptions, ensuring it doesn't impact core gameplay logic or performance.40
+      * Investigate using offline Reinforcement Learning techniques, not for end-to-end control, but for automatically tuning and optimizing the parameters (weights, curve shapes) of the Utility AI system based on simulated game outcomes.
+6.3. Key Considerations for Solo Developer
+* Simplicity First: Prioritize the simplest viable implementation for each feature in the MVP phase. Complexity can be added incrementally.
+* Leverage Libraries: Utilize existing, well-maintained Python or JavaScript libraries for FSM, BT, or potentially basic Utility AI frameworks to avoid reinventing the wheel.
+* Testability: Design the AI modules with clear interfaces and use dependency injection principles to allow for isolated unit testing with mocked simulation data.72
+* AI Assistant Strategy: Use AI coding assistants strategically for specific tasks (boilerplate, unit tests, code explanation) but maintain human oversight for architectural decisions and complex logic validation.
+7. Leveraging AI Coding Assistance
+AI coding assistants (e.g., GitHub Copilot, Cursor, Codeium) can be valuable tools for a solo developer, but their effective use requires understanding their strengths and limitations.
+7.1. Code Generation
+Assistants excel at generating boilerplate and implementing well-defined patterns.17
+* Boilerplate: Generate code skeletons for FSM states and transitions, BT nodes (Sequence, Selector, Action leaves), or basic classes for Utility AI considerations and actions.
+* Rule Translation: Convert natural language descriptions of simple rules (e.g., "If inflation is above 5%, increase interest rates") into corresponding Python or JavaScript code for an RBS or within a Utility AI consideration.
+* Unit Tests: Generate unit test templates and basic test cases for AI components, including setting up mocks for dependencies (like the simulation state API).18 This leverages the assistant's pattern recognition for common testing structures.82
+7.2. Debugging and Analysis
+Assistants can help understand and troubleshoot code:
+* Code Explanation: Explain complex sections of AI logic, whether generated by the assistant or written manually.20 This is useful for understanding intricate BT traversals or complex Utility AI scoring logic.
+* Bug Identification: Help identify potential logical errors, off-by-one errors, or incorrect variable usage within AI algorithms.18 They can suggest potential fixes based on error messages or code context.
+* Data Analysis (Limited): Depending on the assistant's capabilities (especially those integrated with data analysis tools or capable of running code), they might help analyze logs or simulation output to identify patterns in AI behavior, although dedicated analysis tools are generally more powerful.
+7.3. Exploration and Refinement
+Assistants can aid in iterating on the AI design:
+* Alternative Implementations: Suggest different ways to implement a specific algorithm or logic pattern (e.g., different ways to structure a BT sequence, alternative mathematical functions for a Utility AI curve).
+* Refactoring: Assist in refactoring complex AI functions or classes to improve readability, modularity, or potentially performance, based on best practices.20
+* Parameter Exploration: Help generate variations of Utility AI response curves or parameter sets for testing different AI personalities or difficulty levels.
+7.4. Best Practices and Caveats
+Effective use requires careful oversight:
+* Verify Everything: AI-generated code is not guaranteed to be correct, efficient, or secure. Thoroughly review, understand, and test all generated code before integration.18 AI assistants can hallucinate, misunderstand context, or use outdated or suboptimal patterns.
+* Provide Clear Context: The quality of AI assistance depends heavily on the quality of the prompt. Provide clear requirements, constraints, examples, and context (e.g., surrounding code, desired style).20 Define "rules of engagement" for the AI.20
+* Iterative Process: Use assistants iteratively. Generate code, test it, identify issues or areas for improvement, refine the prompt or provide feedback, and regenerate.20 Don't expect perfect results on the first try.
+* Focus on Components: Use AI assistance for well-defined, manageable components (e.g., a single FSM state's logic, a specific Utility AI consideration function) rather than asking for the entire AI system architecture.
+* Maintain Architectural Control: While AI can generate code for components, the overall AI architecture – how different techniques (Utility AI, BTs, FSMs) interact, how they interface with the simulation core, and how the system scales – requires human design and oversight. AI assistants currently lack the deep, domain-specific understanding and foresight for robust, high-level system design, especially for complex, bespoke simulations.22 The developer must remain the architect.
+8. Conclusion
+8.1. Summary of Findings
+The design of the AI agents is a cornerstone of the "Trade War Simulator," dictating the game's strategic depth and player engagement. Analysis of various AI techniques reveals a clear trade-off between behavioral complexity and implementation feasibility, particularly within the constraints of a web-based platform and solo development.
+* RBS/FSM: Simple and performant for basic reactions and states but scale poorly and lack adaptability for complex economic strategy.
+* Behavior Trees: Offer better modularity and structure for sequential actions compared to FSMs, but require careful design and potentially specialized tooling.
+* Utility AI: Provides a flexible framework for nuanced decision-making by weighing multiple factors, suitable for economic trade-offs, but can be complex to tune and debug.
+* GOAP: Enables dynamic planning and emergent behavior, ideal for complex multi-step goals, but computationally expensive and potentially unpredictable.
+* Reinforcement Learning: Holds potential for learning highly sophisticated strategies but is largely infeasible due to extreme data, computational, and expertise requirements.
+* LLM Agents: Offer unparalleled potential for believable interaction but suffer from significant cost, latency, and control issues, making them unsuitable for core game logic currently.
+Integration with the Neoclassical economic model and the turn-based simulation loop is critical, requiring a well-defined interface for the AI to perceive state and execute actions. Difficulty and personality can be effectively implemented by tuning parameters, information access, and goal priorities within the chosen AI framework(s).
+8.2. Final Recommendation
+For the "Trade War Simulator," a phased, hybrid AI implementation is recommended as the most pragmatic and effective approach.
+* Core: Begin with Utility AI for selecting actions based on the current game state, combined with Behavior Trees or FSMs for managing high-level states and executing action sequences.
+* Phasing:
+   1. MVP: Focus on a minimal Utility AI for key decisions and a simple FSM for diplomatic states, ensuring the core AI-simulation feedback loop is functional.
+   2. Enhancement: Expand the Utility AI with more sophisticated considerations and curves, introduce BTs for action execution, refine diplomatic states, and implement distinct AI personalities through goal weighting and behavioral biases.
+   3. Future: Cautiously explore GOAP for specific long-term planning or LLMs for non-critical flavor elements, potentially using RL for offline parameter tuning if resources allow.
+This strategy prioritizes delivering a functional and engaging AI within the project's constraints while providing a clear path for future expansion and refinement. It leverages the strengths of Utility AI for nuanced decisions and BTs/FSMs for structure, avoiding the prohibitive costs and complexities of RL and LLM-based approaches for core gameplay.
+8.3. Future Directions
+Should the project achieve success and resources expand, several avenues for enhancing the AI could be explored. More sophisticated planning algorithms beyond basic GOAP could be investigated. The use of machine learning could be revisited, focusing initially on offline parameter tuning for the Utility AI system based on large numbers of simulated game outcomes. Limited integration of LLMs for generating dynamic narrative content or more complex diplomatic interactions could be explored, contingent on performance and cost viability. Furthermore, refining the economic model itself would provide richer inputs for AI decision-making, enabling more complex and realistic emergent strategies. Continuous testing and iteration, informed by player feedback, will be essential for evolving the AI's capabilities over time.
+Citerede værker
+1. Agent-Based Computational Economics: Growing Economies From the Bottom Up - Iowa State University Digital Repository, tilgået april 21, 2025, https://dr.lib.iastate.edu/server/api/core/bitstreams/484ee119-5472-47cc-849a-af2cc44ec5c7/content
+2. faculty.sites.iastate.edu, tilgået april 21, 2025, https://faculty.sites.iastate.edu/tesfatsi/archive/tesfatsi/ABMTutorial.MacalNorth.JOS2010.pdf
+3. How agent-based models powered by HPC are enabling large scale economic simulations, tilgået april 21, 2025, https://aws.amazon.com/blogs/hpc/how-agent-based-models-powered-by-hpc-are-enabling-large-scale-economic-simulations/
+4. Agent-based modeling: Methods and techniques for simulating human systems - PMC, tilgået april 21, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC128598/
+5. Economic Forecasting with an Agent-based Model - IIASA PURE, tilgået april 21, 2025, https://pure.iiasa.ac.at/16268/1/WP-20-001.pdf
+6. Economic Forecasting with an Agent-based Model - IIASA PURE, tilgået april 21, 2025, https://pure.iiasa.ac.at/id/eprint/16268/1/WP-20-001.pdf
+7. Is AI in games actually AI? unraveling the digital intelligence behind virtual worlds - BytePlus, tilgået april 21, 2025, https://www.byteplus.com/en/topic/499755
+8. Reinforcement Learning in Strategy-Based and Atari Games: A Review of Google DeepMind's Innovations - arXiv, tilgået april 21, 2025, https://arxiv.org/html/2502.10303
+9. Research on Artificial Intelligence in Game Strategy Optimization - ResearchGate, tilgået april 21, 2025, https://www.researchgate.net/publication/384105767_Research_on_Artificial_Intelligence_in_Game_Strategy_Optimization
+10. A Review of Real-Time Strategy Game AI - AAAI Publications, tilgået april 21, 2025, https://ojs.aaai.org/index.php/aimagazine/article/download/2478/2457
+11. Rule-Based System: Pros and Cons - BotPenguin, tilgået april 21, 2025, https://botpenguin.com/glossary/rule-based-system
+12. Tech Breakdown: AI with Finite State Machines - Little Polygon Game Dev Blog, tilgået april 21, 2025, https://blog.littlepolygon.com/posts/fsm/
+13. state driven agent design 1 - AI Junkie, tilgået april 21, 2025, http://www.ai-junkie.com/architecture/state_driven/tut_state1.html
+14. Using Behaviour Trees to Model Battle Drills for Computer-Generated Forces, tilgået april 21, 2025, https://www.sto.nato.int/publications/STO%20Meeting%20Proceedings/STO-MP-MSG-171/MP-MSG-171-01.pdf
+15. Trained Behavior Trees: Programming by Demonstration to Support AI Game Designers - Docta Complutense, tilgået april 21, 2025, https://docta.ucm.es/bitstreams/427b56c6-594f-4925-be9f-ab10f334c9be/download
+16. Rule-Based Vs. Machine Learning AI: Which Produces Better Results? | Pecan AI, tilgået april 21, 2025, https://www.pecan.ai/blog/rule-based-vs-machine-learning-ai-which-produces-better-results/
+17. How to Build a Code Review Assistant Using AI — A Comprehensive Guide - Metaschool, tilgået april 21, 2025, https://metaschool.so/articles/build-a-code-review-assistant-using-ai
+18. Code Reviews with AI a developer guide - Foojay.io, tilgået april 21, 2025, https://foojay.io/today/code-reviews-with-ai-a-developer-guide/
+19. 15 Best AI Coding Assistant Tools in 2025 - Qodo, tilgået april 21, 2025, https://www.qodo.ai/blog/best-ai-coding-assistant-tools/
+20. AI-Powered Coding Assistants: Best Practices to Boost Software Development - Monterail, tilgået april 21, 2025, https://www.monterail.com/blog/ai-powered-coding-assistants-best-practices
+21. AI Code Review: How It Works and 5 Tools You Should Know - Swimm, tilgået april 21, 2025, https://swimm.io/learn/ai-tools-for-developers/ai-code-review-how-it-works-and-3-tools-you-should-know
+22. Tried AI Coding Assistants So You Don't Have To – Here's the Verdict : r/Frontend - Reddit, tilgået april 21, 2025, https://www.reddit.com/r/Frontend/comments/1jabkte/tried_ai_coding_assistants_so_you_dont_have_to/
+23. AI Code Review - IBM, tilgået april 21, 2025, https://www.ibm.com/think/insights/ai-code-review
+24. State Machines vs Behavior Trees: designing a decision-making architecture for robotics, tilgået april 21, 2025, https://www.polymathrobotics.com/blog/state-machines-vs-behavior-trees
+25. Behavior Trees: Three Ways of Cultivating Strong AI - GDC Vault, tilgået april 21, 2025, https://www.gdcvault.com/play/1012744/Behavior-Trees-Three-Ways-of
+26. Is there any benefit to using a Behavior Tree for AI design vs Unity's Visual Scripting State Machine? : r/gamedev - Reddit, tilgået april 21, 2025, https://www.reddit.com/r/gamedev/comments/13mzcug/is_there_any_benefit_to_using_a_behavior_tree_for/
+27. An introduction to Utility AI - The Shaggy Dev, tilgået april 21, 2025, https://shaggydev.com/2023/04/19/utility-ai/
+28. www.gameaipro.com, tilgået april 21, 2025, http://www.gameaipro.com/GameAIPro3/GameAIPro3_Chapter13_Choosing_Effective_Utility-Based_Considerations.pdf
+29. Choosing the Right AI Behavior Framework: Pros and Cons - Toolify.ai, tilgået april 21, 2025, https://www.toolify.ai/ai-news/choosing-the-right-ai-behavior-framework-pros-and-cons-1317115
+30. Applying Goal-Oriented Action Planning to Games Defining Terms - CiteSeerX, tilgået april 21, 2025, https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=0c35d00a015c93bac68475e8e1283b02701ff46b
+31. GOAP (Goal-Oriented Action Planning) is absolutely terrific. : r/godot - Reddit, tilgået april 21, 2025, https://www.reddit.com/r/godot/comments/xgrk0g/goap_goaloriented_action_planning_is_absolutely/
+32. Is GOAP really that bad? : r/gameai - Reddit, tilgået april 21, 2025, https://www.reddit.com/r/gameai/comments/175adnc/is_goap_really_that_bad/
+33. Optimizing Practical Planning for Game AI, tilgået april 21, 2025, http://www.gameaipro.com/GameAIPro2/GameAIPro2_Chapter13_Optimizing_Practical_Planning_for_Game_AI.pdf
+34. Intro to Goal Oriented Action Planning (GOAP) - YouTube, tilgået april 21, 2025, https://www.youtube.com/watch?v=LhnlNKWh7oc
+35. Reinforcement Learning: Connections, Surprises, Challenges - AAAI Publications, tilgået april 21, 2025, https://ojs.aaai.org/aimagazine/index.php/aimagazine/article/view/2844/2744
+36. Reinforcement Learning in Strategy-Based and Atari Games: A Review of Google DeepMind's Innovations - arXiv, tilgået april 21, 2025, https://arxiv.org/pdf/2502.10303
+37. Deep reinforcement learning in real-time strategy games: a ..., tilgået april 21, 2025, https://www.researchgate.net/publication/387526832_Deep_reinforcement_learning_in_real-time_strategy_games_a_systematic_literature_review
+38. Risk Assessment of Reinforcement Learning AI Systems: Looking Beyond the Technology - RAND, tilgået april 21, 2025, https://www.rand.org/content/dam/rand/pubs/research_reports/RRA1400/RRA1473-1/RAND_RRA1473-1.pdf
+39. Game Theory and Machine Learning: Economic Strategies in the AI Era - maseconomics, tilgået april 21, 2025, https://maseconomics.com/game-theory-and-machine-learning-economic-strategies-in-the-ai-era/
+40. AI NPCs: The Future of Game Characters - Naavik, tilgået april 21, 2025, https://naavik.co/digest/ai-npcs-the-future-of-game-characters/
+41. Affordable Generative Agents - OpenReview, tilgået april 21, 2025, https://openreview.net/pdf?id=7tlYbcq5DY
+42. A Survey on Large Language Model-Based Game Agents - arXiv, tilgået april 21, 2025, https://arxiv.org/html/2404.02039v1
+43. arxiv.org, tilgået april 21, 2025, https://arxiv.org/pdf/2304.03442
+44. LLMs: the new frontier in generative agent-based simulation | AWS HPC Blog, tilgået april 21, 2025, https://aws.amazon.com/blogs/hpc/llms-the-new-frontier-in-generative-agent-based-simulation/
+45. modelcontextprotocol/docs: Documentation for the Model Context Protocol (MCP) - GitHub, tilgået april 21, 2025, https://github.com/modelcontextprotocol/docs
+46. Building Effective AI Agents - Anthropic, tilgået april 21, 2025, https://www.anthropic.com/research/building-effective-agents
+47. Is Model Context Protocol (MCP) the Missing Piece to Enterprise AI? - Trace3 Blog, tilgået april 21, 2025, https://blog.trace3.com/is-model-context-protocol-mcp-the-missing-piece-to-enterprise-ai
+48. Will Model Context Protocol (MCP) Become the Standard for Agentic AI? - Datanami, tilgået april 21, 2025, https://www.bigdatawire.com/2025/03/31/will-model-context-protocol-mcp-become-the-standard-for-agentic-ai/
+49. What is the Model Context Protocol (MCP)? - WorkOS, tilgået april 21, 2025, https://workos.com/blog/model-context-protocol
+50. Introducing Model Context Protocol (MCP) in Azure AI Foundry: Create an MCP Server with Azure AI Agent Service - Microsoft Developer Blogs, tilgået april 21, 2025, https://devblogs.microsoft.com/foundry/integrating-azure-ai-agents-mcp/
+51. Introducing the Model Context Protocol - Anthropic, tilgået april 21, 2025, https://www.anthropic.com/news/model-context-protocol
+52. What you need to know about the Model Context Protocol (MCP) - Merge.dev, tilgået april 21, 2025, https://www.merge.dev/blog/model-context-protocol
+53. Model Context Protocol (MCP) :: Spring AI Reference, tilgået april 21, 2025, https://docs.spring.io/spring-ai/reference/api/mcp/mcp-overview.html
+54. Model context protocol (MCP) - OpenAI Agents SDK, tilgået april 21, 2025, https://openai.github.io/openai-agents-python/mcp/
+55. Specification and documentation for the Model Context Protocol - GitHub, tilgået april 21, 2025, https://github.com/modelcontextprotocol/modelcontextprotocol
+56. Model Context Protocol (MCP) an overview - Philschmid, tilgået april 21, 2025, https://www.philschmid.de/mcp-introduction
+57. Build and manage multi-system agents with Vertex AI | Google Cloud Blog, tilgået april 21, 2025, https://cloud.google.com/blog/products/ai-machine-learning/build-and-manage-multi-system-agents-with-vertex-ai
+58. Model Context Protocol - Cursor, tilgået april 21, 2025, https://docs.cursor.com/context/model-context-protocol
+59. Google joins OpenAI in adopting Anthropic's protocol for connecting AI agents - why it matters | ZDNET, tilgået april 21, 2025, https://www.zdnet.com/article/google-joins-openai-in-adopting-anthropics-protocol-for-connecting-ai-agents-why-it-matters/
+60. Specification - Model Context Protocol, tilgået april 21, 2025, https://modelcontextprotocol.io/specification/2025-03-26
+61. Model Context Protocol: Introduction, tilgået april 21, 2025, https://modelcontextprotocol.io/introduction
+62. All You Need To Know About Model Context Protocol(MCP) - YouTube, tilgået april 21, 2025, https://www.youtube.com/watch?v=-UQ6OZywZ2I
+63. Building AI Agents with Model Context Protocol: From Specification to Implementation, tilgået april 21, 2025, https://www.youtube.com/watch?v=oSGVQIZxi7s
+64. opencv.org, tilgået april 21, 2025, https://opencv.org/blog/model-context-protocol/#:~:text=The%20Model%20Context%20Protocol%20(MCP)%20is%20a%20universal%20standard%20that,repositories%20or%20tools%20(servers).
+65. Model Context Protocol (MCP) - Anthropic API, tilgået april 21, 2025, https://docs.anthropic.com/en/docs/agents-and-tools/mcp
+66. Computational Agents Exhibit Believable Humanlike Behavior | Stanford HAI, tilgået april 21, 2025, https://hai.stanford.edu/news/computational-agents-exhibit-believable-humanlike-behavior
+67. It's alive! The rise of generative non-player characters in video games - CiTiP blog, tilgået april 21, 2025, https://www.law.kuleuven.be/citip/blog/ai-act-gaming-unleashing-generative-non-player-characters-npcs/
+68. ABIDES-Economist: Agent-Based Simulation of Economic Systems with Learning Agents, tilgået april 21, 2025, https://arxiv.org/html/2402.09563v1
+69. ACE: A Completely Agent-Based Modeling Approach (Tesfatsion), tilgået april 21, 2025, https://faculty.sites.iastate.edu/tesfatsi/archive/tesfatsi/ace.htm
+70. A Simple Agent-Based Spatial Model of the Economy: Tools for Policy, tilgået april 21, 2025, https://www.jasss.org/19/4/12.html
+71. www.scitepress.org, tilgået april 21, 2025, https://www.scitepress.org/PublishedPapers/2021/102123/102123.pdf
+72. Designing the infrastructure persistence layer - .NET | Microsoft Learn, tilgået april 21, 2025, https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design
+73. Agent-Based Computational Economics: Overview and Brief History1 - PhilArchive, tilgået april 21, 2025, https://philarchive.org/archive/TESACE-4
+74. Chapter 3 Agent-based modeling | Toolbox CSS - Bookdown, tilgået april 21, 2025, https://bookdown.org/f_lennert/book-toolbox_css/agent-based-modeling.html
+75. Reliable and Efficient Agent-Based Modeling and Simulation - JASSS, tilgået april 21, 2025, https://www.jasss.org/27/2/4.html
+76. Agent-based modeling - AnyLogic Help, tilgået april 21, 2025, https://anylogic.help/anylogic/agentbased/index.html
+77. Deep Dive into Agent-Based Modeling for Effective Simulations - Number Analytics, tilgået april 21, 2025, https://www.numberanalytics.com/blog/agent-based-modeling-simulations
+78. Reliable and Efficient Agent-Based Modeling and Simulation - JASSS, tilgået april 21, 2025, https://www.jasss.org/27/2/4/4.pdf
+79. 10 Agent-Based Modeling Strategies for Boosting Simulation Accuracy - Number Analytics, tilgået april 21, 2025, https://www.numberanalytics.com/blog/10-agent-based-modeling-strategies-boosting-simulation-accuracy
+80. Chapter 4. How to build agent-based models. Field service example - AnyLogic, tilgået april 21, 2025, https://www.anylogic.com/upload/books/new-big-book/4-how-to-build-agent-based-models.pdf
+81. Coupling and Cohesion – Software Engineering | GeeksforGeeks, tilgået april 21, 2025, https://www.geeksforgeeks.org/software-engineering-coupling-and-cohesion/
+82. Implementing the infrastructure persistence layer with Entity ..., tilgået april 21, 2025, https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-implementation-entity-framework-core
+83. Inversion of Control Containers and the Dependency Injection pattern, tilgået april 21, 2025, https://martinfowler.com/articles/injection.html
+
+
+AI-design i Trade War Simulator – Rapport og anbefalinger
+Indledning
+Denne rapport præsenterer en detaljeret plan for design og implementering af kunstig intelligens (AI) i “Trade War Simulator”, et tur-baseret strategispil (webapplikation med Python-backend), der simulerer handelskonflikter mellem 20+ lande (inkl. Danmark) baseret på avanceret økonomisk logik. Formålet er at skabe en AI, der:
+* Handler realistisk og strategisk i et tur-baseret gameplay.
+
+* Variere sin adfærd baseret på landets styreform (demokrati, autokrati, hybrid) og økonomiske situation.
+
+* Lader spilleren få indblik i AI’ens motiver (ikke en fuldstændig “black-box”).
+
+* Er underholdende og tilpas uforudsigelig, men stadig balanceret og gennemskuelig (forståelig).
+
+* Kan implementeres i Python og køre i et webmiljø uden urimeligt høj ressourcebelastning.
+
+Rapporten gennemgår forskellige AI-niveauer og -teknikker, foreslår egnede løsninger til spillet, og diskuterer personligheder, forklaringer af AI-handlinger, arkitektur, gennemførlighed i Python samt iterativ udvikling og test.
+Oversigt over AI-niveauer (fra simpel til avanceret)
+AI for computerspil kan designes i stigende niveauer af kompleksitet. Vi beskriver her tre typiske niveauer – fra enkle regelbaserede systemer til avancerede, adaptive AI’er – som også kan svare til sværhedsgrader i spillet:
+   * Niveau 1: Simpel regelbaseret AI – Basale if/then-regler eller scripts styrer beslutninger. AI’en reagerer efter faste regler uden at lære eller tilpasse sig. Dette er let at implementere og kører hurtigt, men kan blive forudsigeligt for spilleren. For eksempel kunne en simpel regel være: “Hvis BNP falder under X, så hæv toldsatserne med Y%”. Sådanne ekspertregelsystemer giver udvikleren fuld kontrol, men kræver mange regler for at dække alle situationer.
+
+   * Niveau 2: Mellem-niveau (dynamisk/heuristisk) AI – Mere adaptiv logik der kan kombinere tilstande og vægte flere faktorer. Her kan man anvende tilstandsbaserede metoder som Finite State Machines eller adfærds-træer for at håndtere flere situationer, samt utility-baserede vurderinger for at vælge mellem forskellige handlinger. Denne AI er mindre forudsigelig end rene regler, da den kan skifte state eller prioriteter baseret på kontekst. Fx kan AI’en have tilstande som “Handelskrig” vs. “Forhandling” og skifte når visse betingelser opfyldes, kombineret med en vurdering af økonomiske nøgletal før hver handling. Dette niveau er relativt gennemskueligt og kan designes til at reagere på spillerens valg uden at være helt fastlåst.
+
+   * Niveau 3: Avanceret adaptiv/lærende AI – Kompleks AI der tilpasser sig over tid eller gennem træning. Dette kan inkludere maskinlæring (fx reinforcement learning) eller evolverende algoritmer (genetiske algoritmer), som lader AI’en opdage strategier selv. Sådan en AI kan potentielt overraske spilleren med nye strategier og lære af spilforløbet. Ulempen er, at den ofte bliver en sort boks (svær at forstå) og kræver meget data eller processorkraft. I praksis bruger de fleste spil ikke ren lærende AI til modstandere, da målet ikke er at vinde optimalt men at skabe sjov og troværdig modstand . Som et kompromis kan man implementere noget adaptivitet (fx at AI’en justerer aggression hvis den gentagne gange taber på en bestemt strategi), uden at gå fuldt ind i neurale netværk.
+
+Ved at have disse niveauer i tankerne kan Trade War Simulator tilbyde AI-modstandere på forskellig sværhedsgrad (f.eks. “Basic” AI = kun faste regler, “Advanced” AI = adaptiv heuristik). Næste afsnit diskuterer konkrete AI-typer og teknikker, og hvilke der anbefales for dette spil.
+AI-typer og teknikker – fra FSM til maskinlæring
+Flere etablerede AI-tilgange kan komme i spil for en trade war simulation. Nedenfor gennemgås de vigtigste typer – Finite State Machines (FSM), utility-baseret AI, influence maps, maskinlæring og evolverende strategier – deres egenskaber, og hvorvidt de er egnede til vores formål.
+Tilstands-maskine (FSM)
+En Finite State Machine er en klassisk AI-arkitektur, hvor en agent befinder sig i én af et endeligt sæt tilstande, og der skiftes tilstand baseret på definerede overgangsbetingelser. Det kan visualiseres som en graf: noder er tilstande (f.eks. “Aggressiv handelspolitik”, “Defensiv/afventende”, “Indgår alliancer”) og kanter er betingelser, der udløser skift mellem tilstande . I hver tilstand har AI’en et bestemt sæt adfærd/regler.
+Fordele: FSM’er er simple at implementere og lette at forstå. De sikrer klar adfærd – AI’en udfører kun logik fra én tilstand ad gangen, hvilket undgår tvetydighed . Designere kan diagramme AI’ens tilstande og overgange, hvilket giver et godt overblik. FSM er velegnet til at modellere høj-niveau strategisk skift i spillet. For eksempel kan et land i spillet være i “fredstid”-tilstand med fokus på handel, men hvis det bliver udsat for sanktioner, skifter det til “konflikt”-tilstand hvor det svarer igen aggressivt.
+Ulemper: En ren FSM kan blive stiv og forudsigelig, især hvis spillets situationer er komplekse. Der kan være behov for meget mange stater for at dække kombinationer af forhold (fx “demokrati i recession under krig” som egen tilstand). Hvis mange betingelser overlapper, kan FSM blive uoverskuelig. En simpel FSM eller scriptet AI risikerer at fremstå enten for dum eller for mønsterbunden, hvilket gør den kedelig eller nem at udnytte for spilleren . Derfor bruges FSM ofte i kombination med andre teknikker (eller hierarkisk FSM) for at håndtere kompleksitet.
+Anbefaling: Anvend FSM til overordnet strategi og faseskift. F.eks. kan hvert land styres af en FSM der afgør dets hovedstrategi (aggressiv, neutral, samarbejdende), afhængigt af triggers som økonomisk sundhed eller nylige konflikter. Dette giver struktur og personlighed, men bør suppleres af en mere finmasket beslutningslogik inden for hver tilstand (fx utility-beregninger for specifikke handlinger).
+Utility-baseret AI (nytteværdi-system)
+Hvor FSM kræver håndkodede prioriteter, fokuserer utility-baseret AI på at vælge den bedst mulige handling i øjeblikket baseret på en score (nytteværdi). I et utility system tildeles hver mulige handling en numerisk værdi ud fra spiltilstanden, og AI’en vælger den handling med højest værdi (eventuelt med lidt randomisering) . Med andre ord beregnes hvor “nyttig” eller gavnlig en given handling er i den aktuelle situation, på baggrund af relevante faktorer, og handlingerne rangeres derefter.
+Fordele: Utility-AI er dynamisk og kan håndtere komplekse valg, da den sammenligner mange forskellige handlinger objektivt . Den er ikke begrænset til et fast hierarki af if-else som en behavior tree, men beregner hvad der er vigtigst lige nu. Dette gør AI’en adaptiv: den samme AI-kode kan træffe forskellige beslutninger afhængigt af om f.eks. økonomien går dårligt (høj nytte for protektionistiske tiltag) eller godt (høj nytte for at åbne nye handelsaftaler). Utility-systemer er også modulære – man kan tilføje nye mulige handlinger med tilhørende nytte-funktioner uden at omskrive hele strukturen .
+Utility-baseret AI har været effektiv i mange spiltyper . Eksempel: The Sims bruger en form for utility til at vælge hvad en Sim skal gøre (spise vs. sove baseret på behov) og strategispil kan bruge det til at vurdere militære handlinger . I vores Trade War-spil kan vi definere en række mulige handlinger pr. tur for et land (hæve/sænke told, indgå alliance, sanktionere, investere indenlandsk, osv.) – hver handling får en beregnet nytteværdi baseret på landets tilstand (BNP, arbejdsløshed, politisk pres, regeringstype osv.). AI’en vælger så handlingen med højest score, hvilket sikrer at den føles rationel og målrettet.
+Ulemper: Det kræver omhyggeligt design af nyttefunktionerne for at få balanceret adfærd. Hvis noget fejlvægtes, kan AI’en konsekvent vælge en uhensigtsmæssig strategi. Desuden kan utility-AI blive for myopisk – den ser kun hvad der er bedst lige nu, og uden videre mekanismer tænker den ikke langsigtet (medmindre man bygger det ind via faktorer, der repræsenterer fremtidige konsekvenser eller ved at simulere frem i tid). Sammenlignet med en FSM kan det også være sværere for spilleren at gennemskue præcis hvorfor AI’en valgte en handling, medmindre vi giver indsigt i dens beregning (det vender vi tilbage til under forklarbarhed).
+Anbefaling: Utility-baseret beslutning bør være kernen i AI’ens tur-for-tur handlinger. Det giver en fleksibel og adaptiv AI, der reagerer på den komplekse økonomiske simulering. Vi kan kombinere det med FSM ved at lade FSM bestemme rammen (f.eks. en værdipolitik eller aggressionsniveau), som justerer vægtningen i utility-beregningerne. Dette vil opfylde kravet om at AI’en er både strategisk og balanceret – den tager rationelle valg men kan også overstyres af sin “personlighed” til tider.
+Influence Maps (indflydelseskort)
+Influence maps er en AI-teknik, hvor man repræsenterer verden som et gitter eller netværk med værdier, der angiver en form for indflydelse eller styrke på forskellige punkter . Det er især brugt i spil med geografisk komponent til at hjælpe AI’en med at træffe rumlige beslutninger – fx hvor på kortet der er farligt, hvor fjenden står svagt, ruter for enheder osv. Man “udstråler” indflydelsesværdier fra kilder (f.eks. en hær eller en vigtig by) henover kortet, ofte med faldende effekt over afstand , og AI’en kan så læse denne “varmekort”-information for at planlægge.
+I en handelskrig-simulator er der ikke et traditionelt landkort med troppebevægelser, men vi kan tænke på influence maps i overført betydning: F.eks. et netværk af lande hvor økonomisk indflydelse spredes. Man kan modellere hvordan en stormagts toldsatser påvirker nabolande eller handelsruter – dvs. et graf-baseret indflydelseskort fremfor et fysisk kort. Et konkret eksempel: Hvis USA hæver told på stål, kan en “indflydelsesværdi” for stålmarkedet spredes til de lande, der handler meget stål med USA, for at vurdere hvem der bliver mest presset af tiltaget. AI’en kan bruge disse værdier til at vælge mål (fx straffe dem man har mest økonomisk leverage over).
+Fordele: Influence maps giver en oversigt over spillets tilstand i en form, AI’en nemt kan bruge til beslutninger . Ved at modellere abstrakte begreber som økonomisk indflydelse, trusselniveau eller allieredes støtte som tal i en matrix, kan AI’en hurtigt sammenligne muligheder (fx “hvem kan jeg presse mest effektivt?”). Det kan fange komplekse relationer, såsom indirekte effekter af en handling, på en måde som regler alene har svært ved.
+Ulemper: Denne metode kan være relativt avanceret at implementere for et økonomisk spil, da man skal designe passende “influence” metrics. Der er risiko for at det bliver for data-tungt eller unødigt komplekst, hvis et enklere system kunne gøre det. For trade war-spillet med 20+ lande vil et influence map potentielt være en 20x20 matrix af påvirkningsværdier mellem hvert land – det er ikke meget data, så performance er ikke et problem, men meningsfuldheden af disse tal er udfordringen. Influence maps er mest oplagte, hvis spillet havde en geografisk dimension (f.eks. hvis handel også var regionalt betinget).
+Anbefaling: Overvej en forenklet influence-map tilgang til at modellere relationer mellem lande. Eksempel: Et “fornærmelses”-kort hvor hver relation har en værdi for hvor provokeret land A er af land B, baseret på handelsbarrierer, sanktioner osv. Dette kan AI’en bruge til at afgøre hvem den vil rette sine næste aktioner imod (hvem har “højeste konflikt-indflydelse”). Dog bør dette ses som et optionalt modul – kernebeslutningerne kan klares via utility som beskrevet. Influence maps er altså ikke altafgørende for spillet, men kan styrke AI’ens strategiske overblik i en flerspillersammenhæng ved at kvantificere relationer.
+Maskinlæring (ML) og træningsbaseret AI
+Maskinlæring dækker metoder hvor AI’en lærer adfærd ud fra data snarere end via håndkodede regler. For spil-AI er reinforcement learning (RL) en almindelig teknik, hvor AI-agenten gennem prøvelse og fejl optimerer en strategi baseret på belønninger. Man kunne tænke sig at træne en RL-agent til handelskrigsspillet, som belønnes for at forbedre sit lands økonomi og svække modstandere. En anden ML-tilgang er at bruge evolutionære algoritmer til at evolutionere strategier over mange simulerede spil.
+Fordele: ML kan potentielt skabe meget sofistikeret og uventet spiladfærd. En trænet agent kunne opdage strategier, som designerne ikke havde forudset, og dermed give spilleren en ny udfordring. I et komplekst spil med mange parametre kan ML teoretisk afsøge den store strategirum bedre end man kan designe manuelt. ML kan også tilpasse sig spillerens stil, hvis træningen fortsætter undervejs (online learning), hvilket gør AI’en adaptiv på et højt niveau.
+Ulemper: Disse metoder er sjældent brugt i traditionelle strategispil-AI, fordi de strider mod nogle af designmålene for god spiloplevelse. Som DMGregory (erfaren spilprogrammør) bemærker: klassisk spildesign vil ofte hellere have AI’en spiller for at underholde frem for at vinde for enhver pris . En RL-agent optimerer efter en matematisk belønning, ikke nødvendigvis efter hvad der føles rimeligt eller sjovt for spilleren. Resultatet kan blive “for godt” (utilgivelig hård modstand) eller mærkeligt (udnytter ubalancer på en måde der virker som om AI’en snyder eller er buggy). Desuden er ML typisk en black box – et neuralt netværk kan ikke nemt forklare hvorfor det tog en beslutning, hvilket direkte modarbejder kravet om gennemskuelighed. Det er også ressourcekrævende at træne; selvom selve eksekveringen af en færdig model kan være hurtig, vil det kræve mange simuleringer at opnå en god strategi. Endelig: spillere som ønsker en meget adaptiv og smart modstander søger ofte mod multiplayer mod mennesker , mens AI først og fremmest skal levere en god singleplayer-oplevelse.
+Anbefaling: Undlad at basere AI’en på tung ML i første iteration. Det er sandsynligvis overkill og kan give uønskede bivirkninger . En mulighed er at eksperimentere med ML offline – f.eks. bruge en genetisk algoritme eller RL til at finjustere visse parametre (balancere utility-vægte eller finde optimale strategier), og så indarbejde disse resultater som forbedringer i den manuelle AI. Dette giver en semi-adaptiv AI uden at køre læringen live. Man kan også overveje at inkludere en “ekspert AI”-sværhedsgrad, der er trænet på forhånd, som et særskilt valg for erfarne spillere, men som standard er en scriptet/utility AI bedre for kontrol og gennemskuelighed.
+Evolverende strategier (genetiske algoritmer)
+En evolutionær algoritme simulerer “naturlig selektion” på strategier: man genererer mange forskellige AI-strategier, lader dem spille mod hinanden, og beholder/rekombinerer de mest succesfulde til næste generation. Over flere generationer kan der opstå optimerede strategier, som AI’en så bruger. Dette er beslægtet med ML, men implementeret som gentagne spilsimuleringer med variationer.
+Fordele: Kan udforske et stort strategi-rum autonomt og finde kreative løsninger. I et komplekst økonomisk spil kunne GA potentielt opdage kombinationer af politikker, der giver en optimal fordel, uden at en menneskelig designer skal forudse dem.
+Ulemper: Meget ressourcekrævende at køre, da det kræver hundredvis eller tusindvis af simuleringer for at evolvere noget meningsfuldt. Det egner sig mest som udviklingsværktøj (til at balancere spillet eller træne AI offline) snarere end noget der kører, mens brugeren spiller. Derudover kan evolverede strategier være lige så uigennemsigtige som RL – de er et resultat af automatiseret søgning og kan udnytte underlige ting i spilmekanikken, som en spiller ikke ville forstå.
+Anbefaling: Brug eventuelt genetiske algoritmer i testfasen for at tune AI’ens parametre eller generere ideer til AI-reaktioner. Men i det færdige spil bør AI’en drives af mere deterministiske systemer (FSM/utility) med forudsigelig runtime. Evolverende teknikker er ikke nødvendige for at opfylde kravene til sjov og gennemskuelig AI i Trade War Simulator, og de vil næppe være praktiske at køre i en live webapplikation.
+Sammenfatning af egnede AI-typer
+Ud fra ovenstående analyse anbefales en hybrid AI for Trade War Simulator, der kombinerer flere teknikker:
+      * FSM til høj-niveau styring (strategisk tilstand baseret på situation og styreform).
+
+      * Utility-baseret logik til lav-niveau beslutninger hver tur (valg af konkrete politikker/handlinger med vægtning af økonomiske faktorer).
+
+      * Personlighedsparametre (beskrevet senere) integreret i ovenstående for at skabe variation pr. land.
+
+      * Influence-map-light: En simpel matrix eller model for landenes indbyrdes relationer, som kan hjælpe AI’en med at udvælge modstandere/allierede.
+
+      * Ingen tung ML i realtid, men evt. brugt offline til at justere parametre og sikre at AI’en ikke har oplagte svagheder.
+
+Denne kombination vil opfylde kravene om realisme, variation og gennemskuelighed. FSM+utility gør AI’en believable (den opfører sig som en rationel aktør med visse karaktertræk), og designeren har kontrol til at undgå åbenlyse dumheder eller exploits. Som spiludvikler Matt Eland udtrykker det: “Game AI … fokus[erer] på at skabe en overbevisende oplevelse fremfor at finde den perfekte løsning” , og vores valg af teknikker afspejler dette princip.
+AI-personlighed og landespecifik adfærd
+For at undgå, at AI-nationerne føles ens eller “for maskinelle”, skal hver AI have en form for personlighed og agere forskelligt alt efter landets karakteristika. Vi foreslår at modellere personlighed baseret på to ting: styreform og økonomisk profil, med mulighed for yderligere kulturelle træk.
+Faktorer der former personligheden
+         * Styreform (regeringstype): Demokrati, autokrati eller hybrid styre vil påvirke AI’ens præferencer. Fx kunne et demokrati-vendt AI lægge vægt på stabil handel, internationalt samarbejde og undgå ekstreme tiltag, da en demokratisk leder måske frygter vælgerreaktioner på økonomisk ustabilitet. Omvendt kunne en autokratisk regeret nation have en mere aggressiv og risikovillig profil – villig til at tåle økonomisk smerte for at opnå geopolitiske mål, og mindre påvirket af interne protester. Hybride regimer kunne ligge midt imellem. Vi kan implementere dette som forskellige parameter-sæt eller AI-profiler. For eksempel: en demokrati-AI har lav aggressionsfaktor, høj vægt på indkomst i utility-funktionen, og visse handlinger (som vilkårlige embargoer) er næsten udelukket medmindre provokeret. En autokrati-AI har højere aggressionsparameter, vægter prestige/magt i utility, og reagerer stærkt på trusler.
+
+         * Økonomisk situation: AI’ens nuværende økonomiske nøgletal skal modulere dens adfærd. Dette tilføjer realisme – et land i dyb recession vil handle desperat anderledes end et land i boom. Vi kan indføre “humør”-variabler for økonomien: f.eks. Krise, Normal, Opsving, som påvirker AI’ens valg. Under krise kan selv et demokratisk land blive tvunget til mere radikale midler (protektionisme, populistiske tiltag) for at please sin befolkning. Disse økonomiske “humørtilstande” kan enten være en del af FSM (skifte til en “krisetilstand”) eller blot indgå som tunge vægte i utility-beregninger (dvs. under krise scorer “stimuler økonomien med enhver pris” handlinger højere).
+
+         * Landespecifikke træk: Udover styreform kan hvert land have unikke egenskaber. Det kan være kulturelle eller historiske faktorer (fx Danmark er traditionelt en lille åben økonomi – AI Danmark kunne derfor have en bias mod at bevare frihandel længst muligt; en stormagt som USA kunne have en “hegemonisk” personlighed der straffer udfordrere; Kina kunne have en langsigtet planlægningshorisont, osv.). Disse træk kan implementeres som modifierer på de grundlæggende parametre. Stellaris (et Paradox-grand strategy spil) benytter en lignende idé: AI-imperier får en AI personality type bestemt af deres etik, træk og regering , som igen styrer deres diplomati, militærbudget, mv. I Trade War Simulator kan vi definere f.eks. en håndfuld personlighedstyper: “Aggressiv protektionist”, “Forsigtig globalist”, “Uforudsigelig populist” osv., og fordele dem til lande ud fra styreform og økonomi. Disse typer vil påvirke hvilke handlinger AI’en foretrækker.
+
+Nedenfor ses et eksempel på, hvordan to fiktive AI-lande kunne konfigureres:
+AI-profil
+	Karakteristika (parametre)
+	Eksempel-land
+	Globalistisk demokrati
+	Lav aggressionsværdi (foretrækker diplomati før konfrontation). Høj vægt på økonomisk vækst og borgernes velfærd i utility-funktion. Vil sjældent initiere en handelskrig uden provokation.
+	🇩🇰 Danmark (demokrati)
+	Autoritær protektionist
+	Høj aggressionsværdi (hurtig til at gengælde eller starte konflikt). Prioriterer national selvforsyning og magt over økonomisk effektivitet. Tåler større økonomisk tab for at straffe rivaler.
+	🇷🇺 Rusland (autokrati)
+	Tabellen illustrerer eksempler på AI-profiler. I praksis kan der være glidende overgange, men at definere nogle arketyper hjælper med at gøre AI’ens adfærd mere genkendelig og tematisk for spilleren.
+Implementering af personlighed i kode
+Strukturelt kan personlighed implementeres ved at gøre AI-logikken data-drevet og modulær. I stedet for at hardcode “demokrati gør X, autokrati gør Y” mange steder, kan vi:
+            * Parametrisere utility-funktionerne: fx have vægte som aggression_factor, trade_openness, risk_tolerance osv. som læses fra en konfigurationsfil for hvert land. AI-controlleren indlæser disse parametre ved spilstart.
+
+            * Strategi-moduler pr. type: Alternativt kan man bruge Strategy Pattern – definere klasser som DemocracyStrategy, AutocracyStrategy der nedarver fra en fælles AI-strategiklasse og overloader visse beslutningsfunktioner. For eksempel kunne AutocracyStrategy.decide_retaliation() indeholde logik for, hvornår autokratiet slår tilbage hårdt, mens DemocracyStrategy måske kun gør det ved høj provokation. Disse klasser kan også overskrive hvordan nytteværdier beregnes (forskellig formel).
+
+            * Personlighed som en del af FSM-state: En simpel metode er at afspejle styreform i FSM’ens struktur: En demokratisk nation kunne have en ekstra mellemtilstand “Overvej forhandling” før “Eskaler konflikt”, mens autokraten springer direkte til konflikt. Dog er dette mindre fleksibelt end parametre, hvis man skal ændre adfærd gradvist.
+
+            * Tuning og test: Vi skal justere personligheder, så de både er mærkbart forskellige og stadig kompetente. Hvis en parameter gør AI’en alt for passiv eller aggressiv, kan spillets balance bryde. Iterativ test (beskrevet senere) bliver vigtig her.
+
+Det afgørende er, at personligheden skal mærkes i spillet. Spilleren bør kunne gætte at “denne modstander er nok en høgeagtig autokrat – jeg forventer et uforudsigeligt modtræk snart”. Det gør AI’en mere interessant og realistisk. Samtidig må variationen ikke skabe komplet kaos; alle AI’er skal følge de samme grundlæggende spilleregler, så spillet forbliver balanceret.
+Forklaring af AI’ens handlinger (gennemskuelighed)
+For at AI’en ikke bliver en sort boks, skal spillet give feedback til spilleren om AI’ens mulige motiver og reaktioner. Dette kan øge indlevelsen og lære spilleren at forbedre sit eget spil (“hvorfor reagerede de sådan på min tarif?”). Her er forslag til, hvordan AI’ens beslutninger kan forklares eller antydes:
+               * Tooltip forklaringer: Ved at hovere over en AI-handling eller en diplomatisk status, kan spilleren præsenteres for en lille tekst. For eksempel, hvis AI’en hæver tolden mod spilleren, kunne et tooltip ved den handling sige: “Land X øgede tolden på vores varer, sandsynligvis pga. vores nylige eksportoverskud og deres egen økonomiske krise.” Dette kræver, at vi genererer en kort begrundelse når AI’en udfører handlingen. Det kan gøres via enkle skabeloner udfyldt med aktuelle data: "{Land} gør {handling}, fordi {årsag}". Årsagen kan bestemmes ud fra hvilken faktor gav højeste nytte i utility-beregningen. Hvis f.eks. AI’ens utility-score for at hæve told var høj primært pga. “beskyt lokal industri”-faktoren, så vis “for at beskytte sin lokale industri”.
+
+               * Pressemeddelelser / nyhedsfeed: En mere immersiv måde er at have et spil-nyhedsfeed. Hver tur kan genereres overskrifter eller pressemeddelelser fra AI-ledere. E.g.: “Times: Præsidenten i land Y kalder nye tariffer ‘nødvendige for national sikkerhed’”. Dette fortæller spilleren indirekte hvorfor AI’en gjorde det (national sikkerhed). Det kan være flavor-tekst men baseret på reelle AI-variabler (fx autokrati bruger ofte begrundelsen “national sikkerhed” eller “suverænitet”). Dette gør AI’en til en egentlig aktør i spilverdenen med retorik. Spillet Civilization og Tropico har lignende koncept, hvor AI-ledere kommer med citater eller udtalelser om deres handlinger.
+
+               * Diplomatiske indikatorer: I UI’et kan vises statusindikatorer og relationer med årsager. Mange grand strategy-spil viser f.eks. relationstal med +/– grunde (EU4 viser “-50: Rivalry, +20: Trade partner” i diplomatilisten). Vi kan vise noget lignende: For hvert AI-lands holdning til spilleren, list top 2-3 grunde. Fx “Danmark’s holdning:  🎖️Allieret (De værdsætter vores handelsaftale: +30, Er ideologisk uenig: -10)”. Dette er forklarende tooltips der giver indsigt i AI’ens state of mind løbende, ikke kun efter handlinger. Spilleren kan dermed forudse, at “nu er relationen dårlig pga. vores forskellige styreformer og min aggressive handel – måske gør de noget snart”.
+
+               * Transparente beregninger (valgfrit): For de spillere, der virkelig vil nørde det, kan man tilbyde en “AI insight”-tilstand (eller som del af et debug-værktøj). Her kunne man næsten udskrive AI’ens utility-score for de seneste valg eller nuværende overvejelser. Det skal nok gemmes til avancerede brugere, da det ellers kan virke for teknisk og ødelægge indlevelsen. Men muligheden for at vise tal bag kulissen (fx i et wiki eller dev blog) kan også forsikre community’et om, at AI’en ikke snyder, men har begrundede mekanismer.
+
+               * Eksempel – Indirekte feedback: Lad os sige spillets AI (Kina) vælger at dumpe priserne på en vare for at skade spillerens økonomi. Samtidig opdateres et nyhedsbrev in-game: “Kinesiske statslige medier: ‘Overskudsproduktion skal ud på markedet – fair konkurrence på råvarer’”. Spilleren forstår, at Kina oversvømmer markedet med vilje og retfærdiggør det som “fair konkurrence”. Dette tipper spilleren om motivet (pres vores industri).
+
+Implementeringsmæssigt bør AI-controlleren, når den træffer en beslutning, returnere ikke kun handlingen men også en årsagskode eller et par nøgleord, som så UI-delen kan omforme til tekst. For eksempel: decision = {"action": "raise_tariff", "target": "steel", "reason": "protect_industry"}. UI har en tekstskabelon for "protect_industry" som afhænger af landet (måske autokratier bruger en anden retorik end demokratier for samme grund). På den måde sikrer vi, at hver AI-handling kan præsenteres meningsfuldt.
+Ved at integrere sådanne forklaringer opfylder vi kravet om, at spilleren forstår eller kan gætte AI’ens motiver. Det skaber også mere engagement, da spillet fortæller en historie om de internationale relationer (frem for at AI bare er en beregningsmotor bag scenen). Som en bonus vil denne gennemsigtighed hjælpe med balancetest: hvis AI’en gør noget “dumt” kan vi lettere se hvorfor den troede det var en god idé.
+Modulær arkitektur og kodemønstre
+For at implementere en kompleks AI af de beskrevne elementer (FSM + utility + personlighed + forklarbarhed) på en robust måde, er en modulær arkitektur essentiel. Vi ønsker kode, der er let at vedligeholde, teste og udvide. Nedenfor skitseres en mulig arkitektur opdelt i komponenter, samt relevante design patterns:
+Overordnet arkitektur
+                  * AI Controller / Manager: En central komponent (f.eks. klassen AIManager), der holder styr på alle AI-styrede lande og koordinerer AI’ens logik hver tur. Den sørger for at kalde de nødvendige metoder for hvert land i korrekt rækkefølge. I et web-backend setup kan AIManager f.eks. kaldes når turen skifter eller via en scheduled task.
+
+                  * AI Agent per land: Hvert land styres af et objekt (eller modul) der indeholder dets AI-state. Dette omfatter aktuelle data (økonomiske tal, relationer), personlighedsparametre og evt. interne hukommelsesvariabler. Agenten har ansvar for at beslutte handlinger for sit land. Dette kan udmøntes som en metode decide_action() som returnerer en handling + forklaringsdata. AIManager itererer over alle AI-agenter og kalder decide_action() for dem hver tur.
+
+                  * Moduler inden i AI Agent: For klarhed kan vi dele beslutningsprocessen i trin/moduler:
+
+                     1. State Analysis (Situationsanalyse): Indsamler relevante fakta om verden for det land. Dette modul kunne f.eks. beregne “faktorer” som økonomisk udvikling, militær magt, diplomatiske relationer etc. (som i stackexchange-spørgsmålet var tænkt ). Her kunne man også opdatere influence maps eller lignende. Output er et datasæt (fx et dict) med de centrale beslutningsparametre.
+
+                     2. Strategic Planner: På basis af analysen, vælger en overordnet strategi eller mål. Dette kunne være en HTN (Hierarchical Task Network) eller GOAP-lignende modul, men det kan også være så simpelt som at vælge en målnation at fokusere på eller en prioriteret politik dette turn. Dette kan være hvor FSM’en kommer ind: AI-agentens FSM tager analysens resultater ind og bestemmer fx “State = AggressiveStance” eller “Goal = PunishCountryX”.
+
+                     3. Action Selector (Utility evaluator): Nu genereres mulige konkrete handlinger givet strategien. Hvis målet f.eks. er “Punish X”, mulige handlinger: hæve told mod X, boykott X’s varer, alliere med X’s rival. Hver handling får en nytte-score via vores utility-funktion, der tager både umiddelbare effekter og passer til personlighed. Her kan vi bruge et Strategy Pattern for utility-beregning: hver handlingstype har en tilhørende evaluator-funktion som beregner en score baseret på AI-analysen (forskellige klasser kan implementere evaluate(action, analysis)).
+
+                     4. Decision Output: Den bedste handling vælges. AI-agenten pakker information om handlingen samt begrundelsesdata (fx top 1-2 faktorer der gav høj score) i en struktur og returnerer den til AIManager.
+
+                        * Execution: AIManager modtager alle AI-beslutninger for turen og sender dem videre til spilsimulatoren for udførelse (ændring af spillets tilstand). Alternativt kan hver AI-agent direkte påvirke spiltilstanden, men det kan være nyttigt at centralisere for at kunne styre rækkefølge (specielt hvis flere AI’er interagerer samme tick).
+
+                        * Post-turn update: Efter handlingerne kan AIManager trigger opdatering af diplomatiske relationer/influence maps etc., som forberedelse til næste tur. Dette sikrer at AI’ernes interne state er synkroniseret med resultatet af alle handlinger (inkl. spillerens).
+
+Denne pipeline sikrer en klar adskillelse mellem at forstå spiltilstanden, beslutte strategi og vælge handling. Det er godt for både debugging og udvidelse (man kan ændre f.eks. Action Selector-algoritmen uden at røre ved State Analysis).
+Design patterns og kodeorganisation
+                           * Strategy Pattern for beslutningstyper: Som nævnt kan handlingstyper eller dele af beslutningen implementeres som udskiftelige strategier. Eksempel: Have forskellige scoring strategies for utility. Man kunne plugge en anden vurderingsfunktion ind for eksperimenter eller AI-tuning (fx en mere aggressive variant). Også hvis man vil have forskellige AI-algoritmer for sværhedsgrad: en “EasyAI” klasse kunne bruge en simpel heuristik strategy, mens “HardAI” bruger en avanceret evalueringsstrategy. Fordi de følger samme interface, AIManager kan behandle dem ens.
+
+                           * State Pattern for FSM: Python kan her bruge en enklere implementering, f.eks. en enum for tilstand plus et transitions-dictionary. Men for større FSM’er kan man lave en base State-klasse og aflede konkrete tilstande som klasser med enter/exit logic. Et State design pattern lader AI-agent have en pointer til en State-objekt, som kan udskiftes ved transition. Det er måske overkill hvis FSM’en er lille, men det kan øge klarhed.
+
+                           * Observer/Event for diplomati: Hvis vi vil decouple AI’erne lidt, kan vi bruge et event-system. Eksempel: Når spilleren udfører en handling, emitter spillet et event “TariffRaised(player, target=France)”. AI-agenter der er berørt (Frankrig i dette tilfælde, eller alle generelt for global effekt) modtager eventet og kan markere i deres state f.eks. “provocation_from[player] += 1”. Dette er en måde at gøre AI reaktiv uden at hvert turn manuelt skal loop’e gennem alt, og det kan også bruges til at generere umiddelbare reaktioner. Python kan implementere det via observer-mønster eller simpelthen ved at have AIManager kalde en notify_event(event) på alle AI’er.
+
+                           * Decision Trees (simulerede): I specifikke tilfælde kunne man ønske at AI’en “ser frem i tiden” før en beslutning. En beslutningstræ-simulering vil sige at AI’en simulerer et par skridt under overvejelse (f.eks. hvis jeg hæver told, vil modstanderen så gøre X, og hvad så?). Dette er beslægtet med min-max eller Monte Carlo Tree Search brugt i fx brætspil-AI. I en multi-lander handelskrig kan dette hurtigt blive komplekst, så det bør begrænses til mikro-beslutninger. Man kan f.eks. lave en what-if simulering for økonomiske konsekvenser: AI’en beregner internt “hvis jeg hæver told på vare A med Y%, hvad bliver mit BNP næste tur vs. hvis jeg ikke gør det?”. Så vælger den handling ud fra forventet bedre udfald. Dette er som et mini-decision tree med dybde 1 eller 2. Implementeringen kan være et modul der kopierer relevante dele af spiltilstanden og kører dem gennem økonomi-logikken offline. Python kan godt håndtere et par kopier og beregninger pr. turn, men vi skal undgå en kombinatorisk eksplosion af scenarier.
+
+                           * Modularisering i kode: Det er fornuftigt at opdele koden i flere Python-moduler/filer:
+
+                              * ai_manager.py for det overordnede,
+
+                              * ai_agent.py for agentklassen,
+
+                              * states.py for FSM tilstande,
+
+                              * personality.py eller config-filer for personlighedsdata,
+
+                              * decision_strategies.py for utility scorers osv.
+
+Dette giver et plug-and-play feel – man kan justere eller udskifte en del uden at alt andet skal ændres.
+
+Sammenfattende tilstræber vi en ren arkitektur hvor AI’en er ”scriptable” og justerbar. Især i Python-web sammenhæng er det vigtigt at kunne ændre AI-logik hurtigt uden at introducere bugs – en god arkitektur gør dette nemmere.
+Gennemførlighed og realisme i Python-webmiljø
+Her vurderes de foreslåede AI-tilgange mht. hvor realistiske de er at implementere i Python, og hvordan de opfylder kravene om realisme og ydeevne:
+Finite State Machines og regelmotorer
+Gennemførlighed: Meget let i Python. Man kan implementere FSM som en simpel struktur (dictionary af tilstandsnavne til funktioner og transitions). Python kan uden problemer håndtere 20+ AI-agenter, hver med en FSM, da det blot er nogle if-tjek og funktionskald pr. tur. Ingen tunge beregninger.
+Performance: FSM’ens overhead er minimal – nogle få tilstandstjek pr. agent pr. tur. Selv hvis vi har 50 tilstande og 100 regler, er det trivielt for Python. Web-backend med Python (fx Flask/Django) kan køre dette pr. request eller turn. Vigtigt er dog at sikre, at FSM-koden ikke bliver for indviklet at vedligeholde. Her hjælper modulær struktur.
+Realisme: FSM alene giver ikke super realisme hvis ikke tilstandene designes omhyggeligt. Den kan dog modellere vigtige makro-træk (fred vs. krig, aggressiv vs. passiv), hvilket er realistisk i den forstand at rigtige lande også skifter “gears” i politik. Men FSM har begrænset nuance – derfor kombinerer vi den med utility for mikrobeslutninger.
+Utility-baseret beslutning
+Gennemførlighed: Python er velegnet til at skrive sådanne beregninger, da det primært er matematik og listehåndtering. 20 lande, der hver vurderer fx 10-20 mulige handlinger med måske 5-10 faktorer hver – det er nogle få tusinde operationer per tur, hvilket er lynhurtigt i Python (på niveau med at sortere en liste med 200 elementer, som er millisekunder). Selv med mere komplekse nytteberegninger er det håndterbart. Desuden kan man justere hvor mange alternativer AI’en overvejer for at skalere performance.
+Performance: Meget forudsigelig og lineært skalerende. Hvis spillet bliver mere kompleks (flere lande eller flere mulige handlinger), kan man vurdere at optimere kritiske loops med NumPy eller C-extension, men sandsynligvis unødvendigt i dette tilfælde. Python kan køre dette i realtid selv på en server uden at lagge.
+Realisme: Utility-systemet kan relativt nemt indfange økonomisk logik – da økonomi er kvantitativ, passer det godt at træffe beslutninger ud fra tal. Det gør AI’ens valg mere fornuftige (maximere nytte ligesom en rationel aktør). Det er troværdigt ift. simulationen, selvom vi bag kulissen justerer nyttefunktionerne for gameplaybalance. For gennemskuelighedens skyld kan vi oversætte nyttefaktorerne til menneskelige motiver i forklaringerne, som drøftet.
+Influence Maps
+Gennemførlighed: At lave et influence map i form af en matrix eller graf i Python er ligetil (man kan bruge fx et 2D list eller NumPy array). Opdatering af en 20x20 matrix med simple propagation-algoritmer er ingenting for Python. Hvis vi gjorde noget mere avanceret (f.eks. løse en større spredningssimulering), kunne det stadig være håndterbart pga. den begrænsede skala (20 nodes). Udfordringen er mere konceptuel – at designe det rigtige “influence” system. Men implementeringsmæssigt: ja, Python kan let håndtere det i hver tur, da der er få lande.
+Performance: Nærmest ikke et issue med disse størrelser. Selv med 100 lande ville det stadig være småt. Influence beregninger kan normalt være tunge i store RTS spil fordi kortet kan have tusindvis af celler; her har vi snarere logiske enheder (lande).
+Realisme: Hvis vi formår at lave et meningsfuldt influence map (fx økonomisk afhængighedsnetværk), vil det øge realismen. Det minder om virkelig verdens komplekse indflydelsesnet mellem lande. Men det skal valideres nøje – forkerte influence metrics kan få AI’en til at overvurdere eller undervurdere ting. Gennemsigtighed kan også være svær: hvordan forklarer man spilleren at “du bliver straffet fordi du ligger indenfor radius af Kinas handelsdominans”? Det kræver at mekanikken er kommunikeret tydeligt. Så realismepotentialet er der, men skal bruges med omtanke.
+Maskinlæring / RL
+Gennemførlighed: Det er muligt at integrere ML i Python – faktisk er Python sproget for ML med biblioteker som TensorFlow, PyTorch osv. Men at træne en ML-model inde i spillet er ikke realistisk i realtid pga. ressourcekrav. Vi kunne offline træne en model. Men så skulle Python-backend bruge den (fx et neuralt net til at evaluere handlinger i stedet for vores egen utility-kode). Det kan den godt, men det introducerer afhængigheder og potentielle performancehit (et stort net evalueret mange gange). For 20 lande turn-baseret er det dog stadig relativt småting ift. typisk ML-workload – en forward-pass gennem et net med f.eks. 100 input -> 50 hidden -> 10 output for 20 lande er intet problem. Så teknisk kan man godt bruge ML-modeller i Python i web. Spørgsmålet er mere udviklingsmæssigt: har vi data og tid til at træne noget meningsfuldt?
+Performance: En forud-trænet model (f.eks. en neuralt net for decision-making) vil køre hurtigt i Python, især med bibliotekers C++ optimeringer. RL træning derimod er ekstremt tung – det ville man gøre offline på en kraftig maskine. I en webapp vil man undgå online learning pga. ustabilitet og CPU-brug.
+Realisme: Som diskuteret, ren ML kan give overmenneskelig eller mærkelig adfærd, hvilket kan skade oplevelsen. Det kan dog også øge realismen hvis gjort rigtigt – fx hvis en RL lærer at imitere menneskelige handelsmønstre. Men sandsynligheden for at en generisk RL uden videre rammer en “menneskelig” spillestil er lav. Ofte skal ML i spil begrænses eller formes (f.eks. ved imitation learning fra menneske-data). For vores formål virker det ikke som den mest realistiske løsning at bruge.
+Konklusion på ML: Gennemførligt men ikke praktisk nødvendigt. Den valgte hybrid tilgang (FSM+utility) vil allerede dække spillets behov i Python. ML kan gemmes som en eksperimentel feature.
+Evolverende algoritmer
+Gennemførlighed: Der findes Python-biblioteker til genetiske algoritmer, men man kan også kode det selv. Træningsscenarierne (mange simulerede spil) er dog en batch-process, ikke en del af normal gameplay. Hvis spillet er på en server, kunne man teoretisk lade den køre natlige simulationer og justere AI – men det er usædvanligt. Det er mere realistisk at udviklerne gør det offline som en seperat modul.
+Performance: At simulere mange spil med 20 lande kan være tidskrævende. Python er ikke det hurtigste til store loops, men hvis man paralleliserer eller optimerer de indre beregninger (fx i C via numpy), kunne man måske træne noget i rimelig tid. Men det er stadig tungt. I runtime (selve spillet) vil en eventuel evolveret strategi bare optræde som statiske parametre, så det påvirker ikke performance for spilleren.
+Realisme: Ligesom ML kan evolverede strategier være svære at kontrollere. De kunne finde “exploits” i spilbalancen som menneskelige spillere ikke ville. Hvis de anvendes til tuning og så kasseres, kan de hjælpe med at fjerne dominérende strategier (man ser hvad GA finder, og så nerfer man det). Men som live-AI er det nok urealistisk.
+Samlet vurdering
+Alt i alt er de anbefalede teknikker (regler, FSM, utility, simple influence) meget gennemførlige i Python og vil køre fint i et webmiljø. Python giver desuden udviklingshastighed, hvilket er godt for iterativ forbedring. AI’en kan køre i serverens hukommelse mellem requests (f.eks. holdes som en singleton eller i en session) – med 20 agenter er det få MB data. Hvis spillet er multiplayer/online, skal man dog sikre thread-sikkerhed hvis flere spil kører samtidig; men hver spilsession kan have sin egen AIManager-instans, så det er isoleret.
+Realisme-mæssigt kan vi med disse teknikker modellere rimelig troværdig opførsel som en styret simulering. Det er aldrig 100% uforudsigeligt som en virkelig geopolitik, men ved at tilføje støj/random events samt personlighedsforskelle kommer vi tæt på. Samtidig bevarer vi balancen og mulighed for forklaringer, fordi AI’en følger vores logik (som vi forstår) fremfor at være en sort boks.
+Iterativ udvikling og test af AI’en
+At bygge en god AI til et komplekst spil er en iterativ proces. Vi skal planlægge gradvise udviklingsfaser, hvor vi implementerer noget, tester og forbedrer i loop. Her er en anbefalet fremgangsmåde:
+                                 1. Prototypefase – simpel AI: Start med en minimal fungerende AI så tidligt som muligt. F.eks. implementer nogle grundlæggende regler eller en lille FSM, der kan styre et par lande for en kort spilsekvens. Dette giver en baseline at arbejde ud fra og sikrer at spillet er spilbart (omend med begrænset udfordring). I denne fase kan vi fange store issues i spilmekanikken også. Test at AI’en udfører gyldige handlinger og spillet ikke bryder.
+
+                                 2. Inkrementel udbygning af logik: Tilføj gradvist flere beslutningsgrene. For eksempel:
+
+                                    * Iteration 1: Få AI’en til at håndtere handelsbalancen (hæve/sænke told ved underskud/overskud).
+
+                                    * Iteration 2: Tilføj reaktion på fjendtlig handling (f.eks. hvis et land rammer dig med en sanktion, så svar igen – simple gengældelsesregel).
+
+                                    * Iteration 3: Indfør personlighedsparametre og se om det gør en forskel (test med én demokrati-profil vs én autokratiprofil i samme situation).
+
+                                    * Iteration 4: Indfør utility-scoringssystem for at erstatte/udvide de manuelle regler.
+
+                                    * Iteration 5: Finpuds og vægt justering af utility-funktioner for balance.
+
+                                    * Iteration 6: Tilføj forklarelses-systemet (tooltips/tekster) og populér med et par typiske tilfælde.
+
+                                    * Iteration 7: (Og så fremdeles med influence map, evt. flere strategier etc. hvis nødvendigt).
+
+                                       3. Efter hver iteration, kør spillet igennem nogle scenarier. Giv gerne AI’en nogle fordele i debug-mode (f.eks. start med bestemte situationer) for at hurtigt se om logikken virker: Man kan lave unit-test-lignende simuleringer, f.eks. “hvis land A er demokrati med lav arbejdsløshed og land B indfører tarif mod A, hvilken handling vælger A?” – her forventer vi måske A diplomatiske svar, ikke total handelskrig. Hvis koden ikke gør det, juster parametre eller regler.
+
+                                       4. Test for sjov og balance: Når AI’en er funktionelt på plads, skal vi vurdere sværhedsgrad og “sjov-faktor”. Dette kræver spiltestere der spiller imod AI’en. Observér:
+
+                                          * Gør AI’en dumme fejl? (f.eks. ødelægger sin egen økonomi uden grund). Hvis ja, spor tilbage i loggen hvorfor den valgte det – juster regler/vægte.
+
+                                          * Er AI’en for passiv eller for aggressiv? – Tun juster parametre som aggression eller følsomhed.
+
+                                          * Varians: Spiller to spil med samme start sig meget ens? Hvis ja, måske tilføj mere random variation eller event-påvirkninger så udfald ikke altid er identiske.
+
+                                          * Eksploits: Prøv som spiller at udnytte en bestemt taktik gentagne gange. Ser AI’en det komme efter nogle ture? Hvis AI’en bliver ved med at falde for samme trick (f.eks. spilleren dumper priser på noget og AI reagerer aldrig), så skal AI’en lære at håndtere det. Måske tilføje en regel: “hvis spiller gør X gentagne gange, så respond Y”. Dette kan kodes eller man kan tune utility så gentagende mønstre opfanges (f.eks. spore sidste par handlinger).
+
+                                          * Gennemsigtighedstest: Vis forklaringerne til testere – forstår de dem? Fejltjek: at teksten matcher handlingen. Juster formuleringer for klarhed. Evt. tilføj flere varianter så det ikke bliver repetitiv tekst.
+
+                                             5. Brug af data og telemetry: I en webapp kan man logge AI’s beslutninger og spiludfald over mange spil. Analyser loggene automatisk:
+
+                                                * Se på win/loss rates mellem forskellige typer (hvis spillet har vindere/tabere).
+
+                                                * Se hvor ofte en given handling sker – hvis en handling aldrig vælges, måske dens nytteberegning er for lav eller den er ubrugelig.
+
+                                                * Brug logs til at identifikere tilfælde hvor AI’en enten kollapsede sin økonomi eller dominerede totalt.
+
+                                                * Om nødvendigt, juster spillets mekanik eller AI’en baseret på disse data.
+
+                                                   6. Iterér mod avancerede funktioner: Når baseline-AI er solid, kan mere avancerede tiltag overvejes (hvis tid/ressourcer tillader):
+
+                                                      * Prøv et begrænset ML-projekt: fx lad AI spille mod sig selv 1000 gange med genetisk algoritme for at optimere et par parametre. Sammenlign den tunede version med den gamle via spiltests.
+
+                                                      * Indfør måske “lærring” i kampagnen: AI kunne have en lille memory af hvad spilleren plejer at gøre og justere lidt. Test om det forbedrer udfordringen uden at det bliver frustrerende.
+
+                                                      * Polér personligheder: giv dem mere karakter via unikke udsagn, måske forskellige tærskler. Sørg for at hybrider eller blandede styreformer opfører sig konsistent (ikke schizofrent skiftende).
+
+                                                         7. Test på tværs af scenarier: Trade War Simulator kan have forskellige scenarier (f.eks. forskellige startopsætninger af økonomier, eller historiske perioder?). Sørg for at AI’en generelt fungerer i alle. Hvis der er scenarie-specifik logik (f.eks. en AI-strategi der kun giver mening i moderne tid vs. 80’erne handelskrig), håndter det med scenarieflag i AI’en.
+
+                                                         8. Brugerfeedback og tuning: Efter release eller under åben test, indsamle feedback. Nogle gange vil spillere finde AI’en for let/svær eller ikke “rolle-spillende” nok (f.eks. “Danmark AI ville aldrig gøre det IRL!”). Overvej feedback, men vej den op mod spilbalance. Ofte må man finde et kompromis mellem realisme og gameplay. Heldigvis er vores AI parametrisk, så vi kan finjustere uden omskrivning.
+
+Opsummerende, en iterativ, datadrevet tilgang sikrer at AI’en gradvist forbedres og møder designmålene. Fordelen ved Python er hurtig prototyping – man kan justere vægte eller logik og genstarte serveren for at teste ændringer ret nemt. Eventuelle komplekse tiltag (som ML-træning) holdes adskilt, så de kan prøves uden at forstyrre baseline.
+Ved nøje test kan vi opnå en AI der føles sjov, udfordrende og fair. Som en artikel om spil-AI udtrykker det: “En stor del af game AI handler om ikke at lave åbenlyse dumme fejl spilleren lægger mærke til” – gennem test vil vi eliminere sådanne fejl. Samtidig vil vi sikre, at AI’en overrasker spilleren en gang imellem (via personlighed og evt. lidt randomisering), så hvert spilforløb ikke er identisk.
+Konklusion
+Med udgangspunkt i ovenstående anbefalinger bør Trade War Simulator’s AI designes som en kombination af regelstyret struktur og dynamisk beslutningstagning. En Finite State Machine kan håndtere de overordnede faseskift og personlighedsprægede tilstande, mens et utility-baseret system giver AI’en fleksibilitet til at træffe fornuftige økonomiske beslutninger i nuet. Hvert land konfigureres med unikke parametre baseret på styreform og økonomi, hvilket giver dem forskellige “personligheder” og gør spillet varieret.
+For at opretholde gennemskuelighed skal AI’en løbende kommunikere sine intentioner og reaktioner gennem UI-elementer som tooltips, diplomatiske grunde og narrative pressemeddelelser. Spilleren vil derved opleve AI-modstanderne som strategiske men forståelige aktører – man kan lære af deres adfærd og forudsige noget af det, men ikke alt.
+Den foreslåede modulære arkitektur i Python sikrer, at AI’en er til at implementere og køre effektivt i et webmiljø. Simpel logik og scoringsfunktioner er ikke krævende for backend-serveren, og Python’s klarhed og rige økosystem gør det nemt at iterere på AI-kode. Vi fraråder at bruge maskinlæring direkte i spillet (både pga. black-box-problemet og ressourceomkostninger), men noterer at ML eller evolutionsmetoder kan bruges offline for at forbedre AI’ens design.
+Ved en omhyggelig, iterativ udviklingsproces, med masser af test og finjustering, kan vi udvikle en AI, der opfylder alle de stillede krav: Realistisk, strategisk, varieret, sjov, uforudsigelig men balanceret, gennemskuelig og teknisk praktisk. Resultatet bliver en central del af spiloplevelsen – en AI der både udfordrer spilleren og medspiller i at skrive fortællingen om internationale handelskonflikter.
+Kilder:
+                                                            * Eland, M. – “Game AI is about creating a compelling and believable experience, not a perfect solution.”
+
+                                                            * Wikipedia – Utility system in video game AI: Definition af nyttebaseret AI som system til at score mulige handlinger og vælge den bedste .
+
+                                                            * ShaggyDev – Utility AI intro: Beskriver fordelene ved utility-basering ift. FSM (undgår forudsigelig/fastlåst adfærd) .
+
+                                                            * Paradox Stellaris Wiki – Eksempel på AI-personligheder bestemt af etik og styreform . Viser hvordan government type påvirker AI-adfærd.
+
+                                                            * Hunt, A. – Influence Maps: Forklaring af influence maps som repræsentation af spilverden for AI-beslutninger .
+
+                                                            * DMGregory (StackExchange) – Indsigt i hvorfor mainstream spil-AI sjældent bruger ren RL: “AI skal ofte spille for sjov, ikke for at vinde – overraskende eller for perfekte træk kan virke som snyd.” .
