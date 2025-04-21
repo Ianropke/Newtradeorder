@@ -1,5 +1,5 @@
 import unittest
-from engine import GameEngine
+from .engine import GameEngine
 import os
 
 class TestEconomicModel(unittest.TestCase):
