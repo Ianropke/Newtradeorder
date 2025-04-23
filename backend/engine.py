@@ -1,5 +1,5 @@
 from typing import Dict, Optional, List
-from models import Country, load_countries_from_file, EconomicModel
+from backend.models import Country, load_countries_from_file, EconomicModel
 import random  # For simple simulation
 import math
 import datetime
@@ -9,7 +9,7 @@ import numpy as np
 from scipy import stats, optimize
 import os
 import logging
-from diplomacy_ai import CountryProfile, AIExplanationSystem
+from backend.diplomacy_ai import CountryProfile, Coalition, CoalitionStrategy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -1088,54 +1088,646 @@ class GameEngine:
         self.current_turn = 0
         self.historical_data = HistoricalDataset()
         self.feedback_system = EnhancedFeedbackSystem(self.historical_data)
-        self.ai_explanation_system = AIExplanationSystem()
+        self.ai_explanation_system = None
         self.ai_decisions_history = []
+        self.diplomacy = None
+        self.diplomatic_consequence = None  # Holder for diplomatic consequence system
+        self.country_strategies = {}  # Dict to hold country-specific coalition strategies
+    
+    def initialize_diplomacy(self):
+        """Initialize diplomacy system for the game."""
+        # Initialize basic diplomacy system
+        self.diplomacy = DiplomacyAI(self)
+        
+        # Initialize diplomatic consequence system
+        self.diplomatic_consequence = DiplomaticConsequence(self)
+        
+        # Create coalition strategies for each country
+        self._initialize_coalition_strategies()
+        
+        return self.diplomacy
+    
+    def _initialize_coalition_strategies(self):
+        """Initialize coalition strategies for each country based on their profiles."""
+        for country_iso, country in self.countries.items():
+            # Create or retrieve country profile
+            if hasattr(country, 'profile'):
+                profile = country.profile
+            else:
+                profile = self.get_country_profile(country_iso)
+                
+            # Create country's coalition strategy
+            self.country_strategies[country_iso] = CoalitionStrategy(country_iso, profile)
     
     def get_country_profile(self, country_iso):
         """Retrieve the country profile for AI decision explanations."""
-        return CountryProfile(self.countries[country_iso])
+        if country_iso not in self.countries:
+            return None
+            
+        if hasattr(self.countries[country_iso], 'profile'):
+            return self.countries[country_iso].profile
+            
+        # Create a new profile if none exists
+        profile = CountryProfile()
+        # Populate with country-specific values based on existing data
+        country = self.countries[country_iso]
+        
+        if hasattr(country, 'government_type'):
+            # Set profile attributes based on government type
+            if country.government_type.lower() in ['democracy', 'republic']:
+                profile.economic_focus = 0.6
+                profile.isolationism = 0.3
+                profile.aggression = 0.3
+            elif country.government_type.lower() in ['dictatorship', 'authoritarian']:
+                profile.economic_focus = 0.5
+                profile.isolationism = 0.5
+                profile.aggression = 0.6
+                
+        # Assign the profile to the country
+        self.countries[country_iso].profile = profile
+        return profile
     
+    def evaluate_coalition_opportunities(self, country_iso=None):
+        """
+        Evaluate opportunities for creating or joining coalitions.
+        
+        Args:
+            country_iso: Optional ISO code to evaluate for specific country only
+            
+        Returns:
+            Dictionary of coalition opportunities
+        """
+        opportunities = {}
+        
+        # If specific country is provided, evaluate only for that country
+        if country_iso:
+            if country_iso in self.country_strategies:
+                strategy = self.country_strategies[country_iso]
+                country_opportunities = strategy.evaluate_potential_coalitions(self)
+                opportunities[country_iso] = country_opportunities
+        else:
+            # Evaluate for all countries with strategies
+            for iso, strategy in self.country_strategies.items():
+                country_opportunities = strategy.evaluate_potential_coalitions(self)
+                opportunities[iso] = country_opportunities
+        
+        return opportunities
+    
+    def decide_coalition_actions(self, country_iso=None):
+        """
+        Decide what coalition actions countries should take.
+        
+        Args:
+            country_iso: Optional ISO code to decide actions for specific country only
+            
+        Returns:
+            Dictionary of decisions by country
+        """
+        decisions = {}
+        
+        # If specific country is provided, decide only for that country
+        if country_iso:
+            if country_iso in self.country_strategies:
+                strategy = self.country_strategies[country_iso]
+                decision = strategy.decide_coalition_action(self)
+                decisions[country_iso] = decision
+                # Process the decision
+                self._process_coalition_decision(country_iso, decision)
+        else:
+            # Decide for all countries with strategies
+            for iso, strategy in self.country_strategies.items():
+                decision = strategy.decide_coalition_action(self)
+                decisions[iso] = decision
+                # Process the decision
+                self._process_coalition_decision(iso, decision)
+        
+        return decisions
+    
+    def _process_coalition_decision(self, country_iso, decision):
+        """
+        Process a coalition decision from an AI country.
+        
+        Args:
+            country_iso: ISO code of the country making the decision
+            decision: Dictionary containing the decision details
+        """
+        action = decision.get('action')
+        
+        if action == 'form_coalition':
+            # Extract coalition details
+            coalition_data = decision.get('coalition_data', {})
+            if coalition_data and 'candidates' in coalition_data and 'purpose' in coalition_data:
+                # Propose the coalition
+                proposal = self.diplomacy.propose_coalition(
+                    country_iso,
+                    coalition_data['purpose'],
+                    coalition_data['candidates'],
+                    self.current_turn
+                )
+                
+                # Record the proposal in the decision
+                decision['proposal_id'] = proposal['id']
+                
+                # AI countries respond to the proposal
+                for candidate in coalition_data['candidates']:
+                    if candidate != country_iso and candidate in self.country_strategies:
+                        # Have the AI country evaluate and respond to the proposal
+                        candidate_strategy = self.country_strategies[candidate]
+                        accept = candidate_strategy.evaluate_coalition_proposal(proposal, self) > 0.5
+                        self.diplomacy.respond_to_coalition_proposal(
+                            candidate, 
+                            proposal['id'], 
+                            accept, 
+                            self.current_turn
+                        )
+        
+        elif action == 'join_coalition':
+            coalition_id = decision.get('coalition_id')
+            if coalition_id and hasattr(self.diplomacy, 'coalitions'):
+                for coalition in self.diplomacy.coalitions:
+                    if coalition.id == coalition_id:
+                        success = coalition.add_country(country_iso, self.current_turn)
+                        decision['success'] = success
+                        
+                        # Calculate diplomatic consequences
+                        if success and self.diplomatic_consequence:
+                            effects = self.diplomatic_consequence.calculate_coalition_action_effects(
+                                coalition,
+                                {'type': 'member_joined', 'country': country_iso},
+                                self
+                            )
+                            # Apply the effects
+                            self.diplomatic_consequence.apply_effects(effects, self)
+                        break
+        
+        elif action == 'leave_coalition':
+            coalition_id = decision.get('coalition_id')
+            reason = decision.get('reason', 'strategic_decision')
+            
+            if coalition_id and hasattr(self.diplomacy, 'coalitions'):
+                for coalition in self.diplomacy.coalitions:
+                    if coalition.id == coalition_id:
+                        success = coalition.remove_country(country_iso, self.current_turn)
+                        decision['success'] = success
+                        
+                        # Calculate diplomatic consequences
+                        if success and self.diplomatic_consequence:
+                            effects = self.diplomatic_consequence.calculate_coalition_action_effects(
+                                coalition,
+                                {'type': 'member_left', 'country': country_iso, 'reason': reason},
+                                self
+                            )
+                            # Apply the effects
+                            self.diplomatic_consequence.apply_effects(effects, self)
+                        break
+        
+        elif action == 'challenge_leadership':
+            coalition_id = decision.get('coalition_id')
+            
+            if coalition_id and hasattr(self.diplomacy, 'coalitions'):
+                for coalition in self.diplomacy.coalitions:
+                    if coalition.id == coalition_id and country_iso in coalition.member_countries:
+                        # Determine success chance based on member influence
+                        challenger_influence = coalition.get_member_influence(country_iso, self)
+                        leader_influence = coalition.get_member_influence(coalition.leader_country, self)
+                        
+                        success_threshold = 0.6  # Challenger needs 60% of leader's influence
+                        
+                        if challenger_influence > leader_influence * success_threshold:
+                            outcome = 'success'
+                            old_leader = coalition.leader_country
+                            coalition.leader_country = country_iso
+                        elif challenger_influence > leader_influence * 0.4:  # Close but not enough
+                            outcome = 'compromise'
+                        else:
+                            outcome = 'failure'
+                            
+                        decision['outcome'] = outcome
+                        
+                        # Calculate diplomatic consequences of leadership challenge
+                        if self.diplomatic_consequence:
+                            effects = self.diplomatic_consequence.calculate_leadership_challenge_effects(
+                                coalition,
+                                country_iso,
+                                outcome,
+                                self
+                            )
+                            # Apply the effects
+                            self.diplomatic_consequence.apply_effects(effects, self)
+                        break
+        
+        elif action == 'propose_coalition_action':
+            coalition_id = decision.get('coalition_id')
+            proposed_action = decision.get('proposed_action', {})
+            
+            if coalition_id and hasattr(self.diplomacy, 'coalitions') and proposed_action:
+                for coalition in self.diplomacy.coalitions:
+                    if coalition.id == coalition_id and country_iso in coalition.member_countries:
+                        # Leader has more weight in proposal acceptance
+                        is_leader = country_iso == coalition.leader_country
+                        
+                        # Determine if action is approved by coalition members
+                        approval_threshold = 0.6  # 60% of members need to approve
+                        
+                        # Simple simulation of member approval
+                        approving_members = 0
+                        for member in coalition.member_countries:
+                            if member == country_iso:
+                                approving_members += 1  # Proposer always agrees
+                            elif member in self.country_strategies:
+                                # Have AI evaluate the proposed action
+                                member_strategy = self.country_strategies[member]
+                                if member_strategy.evaluate_coalition_action(proposed_action, coalition, self) > 0.5:
+                                    approving_members += 1
+                        
+                        approval_rate = approving_members / len(coalition.member_countries)
+                        action_approved = approval_rate >= approval_threshold
+                        
+                        if action_approved:
+                            # Record the action in coalition history
+                            coalition.record_action(
+                                proposed_action.get('type', 'unknown'),
+                                proposed_action,
+                                self.current_turn
+                            )
+                            
+                            # Calculate diplomatic consequences
+                            if self.diplomatic_consequence:
+                                effects = self.diplomatic_consequence.calculate_coalition_action_effects(
+                                    coalition,
+                                    proposed_action,
+                                    self
+                                )
+                                # Apply the effects
+                                self.diplomatic_consequence.apply_effects(effects, self)
+                        
+                        decision['action_approved'] = action_approved
+                        decision['approval_rate'] = approval_rate
+                        break
+        
+        # Record the decision and explanation in AI decisions history
+        self.process_ai_country_decision(country_iso, 'coalition', decision)
+    
+    def get_coalition_report(self, country_iso=None):
+        """
+        Generate a report on coalition activities and statuses.
+        
+        Args:
+            country_iso: Optional ISO code to get report specific to a country
+            
+        Returns:
+            Dictionary with coalition report information
+        """
+        report = {
+            'active_coalitions': [],
+            'coalition_proposals': [],
+            'recent_actions': [],
+            'diplomatic_effects': []
+        }
+        
+        # Get active coalitions
+        if hasattr(self.diplomacy, 'coalitions'):
+            active_coalitions = []
+            
+            for coalition in self.diplomacy.coalitions:
+                # If country_iso is specified, only include coalitions that country is part of
+                if country_iso and country_iso not in coalition.member_countries:
+                    continue
+                    
+                # Coalition data
+                coalition_data = {
+                    'id': coalition.id,
+                    'name': coalition.name,
+                    'purpose': coalition.purpose,
+                    'leader': coalition.leader_country,
+                    'members': list(coalition.member_countries),
+                    'formation_turn': coalition.formation_turn,
+                    'cohesion': coalition.cohesion_level,
+                    'is_active': coalition.is_active(self.current_turn)
+                }
+                
+                active_coalitions.append(coalition_data)
+            
+            report['active_coalitions'] = active_coalitions
+        
+        # Get coalition proposals
+        if hasattr(self.diplomacy, 'coalition_proposals'):
+            proposals = []
+            
+            for proposal_id, proposal in self.diplomacy.coalition_proposals.items():
+                # If country_iso is specified, only include proposals relevant to that country
+                if country_iso and country_iso != proposal['proposing_country'] and country_iso not in proposal['candidate_countries']:
+                    continue
+                    
+                # Only include active (not expired) proposals
+                if proposal['status'] == 'pending':
+                    proposal_data = {
+                        'id': proposal_id,
+                        'name': proposal.get('coalition_name', 'Unnamed Coalition'),
+                        'proposer': proposal['proposing_country'],
+                        'purpose': proposal['purpose'],
+                        'candidates': proposal['candidate_countries'],
+                        'proposal_turn': proposal['proposal_turn'],
+                        'responses': proposal.get('responses', {})
+                    }
+                    
+                    proposals.append(proposal_data)
+            
+            report['coalition_proposals'] = proposals
+        
+        # Get recent coalition actions
+        if hasattr(self.diplomacy, 'coalitions'):
+            recent_actions = []
+            
+            for coalition in self.diplomacy.coalitions:
+                # If country_iso is specified, only include actions from coalitions that country is part of
+                if country_iso and country_iso not in coalition.member_countries:
+                    continue
+                    
+                # Get recent actions (last 5 turns)
+                for action in coalition.actions_history:
+                    if action['turn'] > self.current_turn - 5:
+                        action_data = {
+                            'coalition': coalition.name,
+                            'type': action['type'],
+                            'turn': action['turn'],
+                            'details': action['details']
+                        }
+                        
+                        recent_actions.append(action_data)
+            
+            report['recent_actions'] = recent_actions
+        
+        # Get diplomatic effects if country is specified
+        if country_iso and self.diplomatic_consequence:
+            report['diplomatic_effects'] = self.diplomatic_consequence.generate_effect_report(
+                country_iso, 
+                self.current_turn
+            )
+        
+        return report
+    
+    def update_coalition_dynamics(self):
+        """
+        Update coalition dynamics including cohesion, actions, and diplomatic effects.
+        This should be called at the end of each turn.
+        
+        Returns:
+            List of events that occurred during the update
+        """
+        events = []
+        
+        # Update all coalitions
+        if hasattr(self.diplomacy, 'coalitions'):
+            # First, let the coalition system do its internal updates
+            coalition_events = self.diplomacy.update_coalitions(self.current_turn)
+            events.extend(coalition_events)
+            
+            # Then apply diplomatic consequences of those events
+            if self.diplomatic_consequence:
+                for event in coalition_events:
+                    if event['type'] == 'coalition_dissolved':
+                        # Find the coalition that was dissolved
+                        for coalition in self.diplomacy.coalitions:
+                            if coalition.name == event['coalition']:
+                                effects = self.diplomatic_consequence.calculate_coalition_dissolution_effects(
+                                    coalition,
+                                    event['reason'],
+                                    self
+                                )
+                                # Apply the effects
+                                self.diplomatic_consequence.apply_effects(effects, self)
+                                break
+                    elif event['type'] == 'leadership_change':
+                        # Find the coalition that experienced leadership change
+                        for coalition in self.diplomacy.coalitions:
+                            if coalition.name == event['coalition']:
+                                effects = self.diplomatic_consequence.calculate_leadership_change_effects(
+                                    coalition,
+                                    event['old_leader'],
+                                    event['new_leader'],
+                                    event['reason'],
+                                    self
+                                )
+                                # Apply the effects
+                                self.diplomatic_consequence.apply_effects(effects, self)
+                                break
+                    elif event['type'] == 'cohesion_change':
+                        # Find the coalition that experienced significant cohesion change
+                        for coalition in self.diplomacy.coalitions:
+                            if coalition.name == event['coalition']:
+                                # Only calculate consequences for significant changes
+                                if abs(event['change']) >= 0.15:
+                                    effects = self.diplomatic_consequence.calculate_cohesion_change_effects(
+                                        coalition,
+                                        event['change'],
+                                        event['reason'],
+                                        self
+                                    )
+                                    # Apply the effects
+                                    self.diplomatic_consequence.apply_effects(effects, self)
+                                break
+                
+                # Update active effects for the new turn
+                self.diplomatic_consequence.update_active_effects(self)
+        
+        # Check for expired coalition proposals
+        if hasattr(self.diplomacy, 'coalition_proposals'):
+            expired_proposals = []
+            for proposal_id, proposal in self.diplomacy.coalition_proposals.items():
+                if proposal['status'] == 'pending' and proposal['proposal_turn'] < self.current_turn - 3:
+                    # Proposal expired after 3 turns
+                    self.diplomacy.expire_coalition_proposal(proposal_id, self.current_turn)
+                    expired_proposals.append({
+                        'type': 'proposal_expired',
+                        'proposal_id': proposal_id,
+                        'coalition_name': proposal.get('coalition_name', 'Unnamed Coalition'),
+                        'proposer': proposal['proposing_country']
+                    })
+            events.extend(expired_proposals)
+        
+        # Have AI countries evaluate coalition state and make decisions
+        ai_decisions = self.decide_coalition_actions()
+        
+        # Process natural coalition events (random events)
+        natural_events = self._process_natural_coalition_events()
+        events.extend(natural_events)
+        
+        return events
+        
+    def _process_natural_coalition_events(self):
+        """
+        Process natural coalition events that occur randomly.
+        These include internal conflicts, external pressure, and opportunistic actions.
+        
+        Returns:
+            List of events that occurred
+        """
+        events = []
+        
+        if not hasattr(self.diplomacy, 'coalitions'):
+            return events
+            
+        for coalition in self.diplomacy.coalitions:
+            # Skip inactive coalitions
+            if not coalition.is_active(self.current_turn):
+                continue
+                
+            # Calculate probability of internal conflict based on coalition composition
+            conflict_chance = 0.1  # Base 10% chance per turn
+            
+            # Internal conflicts more likely in low-cohesion coalitions
+            if coalition.cohesion_level < 0.4:
+                conflict_chance += (0.4 - coalition.cohesion_level) * 0.5
+                
+            # Larger coalitions have more potential for conflict
+            if len(coalition.member_countries) > 5:
+                conflict_chance += (len(coalition.member_countries) - 5) * 0.02
+                
+            # Check for internal conflict
+            if random.random() < conflict_chance:
+                # Select two random members for conflict
+                if len(coalition.member_countries) >= 2:
+                    conflicting_members = random.sample(list(coalition.member_countries), 2)
+                    
+                    # Generate conflict reason
+                    reasons = ['economic dispute', 'policy disagreement', 'leadership contest', 
+                              'resource allocation', 'external relationship disagreement']
+                    conflict_reason = random.choice(reasons)
+                    
+                    # Calculate severity (0.1-1.0)
+                    severity = random.uniform(0.1, 1.0)
+                    
+                    # Apply cohesion penalty
+                    cohesion_penalty = -0.05 * severity
+                    old_cohesion = coalition.cohesion_level
+                    coalition.update_cohesion(cohesion_penalty)
+                    
+                    # Create event
+                    event = {
+                        'type': 'internal_conflict',
+                        'coalition': coalition.name,
+                        'members': conflicting_members,
+                        'reason': conflict_reason,
+                        'severity': severity,
+                        'cohesion_change': cohesion_penalty,
+                        'old_cohesion': old_cohesion,
+                        'new_cohesion': coalition.cohesion_level
+                    }
+                    events.append(event)
+                    
+                    # Calculate diplomatic consequences
+                    if self.diplomatic_consequence:
+                        effects = self.diplomatic_consequence.calculate_internal_conflict_effects(
+                            coalition,
+                            conflicting_members,
+                            conflict_reason,
+                            severity,
+                            self
+                        )
+                        # Apply the effects
+                        self.diplomatic_consequence.apply_effects(effects, self)
+            
+            # Check for external pressure event
+            external_pressure_chance = 0.07  # Base 7% chance
+            
+            # Coalitions with specific purposes more likely to face external pressure
+            if coalition.purpose in ['defense', 'counter']:
+                external_pressure_chance += 0.08
+                
+            if random.random() < external_pressure_chance:
+                # Select external country applying pressure
+                external_countries = [c for c in self.countries.keys() if c not in coalition.member_countries]
+                if external_countries:
+                    external_country = random.choice(external_countries)
+                    
+                    # Generate pressure type
+                    pressure_types = ['diplomatic protest', 'trade restrictions', 'competing alliance', 
+                                    'propaganda campaign', 'diplomatic isolation attempts']
+                    pressure_type = random.choice(pressure_types)
+                    
+                    # Calculate coalition response strength (0.0-1.0) based on cohesion
+                    response_strength = coalition.cohesion_level * random.uniform(0.7, 1.3)  # Some randomness
+                    response_strength = max(0.0, min(1.0, response_strength))  # Keep in range
+                    
+                    # Determine outcome
+                    if response_strength > 0.6:
+                        outcome = 'strengthened'
+                        cohesion_effect = 0.05  # Strengthens coalition
+                    elif response_strength > 0.3:
+                        outcome = 'neutral'
+                        cohesion_effect = 0.0  # No effect
+                    else:
+                        outcome = 'weakened'
+                        cohesion_effect = -0.08  # Weakens coalition
+                    
+                    # Apply cohesion change
+                    old_cohesion = coalition.cohesion_level
+                    coalition.update_cohesion(cohesion_effect)
+                    
+                    # Create event
+                    event = {
+                        'type': 'external_pressure',
+                        'coalition': coalition.name,
+                        'external_country': external_country,
+                        'pressure_type': pressure_type,
+                        'response_strength': response_strength,
+                        'outcome': outcome,
+                        'cohesion_change': cohesion_effect,
+                        'old_cohesion': old_cohesion,
+                        'new_cohesion': coalition.cohesion_level
+                    }
+                    events.append(event)
+                    
+                    # Calculate diplomatic consequences
+                    if self.diplomatic_consequence:
+                        effects = self.diplomatic_consequence.calculate_external_pressure_effects(
+                            coalition,
+                            external_country,
+                            pressure_type,
+                            outcome,
+                            self
+                        )
+                        # Apply the effects
+                        self.diplomatic_consequence.apply_effects(effects, self)
+        
+        return events
+
     def process_ai_country_decision(self, country_iso, decision_type, decision_details):
-        """Process an AI country's decision and generate detailed explanations"""
-        # Generate explanation
-        country_profile = self.get_country_profile(country_iso)
-        explanation = {}
+        """
+        Process and record an AI country decision for explanation and reference.
         
-        if decision_type == 'coalition':
-            explanation = self.ai_explanation_system.explain_coalition_decision(
-                country_iso, decision_details, country_profile
-            )
-        elif decision_type == 'trade':
-            explanation = self.ai_explanation_system.explain_trade_decision(
-                country_iso, decision_details, country_profile
-            )
-        elif decision_type == 'budget':
-            budget_policy = self.get_country_budget_policy(country_iso)
-            explanation = self.ai_explanation_system.explain_budget_decision(
-                country_iso, decision_details, country_profile, budget_policy
-            )
-        elif decision_type == 'diplomatic':
-            explanation = self.ai_explanation_system.explain_diplomatic_decision(
-                country_iso, decision_details, country_profile
-            )
-        
-        # Attach explanation to decision record
+        Args:
+            country_iso: ISO code of the country
+            decision_type: Type of decision (trade, war, alliance, etc.)
+            decision_details: Dictionary with decision details
+        """
+        # Basic record
         decision_record = {
             'country': country_iso,
             'type': decision_type,
             'details': decision_details,
-            'explanation': explanation,
-            'timestamp': self.current_turn
+            'turn': self.current_turn,
+            'timestamp': datetime.datetime.now().isoformat()
         }
+        
+        # Get explanation if ai_explanation_system exists
+        if hasattr(self, 'ai_explanation_system') and self.ai_explanation_system:
+            try:
+                explanation = self.ai_explanation_system.explain_decision(
+                    country_iso, 
+                    decision_type, 
+                    decision_details, 
+                    self
+                )
+                decision_record['explanation'] = explanation
+            except Exception as e:
+                logger.error(f"Error generating decision explanation: {e}")
+                decision_record['explanation'] = "No explanation available"
+        else:
+            decision_record['explanation'] = "No explanation system available"
         
         self.ai_decisions_history.append(decision_record)
         return decision_record
-    
-    def get_recent_ai_decisions(self, count=10):
-        """Get the most recent AI decisions with their explanations"""
-        return self.ai_decisions_history[-count:] if self.ai_decisions_history else []
-    
-    def get_ai_decisions_by_country(self, country_iso, count=10):
-        """Get the most recent AI decisions for a specific country"""
-        country_decisions = [d for d in self.ai_decisions_history if d['country'] == country_iso]
-        return country_decisions[-count:] if country_decisions else []
+
+    # ... existing methods ...

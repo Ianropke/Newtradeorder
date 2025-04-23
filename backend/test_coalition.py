@@ -5,7 +5,8 @@ This script tests the Coalition class and coalition-related methods in the Diplo
 """
 
 import unittest
-from diplomacy_ai import DiplomacyAI, Coalition, DiplomaticPersonality, CountryProfile, BudgetPolicy, CoalitionStrategy
+from backend.diplomacy_ai import DiplomacyAI, Coalition, DiplomaticPersonality, CountryProfile, BudgetPolicy, CoalitionStrategy
+from backend.engine import GameEngine
 
 class MockCountry:
     """Mock country object for testing"""
@@ -747,6 +748,287 @@ class TestCoalitionStrategy(unittest.TestCase):
         # SE should be a strong supporter (positive relation with DK)
         self.assertIn("SE", assessment['strong_supporters'])
 
+
+class TestGameEngineCoalitionIntegration(unittest.TestCase):
+    """
+    Test integration af koalitionsstrategier med GameEngine
+    """
+    
+    def setUp(self):
+        """Set up test environment before each test method"""
+        # Opret en GameEngine instans
+        self.engine = GameEngine()
+        self.engine.current_turn = 1
+        
+        # Tilføj testlande
+        from models import Country
+        
+        dk = Country(iso_code="DK", name="Danmark", region="northern_europe")
+        dk.gdp = 400
+        dk.budget_surplus_deficit = -5
+        dk.national_debt = 160
+        dk.industry_percentage = 25
+        dk.agriculture_percentage = 5
+        dk.services_percentage = 70
+        dk.profile = CountryProfile(
+            economic_focus=0.7,
+            isolationism=0.3,
+            aggression=0.2,
+            regional_focus=0.8,
+            pride=0.5
+        )
+        
+        se = Country(iso_code="SE", name="Sverige", region="northern_europe")
+        se.gdp = 500
+        se.budget_surplus_deficit = -3
+        se.national_debt = 200
+        se.industry_percentage = 30
+        se.agriculture_percentage = 3
+        se.services_percentage = 67
+        se.profile = CountryProfile(
+            economic_focus=0.8,
+            isolationism=0.2,
+            aggression=0.3,
+            regional_focus=0.7,
+            pride=0.6
+        )
+        
+        no = Country(iso_code="NO", name="Norge", region="northern_europe")
+        no.gdp = 600
+        no.budget_surplus_deficit = 10  # Olieoverskud
+        no.national_debt = 120
+        no.industry_percentage = 35
+        no.agriculture_percentage = 2
+        no.services_percentage = 63
+        no.profile = CountryProfile(
+            economic_focus=0.9,
+            isolationism=0.4,
+            aggression=0.1,
+            regional_focus=0.7,
+            pride=0.5
+        )
+        
+        fi = Country(iso_code="FI", name="Finland", region="northern_europe")
+        fi.gdp = 350
+        fi.budget_surplus_deficit = -4
+        fi.national_debt = 140
+        fi.industry_percentage = 28
+        fi.agriculture_percentage = 4
+        fi.services_percentage = 68
+        fi.profile = CountryProfile(
+            economic_focus=0.7,
+            isolationism=0.3,
+            aggression=0.2,
+            regional_focus=0.7,
+            pride=0.4
+        )
+        
+        de = Country(iso_code="DE", name="Tyskland", region="western_europe")
+        de.gdp = 4000
+        de.budget_surplus_deficit = 0
+        de.national_debt = 2400
+        de.industry_percentage = 40
+        de.agriculture_percentage = 1
+        de.services_percentage = 59
+        de.profile = CountryProfile(
+            economic_focus=0.6,
+            isolationism=0.2,
+            aggression=0.4,
+            regional_focus=0.5,
+            pride=0.7
+        )
+        
+        # Gem lande i GameEngine
+        self.engine.countries = {
+            "DK": dk,
+            "SE": se,
+            "NO": no,
+            "FI": fi,
+            "DE": de
+        }
+        
+        # Initialiser diplomati
+        self.engine.initialize_diplomacy()
+        
+        # Opsæt landerelationer
+        self.engine.diplomacy.country_relations = {
+            "DK": {
+                "SE": {"opinion": 85, "trade_treaty": True},
+                "NO": {"opinion": 80, "trade_treaty": True},
+                "FI": {"opinion": 75, "trade_treaty": True},
+                "DE": {"opinion": 70, "trade_treaty": True}
+            },
+            "SE": {
+                "DK": {"opinion": 85, "trade_treaty": True},
+                "NO": {"opinion": 90, "trade_treaty": True},
+                "FI": {"opinion": 85, "trade_treaty": True},
+                "DE": {"opinion": 65, "trade_treaty": True}
+            },
+            "NO": {
+                "DK": {"opinion": 80, "trade_treaty": True},
+                "SE": {"opinion": 90, "trade_treaty": True},
+                "FI": {"opinion": 75, "trade_treaty": True},
+                "DE": {"opinion": 60, "trade_treaty": True}
+            },
+            "FI": {
+                "DK": {"opinion": 75, "trade_treaty": True},
+                "SE": {"opinion": 85, "trade_treaty": True},
+                "NO": {"opinion": 75, "trade_treaty": True},
+                "DE": {"opinion": 65, "trade_treaty": True}
+            },
+            "DE": {
+                "DK": {"opinion": 70, "trade_treaty": True},
+                "SE": {"opinion": 65, "trade_treaty": True},
+                "NO": {"opinion": 60, "trade_treaty": True},
+                "FI": {"opinion": 65, "trade_treaty": True}
+            }
+        }
+    
+    def test_initialize_coalition_strategies(self):
+        """Test at koalitionsstrategier initialiseres korrekt for alle lande"""
+        # Kontroller at der er strategier for alle lande
+        self.assertEqual(len(self.engine.country_strategies), len(self.engine.countries))
+        
+        # Kontroller at strategierne har de korrekte landekoder
+        for country_iso in self.engine.countries:
+            self.assertIn(country_iso, self.engine.country_strategies)
+            self.assertEqual(self.engine.country_strategies[country_iso].country_iso, country_iso)
+            
+            # Kontroller at strategiparametrene afspejler landets profil
+            profile = self.engine.countries[country_iso].profile
+            strategy = self.engine.country_strategies[country_iso]
+            
+            # Isolationisme har omvendt forhold til koalitionspræference
+            if profile.isolationism < 0.5:
+                self.assertGreater(strategy.coalition_preference, 0.5)
+            else:
+                self.assertLessEqual(strategy.coalition_preference, 0.5)
+    
+    def test_evaluate_coalition_opportunities(self):
+        """Test evaluering af koalitionsmuligheder"""
+        # Evaluer muligheder for Danmark
+        opportunities = self.engine.evaluate_coalition_opportunities("DK")
+        
+        # Kontroller resultatet
+        self.assertIn("DK", opportunities)
+        self.assertTrue(len(opportunities["DK"]) > 0)
+        
+        # Kontroller at mulighederne indeholder de forventede felter
+        for opportunity in opportunities["DK"]:
+            self.assertIn("purpose", opportunity)
+            self.assertIn("name", opportunity)
+            self.assertIn("candidates", opportunity)
+            self.assertIn("evaluation_score", opportunity)
+            
+            # Nordiske lande bør være inkluderet i de fleste koalitioner
+            candidates = opportunity["candidates"]
+            nordic_count = sum(1 for c in ["SE", "NO", "FI"] if c in candidates)
+            self.assertGreater(nordic_count, 0, "Koalitionsmuligheder bør inkludere nordiske lande")
+    
+    def test_coalition_formation_and_dynamics(self):
+        """Test dannelse af koalition og dynamik over tid"""
+        # 1. Simuler dannelse af nordisk koalition
+        result = self.engine.simulate_coalition_negotiations(
+            "DK", "trade", ["SE", "NO", "FI"]
+        )
+        
+        # Kontroller at forhandlingen lykkedes
+        self.assertTrue(result.get("successful", False), "Nordisk koalition bør dannes succesfuldt")
+        
+        # 2. Hent koalitionsrapport
+        report = self.engine.get_coalition_report("DK")
+        
+        # Kontroller at koalitionen er aktiv
+        self.assertGreater(len(report["active_coalitions"]), 0, "Koalitionen bør være aktiv")
+        coalition = report["active_coalitions"][0]
+        self.assertEqual(coalition["leader"], "DK", "Danmark bør være leder af koalitionen")
+        
+        # Gem koalitions-ID til senere
+        coalition_id = coalition["id"]
+        
+        # 3. Simuler koalitionshandling (fælles handelspolitik)
+        action_result = self.engine.simulate_coalition_action(
+            coalition_id, 
+            "joint_trade", 
+            target_country="DE",
+            details={"trade_boost": 0.1, "tariff_reduction": 0.05}
+        )
+        
+        # Kontroller resultat af handlingen
+        self.assertTrue(action_result.get("success", False), "Koalitionshandlingen bør være succesfuld")
+        
+        # 4. Øg spilrunder og opdater koalitionsdynamik
+        self.engine.current_turn = 5
+        events = self.engine.update_coalition_dynamics()
+        
+        # Hent opdateret rapport
+        report = self.engine.get_coalition_report("DK")
+        
+        # Kontroller at koalitionen stadig eksisterer med opdateret samhørighed
+        self.assertGreater(len(report["active_coalitions"]), 0, "Koalitionen bør stadig eksistere")
+        coalition = report["active_coalitions"][0]
+        self.assertGreater(coalition["cohesion"], 0.5, "Koalitionens samhørighed bør være over 0.5")
+        
+        # 5. Simuler Sverige, der forlader koalitionen
+        leave_action = self.engine.simulate_coalition_action(
+            coalition_id,
+            "member_action",
+            target_country="SE",
+            details={"action": "leave", "reason": "economic_interests"}
+        )
+        
+        # 6. Kontroller diplomatiske konsekvenser for Sverige
+        sweden_report = self.engine.get_coalition_report("SE")
+        self.assertGreater(len(sweden_report.get("diplomatic_effects", [])), 0, 
+                        "Sverige bør opleve diplomatiske konsekvenser")
+    
+    def test_diplomatic_consequences(self):
+        """Test beregning og anvendelse af diplomatiske konsekvenser"""
+        # 1. Opret en koalition
+        result = self.engine.simulate_coalition_negotiations(
+            "DK", "defense", ["SE", "NO"]
+        )
+        coalition_id = None
+        for c in self.engine.diplomacy.coalitions:
+            if c.leader_country == "DK":
+                coalition_id = c.id
+                break
+        
+        self.assertIsNotNone(coalition_id, "Koalitionen bør være oprettet")
+        
+        # 2. Beregn konsekvenser af Tyskland der afviser at tilslutte sig
+        # Først tilføj Tyskland som kandidat
+        for c in self.engine.diplomacy.coalitions:
+            if c.id == coalition_id:
+                c.invited_countries = ["DE"]
+                break
+        
+        # Simuler afvisning
+        effects = self.engine.diplomatic_consequence.calculate_rejection_consequences(
+            "DK", "DE", "defense", self.engine.current_turn
+        )
+        
+        # Kontroller at der er konsekvenser
+        self.assertGreater(len(effects), 0, "Der bør være konsekvenser af afvisning")
+        
+        # 3. Anvend konsekvenserne
+        self.engine.diplomatic_consequence.apply_effects(effects, self.engine)
+        
+        # 4. Kontroller at relationerne er påvirket
+        relation = self.engine.diplomacy.country_relations["DK"]["DE"]["opinion"]
+        self.assertLess(relation, 70, "Danmarks mening om Tyskland bør være reduceret")
+        
+        # 5. Simuler koalitionshandling og beregn konsekvenser
+        action_result = self.engine.simulate_coalition_action(
+            coalition_id,
+            "joint_declaration",
+            target_country="DE",
+            details={"topic": "security", "stance": "critical"}
+        )
+        
+        # Kontroller at handlingen påvirker relationerne yderligere
+        relation_after = self.engine.diplomacy.country_relations["DK"]["DE"]["opinion"]
+        self.assertLessEqual(relation_after, relation, "Relationerne bør forværres efter kritisk erklæring")
 
 if __name__ == "__main__":
     unittest.main()

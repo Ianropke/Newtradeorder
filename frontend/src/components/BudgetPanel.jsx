@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './BudgetPanel.css';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
   const [budgetData, setBudgetData] = useState(null);
@@ -18,6 +23,10 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     percentage: 5,
     duration: 2
   });
+  
+  // New subsidy preview state
+  const [subsidyPreview, setSubsidyPreview] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Simulation state
   const [showEffects, setShowEffects] = useState(false);
@@ -33,12 +42,25 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     unemployment: true
   });
   
+  // Chart references
+  const revenueChartRef = useRef(null);
+  const expenditureChartRef = useRef(null);
+  const historicalChartRef = useRef(null);
+  
+  // Historical data
+  const [historicalBudgets, setHistoricalBudgets] = useState([]);
+  const [showHistoricalData, setShowHistoricalData] = useState(false);
+  
+  // Advanced view toggle
+  const [showAdvancedView, setShowAdvancedView] = useState(false);
+  
   // Fetch budget data when country or year changes
   useEffect(() => {
     if (!countryId) return;
     
     fetchBudgetData();
     fetchSubsidies();
+    fetchHistoricalBudgets();
   }, [countryId, gameYear]);
 
   const fetchBudgetData = async () => {
@@ -72,6 +94,19 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     }
   };
 
+  const fetchHistoricalBudgets = async () => {
+    try {
+      const response = await fetch(`/api/budget/${countryId}/historical`);
+      if (!response.ok) {
+        return; // Historical data may not be available, that's okay
+      }
+      const data = await response.json();
+      setHistoricalBudgets(data.history || []);
+    } catch (err) {
+      console.error('Error fetching historical budget data:', err);
+    }
+  };
+
   const handleEditClick = (item, currentValue) => {
     setEditingItem(item);
     setEditValue(currentValue);
@@ -80,6 +115,7 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
   const handleEditCancel = () => {
     setEditingItem(null);
     setEditValue(0);
+    setSimulatedEffects(null);
   };
 
   const handleEditSave = async () => {
@@ -114,17 +150,51 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
       setError('Failed to update budget. Please try again.');
     } finally {
       setEditingItem(null);
+      setSimulatedEffects(null);
     }
   };
 
   const handleSubsidyChange = (e) => {
     const { name, value } = e.target;
-    setNewSubsidy({
+    const updatedSubsidy = {
       ...newSubsidy,
       [name]: name === 'percentage' || name === 'duration' 
         ? parseFloat(value) 
         : value
-    });
+    };
+    
+    setNewSubsidy(updatedSubsidy);
+    
+    // Preview effects when subsidy parameters change
+    previewSubsidyEffects(updatedSubsidy);
+  };
+
+  const previewSubsidyEffects = async (subsidyData) => {
+    if (!subsidyData || !subsidyData.sector) return;
+    
+    setLoadingPreview(true);
+    try {
+      const response = await fetch(`/api/budget/${countryId}/subsidies/preview`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subsidyData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to preview subsidy effects');
+      }
+      
+      const previewData = await response.json();
+      setSubsidyPreview(previewData);
+      
+    } catch (err) {
+      console.error('Error previewing subsidy effects:', err);
+      setSubsidyPreview(null);
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const addSubsidy = async () => {
@@ -150,6 +220,7 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
         percentage: 5,
         duration: 2
       });
+      setSubsidyPreview(null);
       
       // Refresh budget data as subsidies affect budget
       fetchBudgetData();
@@ -321,6 +392,95 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
       setIsCalibrating(false);
     }
   };
+  
+  // Function to generate charts data
+  const getRevenueChartData = () => {
+    if (!budgetData || !budgetData.revenue) return null;
+    
+    const labels = Object.keys(budgetData.revenue);
+    const values = Object.values(budgetData.revenue);
+    
+    const backgroundColor = [
+      'rgba(54, 162, 235, 0.8)',
+      'rgba(75, 192, 192, 0.8)',
+      'rgba(153, 102, 255, 0.8)',
+      'rgba(255, 159, 64, 0.8)',
+      'rgba(255, 99, 132, 0.8)',
+    ];
+    
+    return {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor,
+          borderWidth: 1,
+        },
+      ],
+    };
+  };
+  
+  const getExpenditureChartData = () => {
+    if (!budgetData || !budgetData.expenses) return null;
+    
+    const labels = Object.keys(budgetData.expenses);
+    const values = Object.values(budgetData.expenses);
+    
+    const backgroundColor = [
+      'rgba(255, 99, 132, 0.8)',
+      'rgba(255, 159, 64, 0.8)',
+      'rgba(255, 205, 86, 0.8)',
+      'rgba(75, 192, 192, 0.8)',
+      'rgba(54, 162, 235, 0.8)',
+      'rgba(153, 102, 255, 0.8)',
+    ];
+    
+    return {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor,
+          borderWidth: 1,
+        },
+      ],
+    };
+  };
+  
+  const getHistoricalChartData = () => {
+    if (!historicalBudgets || historicalBudgets.length === 0) return null;
+    
+    const sortedBudgets = [...historicalBudgets].sort((a, b) => a.year - b.year);
+    const labels = sortedBudgets.map(budget => budget.year);
+    
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Revenue',
+          data: sortedBudgets.map(budget => budget.totalRevenue),
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Expenditure',
+          data: sortedBudgets.map(budget => budget.totalExpenditure),
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Balance',
+          data: sortedBudgets.map(budget => budget.balance),
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+          type: 'line',
+        },
+      ],
+    };
+  };
 
   if (loading) {
     return <div className="budget-panel loading">Loading budget data...</div>;
@@ -334,12 +494,79 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     return <div className="budget-panel error">No budget data available</div>;
   }
 
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.raw;
+            return `${label}: ${formatCurrency(value)}`;
+          }
+        }
+      }
+    }
+  };
+  
+  const historicalChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Historical Budget Trends'
+      },
+      legend: {
+        position: 'top',
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: false,
+        title: {
+          display: true,
+          text: 'Amount'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Year'
+        }
+      }
+    }
+  };
+
   return (
     <div className={`budget-panel ${getBudgetHealthClass()}`}>
       <h2>National Budget</h2>
       
-      <div className="budget-health-indicator">
-        {getHealthText()}
+      <div className="panel-controls">
+        <div className="budget-health-indicator">
+          {getHealthText()}
+        </div>
+        
+        <div className="view-toggles">
+          <button 
+            className={`view-toggle ${showAdvancedView ? 'active' : ''}`}
+            onClick={() => setShowAdvancedView(!showAdvancedView)}
+          >
+            {showAdvancedView ? 'Simple View' : 'Advanced View'}
+          </button>
+          
+          <button 
+            className={`view-toggle ${showHistoricalData ? 'active' : ''}`}
+            onClick={() => setShowHistoricalData(!showHistoricalData)}
+            disabled={historicalBudgets.length === 0}
+          >
+            {showHistoricalData ? 'Hide History' : 'Show History'}
+          </button>
+        </div>
       </div>
       
       <div className="budget-summary">
@@ -371,82 +598,120 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
         </div>
       </div>
       
-      <div className="budget-section">
-        <h3>Government Revenue</h3>
-        <div className="budget-items">
-          {budgetData.revenue.map(item => (
-            <div key={item.name} className="budget-item">
-              <div className="budget-item-name">{item.name}</div>
-              <div className="budget-item-value">
-                {formatCurrency(item.value)}
-                <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
-                  ({formatPercentage(item.value / budgetData.gdp * 100)} of GDP)
-                </span>
+      {showHistoricalData && historicalBudgets.length > 0 && (
+        <div className="historical-chart-container">
+          <Bar 
+            data={getHistoricalChartData()}
+            options={historicalChartOptions}
+            ref={historicalChartRef}
+          />
+        </div>
+      )}
+      
+      <div className={`budget-content ${showAdvancedView ? 'advanced-view' : 'simple-view'}`}>
+        <div className="budget-column">
+          <div className="budget-section">
+            <h3>Government Revenue</h3>
+            
+            {showAdvancedView && (
+              <div className="chart-container">
+                <Pie 
+                  data={getRevenueChartData()}
+                  options={chartOptions}
+                  ref={revenueChartRef}
+                />
               </div>
-            </div>
-          ))}
-          
-          <div className="budget-item total">
-            <div className="budget-item-name">Total Revenue</div>
-            <div className="budget-item-value">
-              {formatCurrency(budgetData.totalRevenue)}
-              <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
-                ({formatPercentage(budgetData.totalRevenue / budgetData.gdp * 100)} of GDP)
-              </span>
+            )}
+            
+            <div className="budget-items">
+              {Object.entries(budgetData.revenue).map(([name, value]) => (
+                <div key={name} className="budget-item">
+                  <div className="budget-item-name">{name}</div>
+                  <div className="budget-item-value">
+                    {formatCurrency(value)}
+                    <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
+                      ({formatPercentage(value / budgetData.gdp * 100)} of GDP)
+                    </span>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="budget-item total">
+                <div className="budget-item-name">Total Revenue</div>
+                <div className="budget-item-value">
+                  {formatCurrency(budgetData.totalRevenue)}
+                  <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
+                    ({formatPercentage(budgetData.totalRevenue / budgetData.gdp * 100)} of GDP)
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="budget-section">
-        <h3>Government Expenditure</h3>
-        <div className="budget-items">
-          {budgetData.expenditure.map(item => (
-            <div key={item.name} className={`budget-item ${item.editable ? 'editable' : ''} ${editingItem === item.name ? 'editing' : ''}`}>
-              <div className="budget-item-name">{item.name}</div>
-              
-              {editingItem === item.name ? (
-                <div className="budget-edit-controls">
-                  <input
-                    type="number"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    min="0"
-                    step="100000000"
-                  />
-                  <button className="apply-button" onClick={handleEditSave}>Apply</button>
-                  <button className="cancel-button" onClick={handleEditCancel}>Cancel</button>
-                  <button className="edit-button" onClick={simulateBudgetEffects}>
-                    Simulate Effects
-                  </button>
-                </div>
-              ) : (
-                <div className="budget-item-value">
-                  {formatCurrency(item.value)}
-                  <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
-                    ({formatPercentage(item.value / budgetData.gdp * 100)} of GDP)
-                  </span>
+        
+        <div className="budget-column">
+          <div className="budget-section">
+            <h3>Government Expenditure</h3>
+            
+            {showAdvancedView && (
+              <div className="chart-container">
+                <Pie 
+                  data={getExpenditureChartData()}
+                  options={chartOptions}
+                  ref={expenditureChartRef}
+                />
+              </div>
+            )}
+            
+            <div className="budget-items">
+              {Object.entries(budgetData.expenses).map(([name, value]) => (
+                <div key={name} className={`budget-item ${budgetData.editableCategories?.includes(name) ? 'editable' : ''} ${editingItem === name ? 'editing' : ''}`}>
+                  <div className="budget-item-name">{name}</div>
                   
-                  {item.editable && (
-                    <button 
-                      className="edit-button"
-                      onClick={() => handleEditClick(item.name, item.value)}
-                    >
-                      Edit
-                    </button>
+                  {editingItem === name ? (
+                    <div className="budget-edit-controls">
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        min="0"
+                        step="100000000"
+                      />
+                      <button className="apply-button" onClick={handleEditSave}>Apply</button>
+                      <button className="cancel-button" onClick={handleEditCancel}>Cancel</button>
+                      <button className="edit-button" onClick={simulateBudgetEffects}>
+                        Simulate Effects
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="budget-item-value">
+                      {formatCurrency(value)}
+                      <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
+                        ({formatPercentage(value / budgetData.gdp * 100)} of GDP)
+                      </span>
+                      
+                      {budgetData.editableCategories?.includes(name) && (
+                        <button 
+                          className="edit-button"
+                          onClick={() => handleEditClick(name, value)}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          ))}
-          
-          <div className="budget-item total">
-            <div className="budget-item-name">Total Expenditure</div>
-            <div className="budget-item-value">
-              {formatCurrency(budgetData.totalExpenditure)}
-              <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
-                ({formatPercentage(budgetData.totalExpenditure / budgetData.gdp * 100)} of GDP)
-              </span>
+              ))}
+              
+              <div className="budget-item total">
+                <div className="budget-item-name">Total Expenditure</div>
+                <div className="budget-item-value">
+                  {formatCurrency(budgetData.totalExpenditure)}
+                  <span style={{ marginLeft: '10px', color: '#7f8c8d', fontSize: '0.9em' }}>
+                    ({formatPercentage(budgetData.totalExpenditure / budgetData.gdp * 100)} of GDP)
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -458,7 +723,7 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
         {subsidies.length > 0 ? (
           <div className="budget-items">
             {subsidies.map(subsidy => (
-              <div key={subsidy.id} className="budget-item">
+              <div key={subsidy.id} className="budget-item subsidy-item">
                 <div className="budget-item-name">
                   {subsidy.sector} Sector ({subsidy.percentage}% subsidy)
                   <div style={{ fontSize: '0.8em', color: '#7f8c8d' }}>
@@ -474,6 +739,32 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
                     Remove
                   </button>
                 </div>
+                
+                {showAdvancedView && subsidy.effects && (
+                  <div className="subsidy-effects">
+                    <div className="effect-header">Effects:</div>
+                    <div className="effect-grid">
+                      {subsidy.effects.output_increase_percentage && (
+                        <div className="effect-item">
+                          <span className="effect-label">Output:</span>
+                          <span className="effect-value positive">+{subsidy.effects.output_increase_percentage.toFixed(1)}%</span>
+                        </div>
+                      )}
+                      {subsidy.effects.unemployment_reduction && (
+                        <div className="effect-item">
+                          <span className="effect-label">Unemployment:</span>
+                          <span className="effect-value positive">-{subsidy.effects.unemployment_reduction.toFixed(1)}%</span>
+                        </div>
+                      )}
+                      {subsidy.effects.price_reduction_percentage && (
+                        <div className="effect-item">
+                          <span className="effect-label">Price:</span>
+                          <span className="effect-value positive">-{subsidy.effects.price_reduction_percentage.toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -524,13 +815,44 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
               />
             </div>
             
+            {subsidyPreview && !loadingPreview && (
+              <div className="subsidy-preview">
+                <h4>Projected Effects</h4>
+                <div className="preview-grid">
+                  <div className="preview-item">
+                    <div className="preview-label">Output Increase:</div>
+                    <div className="preview-value positive">+{subsidyPreview.output_increase_percentage.toFixed(1)}%</div>
+                  </div>
+                  <div className="preview-item">
+                    <div className="preview-label">Unemployment Reduction:</div>
+                    <div className="preview-value positive">-{subsidyPreview.unemployment_reduction.toFixed(1)}%</div>
+                  </div>
+                  <div className="preview-item">
+                    <div className="preview-label">Annual Cost:</div>
+                    <div className="preview-value">{formatCurrency(subsidyPreview.annual_cost)}</div>
+                  </div>
+                  <div className="preview-item">
+                    <div className="preview-label">Export Boost:</div>
+                    <div className="preview-value positive">+{subsidyPreview.export_increase_percentage?.toFixed(1) || '0.0'}%</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {loadingPreview && (
+              <div className="preview-loading">Calculating effects...</div>
+            )}
+            
             <div className="form-actions">
               <button className="apply-button" onClick={addSubsidy}>
                 Add Subsidy
               </button>
               <button 
                 className="cancel-button"
-                onClick={() => setShowAddSubsidyForm(false)}
+                onClick={() => {
+                  setShowAddSubsidyForm(false);
+                  setSubsidyPreview(null);
+                }}
               >
                 Cancel
               </button>
@@ -584,108 +906,109 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
         </div>
       </div>
       
-      {/* Economic Parameter Calibration Section */}
-      <div className="budget-section calibration-section">
-        <h3>Economic Parameter Calibration</h3>
-        <p className="calibration-description">
-          Calibrate economic model parameters based on historical data to improve economic 
-          forecasting accuracy. This process fine-tunes your country's economic model.
-        </p>
-        
-        <div className="calibration-metrics">
-          <div className="metrics-label">Select metrics to calibrate:</div>
-          <div className="metrics-options">
-            <label className="metric-option">
-              <input 
-                type="checkbox"
-                name="gdp_growth"
-                checked={calibrationMetrics.gdp_growth}
-                onChange={handleCalibrationMetricChange}
-              />
-              GDP Growth
-            </label>
-            <label className="metric-option">
-              <input 
-                type="checkbox"
-                name="inflation"
-                checked={calibrationMetrics.inflation}
-                onChange={handleCalibrationMetricChange}
-              />
-              Inflation
-            </label>
-            <label className="metric-option">
-              <input 
-                type="checkbox"
-                name="unemployment"
-                checked={calibrationMetrics.unemployment}
-                onChange={handleCalibrationMetricChange}
-              />
-              Unemployment
-            </label>
+      {showAdvancedView && (
+        <div className="budget-section calibration-section">
+          <h3>Economic Parameter Calibration</h3>
+          <p className="calibration-description">
+            Calibrate economic model parameters based on historical data to improve economic 
+            forecasting accuracy. This process fine-tunes your country's economic model.
+          </p>
+          
+          <div className="calibration-metrics">
+            <div className="metrics-label">Select metrics to calibrate:</div>
+            <div className="metrics-options">
+              <label className="metric-option">
+                <input 
+                  type="checkbox"
+                  name="gdp_growth"
+                  checked={calibrationMetrics.gdp_growth}
+                  onChange={handleCalibrationMetricChange}
+                />
+                GDP Growth
+              </label>
+              <label className="metric-option">
+                <input 
+                  type="checkbox"
+                  name="inflation"
+                  checked={calibrationMetrics.inflation}
+                  onChange={handleCalibrationMetricChange}
+                />
+                Inflation
+              </label>
+              <label className="metric-option">
+                <input 
+                  type="checkbox"
+                  name="unemployment"
+                  checked={calibrationMetrics.unemployment}
+                  onChange={handleCalibrationMetricChange}
+                />
+                Unemployment
+              </label>
+            </div>
           </div>
-        </div>
-        
-        <button 
-          className="calibrate-button"
-          onClick={startCalibration}
-          disabled={isCalibrating || !Object.values(calibrationMetrics).some(v => v)}
-        >
-          {isCalibrating ? 'Calibrating...' : 'Calibrate Economic Parameters'}
-        </button>
-        
-        {calibrationResult && (
-          <div className="calibration-result">
-            <h4>Calibration Complete</h4>
-            <p>{calibrationResult.message}</p>
-            
-            <button
-              className="view-report-button"
-              onClick={() => setShowCalibrationReport(!showCalibrationReport)}
-            >
-              {showCalibrationReport ? 'Hide Detailed Report' : 'View Detailed Report'}
-            </button>
-            
-            {showCalibrationReport && calibrationResult.report && (
-              <div className="calibration-report">
-                <h4>Calibration Report</h4>
-                
-                <div className="report-metrics">
-                  {Object.entries(calibrationResult.report.metrics || {}).map(([metric, value]) => (
-                    <div key={metric} className="report-metric">
-                      <div className="metric-name">{metric.replace('_', ' ')}</div>
-                      <div className="metric-value">
-                        <div className="before-value">
-                          Before: {typeof value.before === 'number' ? value.before.toFixed(2) : value.before}
-                        </div>
-                        <div className="after-value">
-                          After: {typeof value.after === 'number' ? value.after.toFixed(2) : value.after}
-                        </div>
-                        <div className={`change-value ${value.change > 0 ? 'positive' : value.change < 0 ? 'negative' : ''}`}>
-                          Change: {value.change > 0 ? '+' : ''}{typeof value.change === 'number' ? value.change.toFixed(2) : value.change}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="calibration-parameters">
-                  <h5>Updated Economic Parameters</h5>
-                  <div className="parameters-grid">
-                    {Object.entries(calibrationResult.calibrated_params || {}).map(([param, value]) => (
-                      <div key={param} className="parameter-item">
-                        <div className="parameter-name">{param.replace('_', ' ')}</div>
-                        <div className="parameter-value">
-                          {typeof value === 'number' ? value.toFixed(4) : value}
+          
+          <button 
+            className="calibrate-button"
+            onClick={startCalibration}
+            disabled={isCalibrating || !Object.values(calibrationMetrics).some(v => v)}
+          >
+            {isCalibrating ? 'Calibrating...' : 'Calibrate Economic Parameters'}
+          </button>
+          
+          {calibrationResult && (
+            <div className="calibration-result">
+              <h4>Calibration Complete</h4>
+              <p>{calibrationResult.message}</p>
+              
+              <button
+                className="view-report-button"
+                onClick={() => setShowCalibrationReport(!showCalibrationReport)}
+              >
+                {showCalibrationReport ? 'Hide Detailed Report' : 'View Detailed Report'}
+              </button>
+              
+              {showCalibrationReport && calibrationResult.report && (
+                <div className="calibration-report">
+                  <h4>Calibration Report</h4>
+                  
+                  <div className="report-metrics">
+                    {Object.entries(calibrationResult.report.metrics || {}).map(([metric, value]) => (
+                      <div key={metric} className="report-metric">
+                        <div className="metric-name">{metric.replace('_', ' ')}</div>
+                        <div className="metric-value">
+                          <div className="before-value">
+                            Before: {typeof value.before === 'number' ? value.before.toFixed(2) : value.before}
+                          </div>
+                          <div className="after-value">
+                            After: {typeof value.after === 'number' ? value.after.toFixed(2) : value.after}
+                          </div>
+                          <div className={`change-value ${value.change > 0 ? 'positive' : value.change < 0 ? 'negative' : ''}`}>
+                            Change: {value.change > 0 ? '+' : ''}{typeof value.change === 'number' ? value.change.toFixed(2) : value.change}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
+                  
+                  <div className="calibration-parameters">
+                    <h5>Updated Economic Parameters</h5>
+                    <div className="parameters-grid">
+                      {Object.entries(calibrationResult.calibrated_params || {}).map(([param, value]) => (
+                        <div key={param} className="parameter-item">
+                          <div className="parameter-name">{param.replace('_', ' ')}</div>
+                          <div className="parameter-value">
+                            {typeof value === 'number' ? value.toFixed(4) : value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Budget Effects Simulation Popup */}
       {showEffects && simulatedEffects && (
@@ -735,6 +1058,13 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
                 </span>
               </li>
             </ul>
+            
+            {simulatedEffects.description && (
+              <div className="effects-description expert-opinion">
+                <h5>Economic Analysis</h5>
+                <p>{simulatedEffects.description}</p>
+              </div>
+            )}
             
             <div className="budget-effects-actions">
               <button 

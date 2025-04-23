@@ -1,10 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/CountryAnalysisPanel.css';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, AnnotationPlugin } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  BarElement,
+  Title, 
+  Tooltip, 
+  Legend, 
+  TimeScale,
+  Filler
+} from 'chart.js';
+import 'chartjs-adapter-date-fns';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 // Register Chart.js components including annotations for key events
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, AnnotationPlugin);
+ChartJS.register(
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  BarElement,
+  Title, 
+  Tooltip, 
+  Legend, 
+  TimeScale,
+  Filler,
+  ChartDataLabels,
+  annotationPlugin
+);
 
 function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,6 +48,19 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
   const [comparisonCountries, setComparisonCountries] = useState([]); // Multiple countries comparison
   const [error, setError] = useState(null);
   const [exportLoading, setExportLoading] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+  const [viewMode, setViewMode] = useState('line'); // 'line' or 'bar'
+  const [retryCount, setRetryCount] = useState(0);
+  const chartRef = useRef(null);
+  const maxRetries = 3;
+
+  // Debounced data fetching to prevent excessive API calls
+  const debouncedFetch = useCallback(
+    debounce((func) => {
+      func();
+    }, 300),
+    []
+  );
 
   useEffect(() => {
     if (!country || !country.iso_code) return;
@@ -27,51 +68,113 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     setIsLoading(true);
     setError(null);
 
-    fetchTradeData(country.iso_code);
-    fetchHistoricalBenchmarks(country.iso_code);
+    // Fetch data with retry mechanism
+    const fetchData = async () => {
+      try {
+        await Promise.all([
+          fetchTradeData(country.iso_code),
+          fetchHistoricalBenchmarks(country.iso_code)
+        ]);
+      } catch (error) {
+        console.error("Error in main data fetch:", error);
+        handleFetchError(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    debouncedFetch(fetchData);
+    
+    // Clean up when component unmounts or country changes
+    return () => {
+      // Cancel any pending operations if component unmounts
+    };
   }, [country]);
+
+  // Improved error handling with retry mechanism
+  const handleFetchError = (error, endpoint = '') => {
+    // Create a more user-friendly error message
+    const userMessage = `Kunne ikke hente data${endpoint ? ` for ${endpoint}` : ''}: ${error.message || 'Ukendt fejl'}`;
+    
+    // Log the detailed error for debugging
+    console.error(`API Error (${endpoint || 'unknown endpoint'})`, error);
+    
+    // Decide if we should retry
+    if (retryCount < maxRetries) {
+      setRetryCount(count => count + 1);
+      setError(`${userMessage} - Prøver igen (${retryCount + 1}/${maxRetries})...`);
+      
+      // Retry with exponential backoff
+      setTimeout(() => {
+        if (country && country.iso_code) {
+          if (endpoint.includes('trade')) {
+            fetchTradeData(country.iso_code);
+          } else if (endpoint.includes('historical')) {
+            fetchHistoricalBenchmarks(country.iso_code);
+          } else {
+            // Retry all
+            fetchTradeData(country.iso_code);
+            fetchHistoricalBenchmarks(country.iso_code);
+          }
+        }
+      }, 1000 * Math.pow(2, retryCount));
+    } else {
+      // Max retries reached, show final error and fallback to mock data
+      setError(`${userMessage} - Bruger simulerede data i stedet.`);
+      setRetryCount(0);
+      
+      // Generate mock data as fallback
+      if (endpoint.includes('trade') || !endpoint) {
+        generateDummyTradeData();
+        generateDummyCompetitors();
+      }
+      
+      if (endpoint.includes('historical') || !endpoint) {
+        generateMockHistoricalData();
+        setDataSource('mock');
+      }
+    }
+  };
 
   const fetchTradeData = async (iso) => {
     try {
       const partnersRes = await fetch(`/api/trade_partners/${iso}`);
-      if (partnersRes.ok) {
-        const partnersData = await partnersRes.json();
+      
+      if (!partnersRes.ok) {
+        throw new Error(`Status ${partnersRes.status}: ${await partnersRes.text().catch(() => 'Ukendt fejl')}`);
+      }
+      
+      const partnersData = await partnersRes.json();
 
-        if (partnersData.partners) {
-          setTradePartners(partnersData.partners);
+      if (partnersData.partners) {
+        setTradePartners(partnersData.partners);
 
-          const totalTrade = partnersData.partners.reduce((sum, partner) =>
-            sum + (partner.importVolume || 0) + (partner.exportVolume || 0), 0);
-          setTradeDependency(totalTrade / (country.gdp || 1));
-        }
-      } else {
-        console.warn("Kunne ikke hente handelspartnerdata");
-        generateDummyTradeData();
+        const totalTrade = partnersData.partners.reduce((sum, partner) =>
+          sum + (partner.importVolume || 0) + (partner.exportVolume || 0), 0);
+        setTradeDependency(totalTrade / (country.gdp || 1));
       }
 
       const competitorsRes = await fetch(`/api/competitors/${iso}`);
-      if (competitorsRes.ok) {
-        const competitorsData = await competitorsRes.json();
-        if (competitorsData.competitors) {
-          setCompetitorData(competitorsData.competitors);
-        }
-      } else {
-        console.warn("Kunne ikke hente konkurrentdata");
-        generateDummyCompetitors();
+      
+      if (!competitorsRes.ok) {
+        throw new Error(`Status ${competitorsRes.status}: ${await competitorsRes.text().catch(() => 'Ukendt fejl')}`);
       }
+      
+      const competitorsData = await competitorsRes.json();
+      
+      if (competitorsData.competitors) {
+        setCompetitorData(competitorsData.competitors);
+      }
+      
+      // Reset retry count on success
+      setRetryCount(0);
     } catch (error) {
-      console.error("Fejl ved hentning af handelsdata:", error);
-      setError(`Fejl ved hentning af handelsdata: ${error.message}`);
-      generateDummyTradeData();
-      generateDummyCompetitors();
-    } finally {
-      setIsLoading(false);
+      handleFetchError(error, 'handelsdata');
     }
   };
 
   const fetchHistoricalBenchmarks = async (iso) => {
     setIsLoading(true);
-    setError(null);
     try {
       // Clear existing data before fetching new data
       setHistoricalBenchmarks(null);
@@ -79,46 +182,44 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       
       // Fetch historical benchmarks data from backend
       const response = await fetch(`/api/countries/${iso}/historical-benchmarks`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Received historical data:", data);
-        
-        if (data.status === 'mock') {
-          console.info("Using mock historical data from server:", data.message);
-          setDataSource('mock');
-        } else {
-          setDataSource('real');
-        }
-        
-        setHistoricalBenchmarks(data);
-
-        // Process the trends data from the backend API
-        if (data.metrics && data.years) {
-          processHistoricalTrends(data);
-        }
-        
-        // Extract key historical events if available
-        if (data.key_events) {
-          setKeyEvents(data.key_events);
-        } else {
-          // Set default key events if not provided by the backend
-          setKeyEvents([
-            { year: 2008, event: "Global finanskrise", impact: "Negativ", magnitude: "Høj" },
-            { year: 2020, event: "COVID-19 pandemi", impact: "Negativ", magnitude: "Meget høj" }
-          ]);
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Ukendt fejl' }));
-        console.warn("Could not fetch historical benchmarks:", errorData.error || 'Unknown error');
-        setError(`Kunne ikke hente historiske data: ${errorData.error || 'Ukendt fejl'}`);
-        generateMockHistoricalData();
-        setDataSource('mock');
+      
+      if (!response.ok) {
+        const errorMessage = await response.text().catch(() => 'Ukendt fejl');
+        throw new Error(`Status ${response.status}: ${errorMessage}`);
       }
+      
+      const data = await response.json();
+      console.log("Received historical data:", data);
+      
+      if (data.status === 'mock') {
+        console.info("Using mock historical data from server:", data.message);
+        setDataSource('mock');
+      } else {
+        setDataSource('real');
+      }
+      
+      setHistoricalBenchmarks(data);
+
+      // Process the trends data from the backend API
+      if (data.metrics && data.years) {
+        processHistoricalTrends(data);
+      }
+      
+      // Extract key historical events if available
+      if (data.key_events) {
+        setKeyEvents(data.key_events);
+      } else {
+        // Set default key events if not provided by the backend
+        setKeyEvents([
+          { year: 2008, event: "Global finanskrise", impact: "Negativ", magnitude: "Høj" },
+          { year: 2020, event: "COVID-19 pandemi", impact: "Negativ", magnitude: "Meget høj" }
+        ]);
+      }
+      
+      // Reset retry count on success
+      setRetryCount(0);
     } catch (error) {
-      console.error("Error fetching historical benchmarks:", error);
-      setError(`Fejl ved hentning af historiske data: ${error.message}`);
-      generateMockHistoricalData();
-      setDataSource('mock');
+      handleFetchError(error, 'historiske data');
     } finally {
       setIsLoading(false);
     }
@@ -425,8 +526,8 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     setCompetitorData(similarCountries);
   };
 
-  // Export historical data to CSV
-  const exportHistoricalData = (isoCode, benchmarks) => {
+  // Enhanced export functionality with multiple format options
+  const exportHistoricalData = (isoCode, benchmarks, format = 'csv') => {
     if (!benchmarks || !benchmarks.metrics || !benchmarks.years) {
       setError("Ingen data tilgængelig til eksport");
       return;
@@ -438,7 +539,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       const years = benchmarks.years;
       const metrics = benchmarks.metrics;
       
-      // Base CSV headers
+      // Base headers
       const headers = ['År', 'BNP Vækst (%)', 'Regional BNP Vækst (%)', 'Global BNP Vækst (%)'];
       
       // Add comparison countries headers if any
@@ -500,14 +601,73 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
         });
       }
       
-      const csvContent = csvRows.map(row => row.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute('download', `${isoCode}_historical_data_${new Date().toISOString().slice(0,10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Add additional metadata
+      csvRows.push([]);
+      csvRows.push(['Metadata']);
+      csvRows.push(['Land', country.name]);
+      csvRows.push(['Eksportdato', new Date().toISOString().slice(0,10)]);
+      csvRows.push(['Datakilde', dataSource === 'real' ? 'Faktiske data' : 'Simulerede data']);
+      
+      if (format === 'csv') {
+        // Process for CSV format
+        const csvContent = csvRows.map(row => 
+          row.map(cell => 
+            // Properly escape values for CSV
+            typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n')) 
+              ? `"${cell.replace(/"/g, '""')}"` 
+              : cell
+          ).join(',')
+        ).join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `${isoCode}_historical_data_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'json') {
+        // Process for JSON format
+        const jsonData = {
+          metadata: {
+            country: country.name,
+            iso_code: isoCode,
+            export_date: new Date().toISOString(),
+            data_source: dataSource
+          },
+          years: years,
+          metrics: metrics,
+          comparison_countries: comparisonCountries.map(c => ({
+            name: c.name,
+            iso_code: c.iso_code,
+            metrics: c.metrics
+          })),
+          key_events: keyEvents
+        };
+        
+        const jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(jsonBlob);
+        link.setAttribute('download', `${isoCode}_historical_data_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'excel') {
+        // For Excel, we'll create an XLSX format download
+        // Note: In a real implementation, you would typically use a library like SheetJS/xlsx
+        // For this demo, we'll just download as CSV but with an Excel extension
+        const csvContent = csvRows.map(row => row.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `${isoCode}_historical_data_${new Date().toISOString().slice(0,10)}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      // Show success message
+      setError(null);
     } catch (error) {
       console.error("Fejl ved eksport af data:", error);
       setError(`Fejl ved eksport af data: ${error.message}`);
@@ -516,7 +676,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     }
   };
 
-  // Add a country to the comparison list
+  // Enhanced country comparison with improved handling of data alignment
   const addCountryComparison = async (isoCode) => {
     if (!isoCode || !allCountries || !historicalBenchmarks) {
       setError("Kan ikke tilføje landet til sammenligning");
@@ -528,49 +688,53 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       return; // Already added
     }
     
+    // Limit the number of comparison countries to prevent chart clutter
+    if (comparisonCountries.length >= 5) {
+      setError("Du kan maksimalt sammenligne med 5 lande ad gangen");
+      return;
+    }
+    
     try {
       setIsLoading(true);
       setError(null);
       
       // Fetch comparison country's historical data
       const response = await fetch(`/api/countries/${isoCode}/historical-benchmarks`);
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Create comparison country object with all necessary data
-        const comparisonData = {
-          iso_code: isoCode,
-          name: allCountries[isoCode]?.name || isoCode,
-          color: getRandomColor(),
-          metrics: data.metrics || {},
-          years: data.years || []
-        };
-        
-        // Add to comparison countries list
-        setComparisonCountries(prev => [...prev, comparisonData]);
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Ukendt fejl' }));
-        console.error("Failed to fetch comparison country data:", errorData.error);
-        setError(`Kunne ikke hente data for sammenligningslandet: ${errorData.error || 'Ukendt fejl'}`);
-        
-        // Try with mock data instead
-        const mockData = generateMockDataForCountry(isoCode);
-        const comparisonData = {
-          iso_code: isoCode,
-          name: allCountries[isoCode]?.name || isoCode,
-          color: getRandomColor(),
-          metrics: mockData.metrics || {},
-          years: mockData.years || [],
-          isMock: true
-        };
-        
-        setComparisonCountries(prev => [...prev, comparisonData]);
+      if (!response.ok) {
+        throw new Error(`Kunne ikke hente data for ${allCountries[isoCode]?.name || isoCode} (${response.status})`);
+      }
+      
+      const data = await response.json();
+      
+      // Check for data alignment with the main country's data
+      const dataAligned = areDataAligned(historicalBenchmarks, data);
+      
+      // Create comparison country object with all necessary data
+      const comparisonData = {
+        iso_code: isoCode,
+        name: allCountries[isoCode]?.name || isoCode,
+        color: getRandomColor(),
+        metrics: data.metrics || {},
+        years: data.years || [],
+        isMock: data.status === 'mock',
+        alignmentWarning: !dataAligned
+      };
+      
+      // Add to comparison countries list
+      setComparisonCountries(prev => [...prev, comparisonData]);
+      
+      // Show alignment warning if needed
+      if (!dataAligned) {
+        setError(`Advarsel: Data for ${comparisonData.name} dækker ikke samme tidsperiode som ${country.name}. Sammenligningen kan være misvisende.`);
       }
     } catch (error) {
       console.error("Error adding comparison country:", error);
-      setError(`Fejl ved tilføjelse af sammenligningsland: ${error.message}`);
       
-      // Try with mock data in case of error
+      // More user-friendly error message
+      const errorMsg = `Kunne ikke hente data for ${allCountries[isoCode]?.name || isoCode}. Bruger estimerede data i stedet.`;
+      setError(errorMsg);
+      
+      // Try with mock data instead
       const mockData = generateMockDataForCountry(isoCode);
       const comparisonData = {
         iso_code: isoCode,
@@ -585,6 +749,21 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Check if two datasets have aligned years for proper comparison
+  const areDataAligned = (dataset1, dataset2) => {
+    if (!dataset1?.years || !dataset2?.years) return false;
+    
+    // Check if datasets cover the same years
+    const years1 = new Set(dataset1.years);
+    const years2 = new Set(dataset2.years);
+    
+    // Check for at least 75% overlap
+    const intersection = new Set([...years1].filter(y => years2.has(y)));
+    const coverage = intersection.size / Math.max(years1.size, years2.size);
+    
+    return coverage >= 0.75;
   };
   
   // Generate mock data for a specific country
@@ -693,7 +872,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
   };
 
-  // Render chart for selected historical metric with annotations for key events
+  // Enhanced chart rendering with annotations for key events and responsive design
   const renderHistoricalChart = () => {
     const metric = selectedBenchmarkMetric || 'gdp_growth';
     
@@ -710,27 +889,30 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
         label: `${country?.name || 'Land'}`,
         data: selectedTrend.countryValues || [],
         borderColor: '#3f51b5',
-        backgroundColor: 'rgba(63, 81, 181, 0.1)',
+        backgroundColor: viewMode === 'bar' ? 'rgba(63, 81, 181, 0.7)' : 'rgba(63, 81, 181, 0.1)',
         tension: 0.3,
         borderWidth: 2,
+        fill: viewMode === 'line' ? false : undefined,
       },
       {
         label: 'Regional Benchmark',
         data: selectedTrend.regionalValues || [],
         borderColor: '#ff9800',
-        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+        backgroundColor: viewMode === 'bar' ? 'rgba(255, 152, 0, 0.7)' : 'rgba(255, 152, 0, 0.1)',
         tension: 0.3,
         borderDash: [5, 5],
         borderWidth: 1.5,
+        hidden: viewMode === 'bar' && comparisonCountries.length > 0,
       },
       {
         label: 'Global Benchmark',
         data: selectedTrend.globalValues || [],
         borderColor: '#4caf50',
-        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+        backgroundColor: viewMode === 'bar' ? 'rgba(76, 175, 80, 0.7)' : 'rgba(76, 175, 80, 0.1)',
         tension: 0.3,
         borderDash: [2, 2],
         borderWidth: 1.5,
+        hidden: viewMode === 'bar' && comparisonCountries.length > 0,
       }
     ];
     
@@ -741,7 +923,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
           label: `${compCountry.name}${compCountry.isMock ? ' (estimeret)' : ''}`,
           data: compCountry.metrics[metric].country_values,
           borderColor: compCountry.color,
-          backgroundColor: `${compCountry.color}20`, // Add transparency
+          backgroundColor: viewMode === 'bar' ? `${compCountry.color}D0` : `${compCountry.color}20`, // Add transparency
           tension: 0.3,
           borderWidth: 2,
         });
@@ -753,9 +935,10 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       datasets: datasets
     };
 
-    // Create annotations for key events
+    // Create annotations for key events (only if enabled)
     const annotations = {};
-    if (keyEvents && keyEvents.length > 0) {
+    
+    if (showAnnotations && keyEvents && keyEvents.length > 0) {
       keyEvents.forEach((event, index) => {
         const eventYear = event.year.toString();
         const yearIndex = chartData.labels.findIndex(year => year.toString() === eventYear);
@@ -792,73 +975,109 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       return titles[metricName] || metricName;
     };
 
+    // Common chart options
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        y: {
+          beginAtZero: metric !== 'trade_balance',
+          title: {
+            display: true,
+            text: '%'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'År'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 10
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+            }
+          }
+        },
+        annotation: {
+          annotations: showAnnotations ? annotations : {}
+        },
+        datalabels: {
+          display: viewMode === 'bar' && datasets[0].data.length <= 10,
+          color: '#333',
+          anchor: 'end',
+          align: 'top',
+          formatter: function(value) {
+            return value ? value.toFixed(1) + '%' : '';
+          },
+          font: {
+            weight: 'bold',
+            size: 9
+          }
+        }
+      }
+    };
+
     return (
       <div className="trend-chart">
         <h5>{getMetricTitle(metric)}</h5>
         <div className="chart-container">
-          <Line 
-            data={chartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: {
-                mode: 'index',
-                intersect: false,
-              },
-              scales: {
-                y: {
-                  beginAtZero: metric !== 'trade_balance',
-                  title: {
-                    display: true,
-                    text: '%'
-                  },
-                  grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'År'
-                  },
-                  grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
-                  }
-                }
-              },
-              plugins: {
-                legend: {
-                  position: 'top',
-                  labels: {
-                    usePointStyle: true,
-                    boxWidth: 10
-                  }
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
-                    }
-                  }
-                },
-                annotation: {
-                  annotations: annotations
-                }
-              }
-            }}
-          />
+          {viewMode === 'line' ? (
+            <Line 
+              data={chartData}
+              options={chartOptions}
+              ref={chartRef}
+            />
+          ) : (
+            <Bar
+              data={chartData}
+              options={chartOptions}
+              ref={chartRef}
+            />
+          )}
         </div>
       </div>
     );
   };
   
-  // Render country comparison selector
+  // Enhanced comparison selector with better UI and filtering
   const renderComparisonSelector = () => {
     if (!allCountries) return null;
     
+    // Filter out current country and already selected comparison countries
     const availableCountries = Object.values(allCountries)
       .filter(c => c.iso_code !== country?.iso_code && 
                 !comparisonCountries.some(comp => comp.iso_code === c.iso_code));
+    
+    // Group countries by region for easier selection
+    const regionGroups = {};
+    availableCountries.forEach(c => {
+      const region = c.region || 'Andre';
+      if (!regionGroups[region]) {
+        regionGroups[region] = [];
+      }
+      regionGroups[region].push(c);
+    });
     
     if (availableCountries.length === 0) return null;
     
@@ -878,8 +1097,15 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
             disabled={isLoading}
           >
             <option value="">Vælg land til sammenligning...</option>
-            {availableCountries.map(c => (
-              <option key={c.iso_code} value={c.iso_code}>{c.name}</option>
+            {Object.keys(regionGroups).sort().map(region => (
+              <optgroup key={region} label={region}>
+                {regionGroups[region]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(c => (
+                    <option key={c.iso_code} value={c.iso_code}>{c.name}</option>
+                  ))
+                }
+              </optgroup>
             ))}
           </select>
         </div>
@@ -889,7 +1115,11 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
             {comparisonCountries.map(c => (
               <div key={c.iso_code} className="comparison-item">
                 <div className="color-indicator" style={{ backgroundColor: c.color }}></div>
-                <span>{c.name}{c.isMock ? ' (estimeret)' : ''}</span>
+                <span>
+                  {c.name}
+                  {c.isMock ? ' (estimeret)' : ''}
+                  {c.alignmentWarning && ' ⚠️'}
+                </span>
                 <button 
                   className="remove-btn"
                   onClick={() => removeCountryComparison(c.iso_code)}
@@ -914,7 +1144,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     );
   };
   
-  // Render key historical events
+  // Enhanced key events display with detailed information
   const renderKeyEvents = () => {
     if (!keyEvents || keyEvents.length === 0) return null;
     
@@ -944,16 +1174,87 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     );
   };
 
+  // Responsive UI: Enhanced visualization controls
+  const renderVisualizationControls = () => {
+    return (
+      <div className="visualization-controls">
+        <div className="view-toggles">
+          <button
+            className={`view-toggle ${viewMode === 'line' ? 'active' : ''}`}
+            onClick={() => setViewMode('line')}
+            title="Linjediagram"
+          >
+            <span role="img" aria-label="Linjediagram">📈</span>
+          </button>
+          <button
+            className={`view-toggle ${viewMode === 'bar' ? 'active' : ''}`}
+            onClick={() => setViewMode('bar')}
+            title="Søjlediagram"
+          >
+            <span role="img" aria-label="Søjlediagram">📊</span>
+          </button>
+        </div>
+        
+        <div className="annotation-toggle">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={showAnnotations}
+              onChange={() => setShowAnnotations(!showAnnotations)}
+            />
+            <span className="toggle-text">Vis begivenheder</span>
+          </label>
+        </div>
+        
+        <div className="export-controls">
+          <div className="export-dropdown">
+            <button 
+              className="export-button"
+              disabled={!historicalBenchmarks || isLoading || exportLoading}
+            >
+              <span className="export-icon">📤</span>
+              {exportLoading ? 'Eksporterer...' : 'Eksportér'}
+            </button>
+            <div className="export-options">
+              <button onClick={() => exportHistoricalData(country.iso_code, historicalBenchmarks, 'csv')}>
+                CSV-format
+              </button>
+              <button onClick={() => exportHistoricalData(country.iso_code, historicalBenchmarks, 'json')}>
+                JSON-format
+              </button>
+              <button onClick={() => exportHistoricalData(country.iso_code, historicalBenchmarks, 'excel')}>
+                Excel-format
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Clear error message after a timeout
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
         setError(null);
-      }, 5000);
+      }, 10000); // Increased timeout for more complex error messages
       
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  // Utility function for debouncing
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 
   if (!country) {
     return (
@@ -969,7 +1270,13 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       <h3>Landeanalyse: {country.name}</h3>
       
       {isLoading && <div className="loading-indicator">Indlæser data...</div>}
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          <span className="error-text">{error}</span>
+          <button className="dismiss-error" onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
 
       <div className="tabs">
         <button
@@ -1253,7 +1560,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
                 </span>
               </div>
               
-              <div className="metrics-export-container">
+              <div className="metrics-visualization-container">
                 <div className="metric-selector">
                   <label htmlFor="metric-select">Metrik:</label>
                   <select 
@@ -1269,14 +1576,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
                   </select>
                 </div>
                 
-                <button 
-                  className="export-button"
-                  onClick={() => exportHistoricalData(country.iso_code, historicalBenchmarks)}
-                  disabled={!historicalBenchmarks || isLoading || exportLoading}
-                >
-                  <span className="export-icon">📊</span>
-                  {exportLoading ? 'Eksporterer...' : 'Eksportér data (CSV)'}
-                </button>
+                {renderVisualizationControls()}
               </div>
             </div>
             
