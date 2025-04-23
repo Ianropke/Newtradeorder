@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Dict, Optional, List
 
 class Industry:
@@ -14,6 +15,13 @@ class Industry:
             services=data.get('services', 0.0),
             agriculture=data.get('agriculture', 0.0)
         )
+
+    def to_dict(self) -> Dict[str, float]:
+        return {
+            'manufacturing': self.manufacturing,
+            'services': self.services,
+            'agriculture': self.agriculture
+        }
 
 class Sector:
     """
@@ -63,12 +71,29 @@ class Sector:
             unemployment_rate=data.get('unemployment_rate', 0.0)
         )
 
+    def to_dict(self) -> Dict:
+        return {
+            'name': self.name,
+            'output': self.output,
+            'employment': self.employment,
+            'import_share': self.import_share,
+            'price': self.price,
+            'capital_stock': self.capital_stock,
+            'potential_output': self.potential_output,
+            'import_price': self.import_price,
+            'export': self.export,
+            'import_': self.import_,
+            'unemployment_rate': self.unemployment_rate
+        }
+
 class Country:
     def __init__(self, name: str, iso_code: str, gdp: float, population: float,
                  industries: Industry, trade_partners: Dict, tariffs: Dict,
                  unemployment_rate: float, growth_rate: float, approval_rating: float,
                  government_type: str, is_eu_member: Optional[bool] = False,
-                 sectors: Optional[List[Sector]] = None):
+                 sectors: Optional[List[Sector]] = None, 
+                 budget: Optional[Dict] = None,
+                 subsidies: Optional[Dict] = None):
         self.name = name
         self.iso_code = iso_code
         self.gdp = gdp
@@ -82,6 +107,28 @@ class Country:
         self.government_type = government_type
         self.is_eu_member = is_eu_member
         self.sectors = sectors if sectors is not None else []
+        # Budget structure: {'revenue': {...}, 'expenses': {...}, 'balance': float}
+        self.budget = budget if budget is not None else {
+            'revenue': {
+                'taxation': 0.0,
+                'tariffs': 0.0,
+                'other': 0.0
+            },
+            'expenses': {
+                'subsidies': 0.0,
+                'social_services': 0.0,
+                'defense': 0.0,
+                'infrastructure': 0.0,
+                'education': 0.0,
+                'healthcare': 0.0
+            },
+            'balance': 0.0,
+            'debt': 0.0,
+            'debt_to_gdp_ratio': 0.0
+        }
+        
+        # Subsidies structure: {'sector_name': {'amount': float, 'percentage': float, 'effects': {...}}}
+        self.subsidies = subsidies if subsidies is not None else {}
 
     @classmethod
     def from_dict(cls, data: Dict):
@@ -101,8 +148,29 @@ class Country:
             approval_rating=data['approval_rating'],
             government_type=data['government_type'],
             is_eu_member=data.get('is_eu_member', False),
-            sectors=sectors
+            sectors=sectors,
+            budget=data.get('budget', None),
+            subsidies=data.get('subsidies', None)
         )
+
+    def to_dict(self) -> Dict:
+        return {
+            'name': self.name,
+            'iso_code': self.iso_code,
+            'gdp': self.gdp,
+            'population': self.population,
+            'industries': self.industries.to_dict() if hasattr(self.industries, 'to_dict') else self.industries,
+            'trade_partners': self.trade_partners,
+            'tariffs': self.tariffs,
+            'unemployment_rate': self.unemployment_rate,
+            'growth_rate': self.growth_rate,
+            'approval_rating': self.approval_rating,
+            'government_type': self.government_type,
+            'is_eu_member': self.is_eu_member,
+            'sectors': [s.to_dict() for s in self.sectors],
+            'budget': self.budget,
+            'subsidies': self.subsidies
+        }
 
 class TradeBloc:
     """
@@ -170,24 +238,187 @@ def load_countries_from_file(filepath: str) -> Dict[str, Country]:
             countries[country.iso_code] = country
         return countries
     except FileNotFoundError:
-        print(f"Error: Country data file not found at {filepath}")
+        logging.error("Country data file not found at %s", filepath)
         return {}
     except json.JSONDecodeError:
-        print(f"Error: Could not decode JSON from {filepath}")
+        logging.error("Could not decode JSON from %s", filepath)
         return {}
     except KeyError as e:
-        print(f"Error: Missing key {e} in country data in {filepath}")
+        logging.error("Missing key %s in country data in %s", e, filepath)
         return {}
 
-# Example usage (can be removed later):
-# if __name__ == '__main__':
-#     # Assuming countries.json is in ../data/ relative to this file
-#     import os
-#     script_dir = os.path.dirname(__file__) 
-#     data_path = os.path.join(script_dir, '../data/countries.json')
-#     loaded_countries = load_countries_from_file(data_path)
-#     if loaded_countries:
-#         print(f"Loaded {len(loaded_countries)} countries.")
-#         print(f"Example - USA GDP: {loaded_countries['USA'].gdp}")
-#         print(f"Example - Denmark Industries: {loaded_countries['DNK'].industries.__dict__}")
+class GameEvent:
+    """
+    Represents a game event that can affect one or more countries.
+    Events can be diplomatic incidents, natural disasters, technological
+    breakthroughs, or other global/regional happenings.
+    """
+    def __init__(self, event_id, event_type, title, description, 
+                 affected_countries, options=None, turn_created=1, is_resolved=False):
+        self.event_id = event_id
+        self.event_type = event_type  # 'diplomatic', 'economic', 'natural', 'political', etc.
+        self.title = title
+        self.description = description
+        self.affected_countries = affected_countries  # List of country ISO codes
+        self.options = options or []  # Response options for player
+        self.turn_created = turn_created
+        self.is_resolved = is_resolved
+        self.resolution_option = None  # Which option was chosen
+        self.resolution_effects = {}  # The actual effects that were applied
+    
+    def add_option(self, option_id, text, effects):
+        """Add a response option to the event"""
+        self.options.append({
+            'id': option_id,
+            'text': text,
+            'effects': effects  # dict of effects like {'country': 'USA', 'relation_change': -10}
+        })
+    
+    def resolve(self, option_id):
+        """Mark event as resolved with the given option"""
+        self.is_resolved = True
+        self.resolution_option = option_id
+        
+        # Find the option's effects
+        for option in self.options:
+            if option['id'] == option_id:
+                self.resolution_effects = option['effects']
+                break
+    
+    def to_dict(self):
+        """Convert event to a dictionary for JSON serialization"""
+        return {
+            'event_id': self.event_id,
+            'event_type': self.event_type,
+            'title': self.title,
+            'description': self.description,
+            'affected_countries': self.affected_countries,
+            'options': self.options,
+            'turn_created': self.turn_created,
+            'is_resolved': self.is_resolved,
+            'resolution_option': self.resolution_option,
+            'resolution_effects': self.resolution_effects
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        """Create an event from a dictionary"""
+        event = cls(
+            event_id=data['event_id'],
+            event_type=data['event_type'],
+            title=data['title'],
+            description=data['description'],
+            affected_countries=data['affected_countries'],
+            options=data.get('options', []),
+            turn_created=data.get('turn_created', 1),
+            is_resolved=data.get('is_resolved', False)
+        )
+        event.resolution_option = data.get('resolution_option')
+        event.resolution_effects = data.get('resolution_effects', {})
+        return event
+
+
+class DiplomaticMission:
+    """
+    Represents a diplomatic mission between countries, such as trade delegations,
+    cultural exchanges, state visits, or other diplomatic activities.
+    """
+    def __init__(self, mission_id: str, mission_type: str, 
+                 origin_country: str, target_country: str,
+                 title: str, description: str, 
+                 turn_started: int, duration: int,
+                 status: str = "ongoing", 
+                 benefits: Dict = None,
+                 cost: float = 0.0):
+        """
+        Initialize a diplomatic mission.
+        
+        Args:
+            mission_id: Unique identifier for the mission
+            mission_type: Type of mission (trade_delegation, cultural_exchange, state_visit, etc.)
+            origin_country: ISO code of the country initiating the mission
+            target_country: ISO code of the country receiving the mission
+            title: Short title describing the mission
+            description: Full description of the mission
+            turn_started: Game turn when the mission began
+            duration: Expected duration in turns
+            status: Current status (proposed, ongoing, completed, failed)
+            benefits: Dictionary of expected or actual benefits
+            cost: Economic cost of the mission to the initiating country
+        """
+        self.mission_id = mission_id
+        self.mission_type = mission_type
+        self.origin_country = origin_country
+        self.target_country = target_country
+        self.title = title
+        self.description = description
+        self.turn_started = turn_started
+        self.duration = duration
+        self.status = status
+        self.benefits = benefits or {}
+        self.cost = cost
+        self.events = []  # Special events that occurred during the mission
+        self.outcomes = {}  # Actual outcomes after completion
+        
+    def add_event(self, event_title: str, event_description: str, turn: int, impact: Dict = None):
+        """Add a special event that occurred during the mission"""
+        self.events.append({
+            'title': event_title,
+            'description': event_description,
+            'turn': turn,
+            'impact': impact or {}
+        })
+        
+    def complete(self, outcomes: Dict, success_level: float = 1.0):
+        """Mark the mission as completed with specific outcomes"""
+        self.status = "completed"
+        self.outcomes = outcomes
+        
+        # Apply outcome multiplier based on success level (0.0 to 1.0)
+        for key, value in self.outcomes.items():
+            if isinstance(value, (int, float)):
+                self.outcomes[key] = value * success_level
+                
+    def abort(self, reason: str):
+        """Abort the mission before completion"""
+        self.status = "failed"
+        self.outcomes = {"reason_for_failure": reason}
+        
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization"""
+        return {
+            'mission_id': self.mission_id,
+            'mission_type': self.mission_type,
+            'origin_country': self.origin_country,
+            'target_country': self.target_country,
+            'title': self.title,
+            'description': self.description,
+            'turn_started': self.turn_started,
+            'duration': self.duration,
+            'status': self.status,
+            'benefits': self.benefits,
+            'cost': self.cost,
+            'events': self.events,
+            'outcomes': self.outcomes
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict):
+        """Create from dictionary"""
+        mission = cls(
+            mission_id=data['mission_id'],
+            mission_type=data['mission_type'],
+            origin_country=data['origin_country'],
+            target_country=data['target_country'],
+            title=data['title'],
+            description=data['description'],
+            turn_started=data['turn_started'],
+            duration=data['duration'],
+            status=data.get('status', 'ongoing'),
+            benefits=data.get('benefits', {}),
+            cost=data.get('cost', 0.0)
+        )
+        mission.events = data.get('events', [])
+        mission.outcomes = data.get('outcomes', {})
+        return mission
 

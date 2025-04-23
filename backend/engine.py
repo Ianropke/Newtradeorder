@@ -1,302 +1,1141 @@
-from typing import Dict, Optional
-from .models import Country, load_countries_from_file, EconomicModel
+from typing import Dict, Optional, List
+from models import Country, load_countries_from_file, EconomicModel
 import random  # For simple simulation
+import math
+import datetime
+import copy
+import json
+import numpy as np
+from scipy import stats, optimize
+import os
+import logging
+from diplomacy_ai import CountryProfile, AIExplanationSystem
 
-class AIProfile:
-    """
-    AI-profil/personlighed for et land: styrer vægtning af mål og adfærd.
-    """
-    def __init__(self, regime_type, risk_aversion, retaliation, trust_weight, growth_weight, sector_protection):
-        self.regime_type = regime_type  # 'democracy', 'autocracy', 'hybrid'
-        self.risk_aversion = risk_aversion  # 0-1
-        self.retaliation = retaliation  # 0-1
-        self.trust_weight = trust_weight  # 0-1
-        self.growth_weight = growth_weight  # 0-1
-        self.sector_protection = sector_protection  # 0-1
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-# Eksempel-profiler (kan gøres mere avanceret og lægges i data)
-AI_PROFILES = {
-    'democracy': AIProfile('democracy', risk_aversion=0.7, retaliation=0.4, trust_weight=0.7, growth_weight=0.8, sector_protection=0.5),
-    'autocracy': AIProfile('autocracy', risk_aversion=0.3, retaliation=0.8, trust_weight=0.3, growth_weight=0.6, sector_protection=0.8),
-    'hybrid': AIProfile('hybrid', risk_aversion=0.5, retaliation=0.6, trust_weight=0.5, growth_weight=0.7, sector_protection=0.6)
-}
+class DiplomacyRelation:
+    def __init__(self, country_a, country_b, relation_level=0.0, last_event=None):
+        self.country_a = country_a
+        self.country_b = country_b
+        self.relation_level = relation_level  # -1.0 to 1.0
+        self.last_event = last_event
 
-class AIStrategyState:
+class Alliance:
+    def __init__(self, name, members, date_formed, is_active=True, type_="general"):
+        self.name = name
+        self.members = members  # Liste af ISO-koder
+        self.date_formed = date_formed
+        self.is_active = is_active
+        self.type = type_  # "general", "economic", "military"
+        self.date_disbanded = None
+    
+    def disband(self):
+        self.is_active = False
+        self.date_disbanded = datetime.date.today().isoformat()
+        
+def find_relation(relations, country_a, country_b):
+    for rel in relations:
+        if (rel.country_a == country_a and rel.country_b == country_b) or \
+           (rel.country_a == country_b and rel.country_b == country_a):
+            return rel
+    return None
+
+class HistoricalDataset:
     """
-    Simpel FSM/BT-tilstand for AI-land (kan udvides).
+    Represents historical economic data for calibration and benchmarking.
     """
-    def __init__(self, state):
-        self.state = state  # fx 'neutral', 'aggressive', 'cooperative'
+    def __init__(self, data_path=None):
+        self.data = {}
+        self.global_averages = {}
+        self.regional_averages = {}
+        self.loaded = False
+        if data_path:
+            self.load_data(data_path)
+    
+    def load_data(self, data_path):
+        """Load historical data from a JSON file."""
+        try:
+            if os.path.exists(data_path):
+                with open(data_path, encoding='utf-8') as f:
+                    self.data = json.load(f)
+                self._calculate_averages()
+                self.loaded = True
+                logger.info(f"Historical data loaded successfully from {data_path}")
+            else:
+                logger.warning(f"Historical data file not found at {data_path}")
+        except Exception as e:
+            logger.error(f"Error loading historical data: {e}")
+    
+    def _calculate_averages(self):
+        """Calculate global and regional averages for benchmarking."""
+        metric_sums = {}
+        metric_counts = {}
+        regional_data = {}
+        
+        for country_iso, country_data in self.data.items():
+            region = country_data.get('region', 'Unknown')
+            if region not in regional_data:
+                regional_data[region] = {}
+            
+            for year, yearly_data in country_data.get('yearly_data', {}).items():
+                for metric, value in yearly_data.items():
+                    if isinstance(value, (int, float)):
+                        if metric not in metric_sums:
+                            metric_sums[metric] = {}
+                            metric_counts[metric] = {}
+                        
+                        if year not in metric_sums[metric]:
+                            metric_sums[metric][year] = 0
+                            metric_counts[metric][year] = 0
+                        
+                        metric_sums[metric][year] += value
+                        metric_counts[metric][year] += 1
+                
+                if year not in regional_data[region]:
+                    regional_data[region][year] = {}
+                
+                for metric, value in yearly_data.items():
+                    if isinstance(value, (int, float)):
+                        if metric not in regional_data[region][year]:
+                            regional_data[region][year][metric] = []
+                        
+                        regional_data[region][year][metric].append(value)
+        
+        for metric, year_data in metric_sums.items():
+            self.global_averages[metric] = {}
+            for year, total in year_data.items():
+                count = metric_counts[metric][year]
+                if count > 0:
+                    self.global_averages[metric][year] = total / count
+        
+        for region, years in regional_data.items():
+            if region not in self.regional_averages:
+                self.regional_averages[region] = {}
+            
+            for year, metrics in years.items():
+                self.regional_averages[region][year] = {}
+                for metric, values in metrics.items():
+                    if values:
+                        self.regional_averages[region][year][metric] = sum(values) / len(values)
+    
+    def get_historical_data(self, country_iso, start_year=None, end_year=None):
+        """Get historical data for a specific country."""
+        if country_iso not in self.data:
+            logger.warning(f"No historical data found for country: {country_iso}")
+            return None
+        
+        country_data = self.data[country_iso].get('yearly_data', {})
+        
+        if start_year or end_year:
+            filtered_data = {}
+            for year_str, data in country_data.items():
+                year = int(year_str)
+                if (start_year is None or year >= start_year) and (end_year is None or year <= end_year):
+                    filtered_data[year_str] = data
+            return filtered_data
+        
+        return country_data
+    
+    def get_benchmark_data(self, country_iso, metric, years):
+        """
+        Get benchmark data for a specific country and metric.
+        Returns a dict with country, regional, and global values.
+        """
+        result = {
+            'country_values': [],
+            'regional_values': [],
+            'global_values': []
+        }
+        
+        if not self.loaded or country_iso not in self.data:
+            logger.warning(f"No data for benchmarking country: {country_iso}")
+            return result
+        
+        region = self.data[country_iso].get('region', 'Unknown')
+        
+        for year in years:
+            year_str = str(year)
+            if year_str in self.data[country_iso].get('yearly_data', {}) and metric in self.data[country_iso]['yearly_data'][year_str]:
+                result['country_values'].append(self.data[country_iso]['yearly_data'][year_str][metric])
+            else:
+                result['country_values'].append(None)
+            
+            if region in self.regional_averages and year_str in self.regional_averages[region] and metric in self.regional_averages[region][year_str]:
+                result['regional_values'].append(self.regional_averages[region][year_str][metric])
+            else:
+                result['regional_values'].append(None)
+            
+            if metric in self.global_averages and year_str in self.global_averages[metric]:
+                result['global_values'].append(self.global_averages[metric][year_str])
+            else:
+                result['global_values'].append(None)
+        
+        return result
+
+class EconomicCalibrator:
+    """
+    Calibrates economic model parameters based on historical data.
+    """
+    def __init__(self, historical_data):
+        self.historical_data = historical_data
+        self.calibration_results = {}
+    
+    def calibrate_parameters(self, country_iso, model_parameters, target_metrics=None):
+        """
+        Calibrate economic parameters for a specific country based on historical data.
+        """
+        if target_metrics is None:
+            target_metrics = ['gdp_growth', 'inflation', 'unemployment']
+        
+        historical_data = self.historical_data.get_historical_data(country_iso)
+        if not historical_data:
+            logger.warning(f"Cannot calibrate for {country_iso}: No historical data found")
+            return model_parameters
+        
+        historical_series = {}
+        for metric in target_metrics:
+            historical_series[metric] = []
+            for year in sorted(historical_data.keys()):
+                if metric in historical_data[year]:
+                    historical_series[metric].append(historical_data[year][metric])
+        
+        for metric, series in historical_series.items():
+            if len(series) < 5:
+                logger.warning(f"Insufficient historical data for {country_iso} on {metric}")
+                return model_parameters
+        
+        calibration_params = {
+            'gdp_growth': ['productivity_factor', 'capital_elasticity', 'labor_elasticity'],
+            'inflation': ['monetary_policy_effect', 'phillips_curve_slope'],
+            'unemployment': ['natural_rate', 'okun_coefficient']
+        }
+        
+        calibrated_params = model_parameters.copy()
+        
+        for metric in target_metrics:
+            if metric not in calibration_params:
+                continue
+            
+            try:
+                params_to_calibrate = calibration_params[metric]
+                for param in params_to_calibrate:
+                    if param in calibrated_params:
+                        calibrated_params[param] = self._optimize_parameter(
+                            historical_series[metric], 
+                            param, 
+                            calibrated_params[param]
+                        )
+            except Exception as e:
+                logger.error(f"Error calibrating {metric} for {country_iso}: {e}")
+        
+        self.calibration_results[country_iso] = {
+            'original_params': model_parameters,
+            'calibrated_params': calibrated_params,
+            'metrics': target_metrics,
+            'data_points': {m: len(historical_series[m]) for m in target_metrics}
+        }
+        
+        logger.info(f"Calibration completed for {country_iso}")
+        return calibrated_params
+    
+    def _optimize_parameter(self, historical_series, param_name, current_value):
+        """
+        Basic parameter optimization based on historical data.
+        """
+        mean_value = np.mean(historical_series)
+        std_value = np.std(historical_series)
+        
+        if param_name in ['productivity_factor', 'capital_elasticity', 'labor_elasticity']:
+            if mean_value > 3.0:
+                return current_value * 1.1
+            elif mean_value < 1.0:
+                return current_value * 0.9
+        
+        elif param_name in ['monetary_policy_effect', 'phillips_curve_slope']:
+            if std_value > 2.0:
+                return current_value * 1.15
+            elif std_value < 0.5:
+                return current_value * 0.85
+        
+        elif param_name == 'natural_rate':
+            sorted_data = sorted(historical_series)
+            natural_rate_estimate = sorted_data[len(sorted_data) // 4]
+            return max(3.0, min(8.0, natural_rate_estimate))
+        
+        return current_value
+    
+    def get_calibration_report(self, country_iso):
+        """Get a report on the calibration process for a country."""
+        if country_iso not in self.calibration_results:
+            return {"status": "Not calibrated", "message": "No calibration has been performed for this country."}
+        
+        result = self.calibration_results[country_iso]
+        
+        param_changes = {}
+        for param, new_value in result['calibrated_params'].items():
+            if param in result['original_params']:
+                old_value = result['original_params'][param]
+                change_pct = ((new_value - old_value) / old_value) * 100 if old_value != 0 else float('inf')
+                param_changes[param] = {
+                    'original': old_value,
+                    'calibrated': new_value,
+                    'change_pct': change_pct
+                }
+        
+        return {
+            "status": "Calibrated",
+            "metrics_used": result['metrics'],
+            "data_points": result['data_points'],
+            "parameter_changes": param_changes,
+            "explanation": self._generate_calibration_explanation(country_iso, param_changes)
+        }
+    
+    def _generate_calibration_explanation(self, country_iso, param_changes):
+        """Generate a human-readable explanation of calibration changes."""
+        if not param_changes:
+            return "No parameters were changed during calibration."
+        
+        explanations = []
+        
+        growth_params = ['productivity_factor', 'capital_elasticity', 'labor_elasticity']
+        inflation_params = ['monetary_policy_effect', 'phillips_curve_slope']
+        unemployment_params = ['natural_rate', 'okun_coefficient']
+        
+        growth_changed = any(param in param_changes for param in growth_params)
+        if growth_changed:
+            growth_direction = None
+            for param in growth_params:
+                if param in param_changes and abs(param_changes[param]['change_pct']) > 5:
+                    direction = "increased" if param_changes[param]['change_pct'] > 0 else "decreased"
+                    if growth_direction is None:
+                        growth_direction = direction
+                    elif growth_direction != direction:
+                        growth_direction = "adjusted"
+            
+            if growth_direction:
+                explanations.append(
+                    f"Growth-related parameters were {growth_direction} to better match historical GDP growth patterns."
+                )
+        
+        inflation_changed = any(param in param_changes for param in inflation_params)
+        if inflation_changed:
+            if 'phillips_curve_slope' in param_changes and abs(param_changes['phillips_curve_slope']['change_pct']) > 5:
+                direction = "steeper" if param_changes['phillips_curve_slope']['change_pct'] > 0 else "flatter"
+                explanations.append(
+                    f"The Phillips curve was adjusted to be {direction}, reflecting the historical relationship "
+                    f"between inflation and unemployment in {country_iso}."
+                )
+        
+        if 'natural_rate' in param_changes and abs(param_changes['natural_rate']['change_pct']) > 5:
+            new_rate = param_changes['natural_rate']['calibrated']
+            explanations.append(
+                f"The natural unemployment rate was calibrated to {new_rate:.1f}% based on historical labor market data."
+            )
+        
+        total_params = len(param_changes)
+        significant_changes = sum(1 for p in param_changes.values() if abs(p['change_pct']) > 10)
+        
+        if significant_changes > 0:
+            explanations.append(
+                f"Overall, {significant_changes} of {total_params} parameters required significant adjustment (>10%) "
+                f"to match {country_iso}'s unique economic characteristics."
+            )
+        else:
+            explanations.append(
+                f"Overall, the default economic model was already well-suited to {country_iso}'s economic patterns, "
+                f"with only minor parameter adjustments needed."
+            )
+        
+        return " ".join(explanations)
+
+class EnhancedFeedbackSystem:
+    """
+    Provides detailed economic explanations and feedback for game events and decisions.
+    Incorporates historical benchmarking and realistic economic analysis.
+    """
+    def __init__(self, historical_data=None):
+        self.historical_data = historical_data
+        self.global_context = {}
+        self.narrative_templates = self._load_narrative_templates()
+    
+    def _load_narrative_templates(self):
+        """Load narrative templates for various economic situations."""
+        return {
+            "gdp_growth": {
+                "positive": [
+                    "The economy is experiencing robust growth, with GDP expanding at {value}% annually.",
+                    "Economic activity has strengthened, with GDP growing at {value}% compared to the previous period."
+                ],
+                "negative": [
+                    "The economy is contracting, with GDP shrinking at a rate of {value}% annually.",
+                    "Economic activity has weakened significantly, with GDP declining by {value}% compared to the previous period."
+                ],
+                "neutral": [
+                    "The economy is growing steadily at {value}% annually.",
+                    "Economic activity is maintaining a moderate pace, with GDP expanding by {value}% compared to the previous period."
+                ]
+            },
+            "inflation": {
+                "high": [
+                    "Inflation has accelerated to {value}%, significantly above the target range.",
+                    "Price pressures are mounting, with inflation reaching {value}% annually."
+                ],
+                "low": [
+                    "Inflation remains subdued at {value}%, below the target range.",
+                    "Price pressures are minimal, with inflation at just {value}% annually."
+                ],
+                "target": [
+                    "Inflation is well-contained at {value}%, within the target range.",
+                    "Price stability is maintained with inflation at {value}% annually."
+                ]
+            },
+            "trade_balance": {
+                "surplus": [
+                    "The country is maintaining a strong trade surplus of {value}% of GDP.",
+                    "Export competitiveness remains high, leading to a trade surplus of {value}% of GDP."
+                ],
+                "deficit": [
+                    "The country is running a trade deficit of {value}% of GDP.",
+                    "Import dependence is reflected in a trade deficit of {value}% of GDP."
+                ],
+                "balanced": [
+                    "Trade flows are roughly balanced, with a small {surplus_or_deficit} of {value}% of GDP.",
+                    "The external position is stable with a {surplus_or_deficit} of {value}% of GDP."
+                ]
+            }
+        }
+    
+    def generate_economic_insight(self, country_data, metric, historical_comparison=True):
+        """
+        Generate detailed economic insight for a specific metric.
+        """
+        if metric not in country_data:
+            return {"insight": f"No data available for {metric}.", "context": {}}
+        
+        value = country_data[metric]
+        historical_context = {}
+        
+        if historical_comparison and self.historical_data and 'iso_code' in country_data:
+            try:
+                recent_years = [datetime.datetime.now().year - i for i in range(1, 6)]
+                benchmark = self.historical_data.get_benchmark_data(
+                    country_data['iso_code'], 
+                    metric, 
+                    recent_years
+                )
+                
+                country_values = [v for v in benchmark['country_values'] if v is not None]
+                if country_values:
+                    historical_context = {
+                        'historical_avg': sum(country_values) / len(country_values),
+                        'trend': self._calculate_trend(country_values),
+                        'country_values': country_values
+                    }
+                
+                regional_values = [v for v in benchmark['regional_values'] if v is not None]
+                if regional_values:
+                    historical_context['regional_avg'] = sum(regional_values) / len(regional_values)
+                    historical_context['relative_to_region'] = value - historical_context['regional_avg']
+            
+            except Exception as e:
+                logger.error(f"Error generating historical context: {e}")
+        
+        narrative = self._generate_narrative(metric, value, historical_context)
+        
+        return {
+            "insight": narrative,
+            "context": historical_context
+        }
+    
+    def _calculate_trend(self, values):
+        """Calculate the trend direction from a series of values."""
+        if len(values) < 2:
+            return "stable"
+        
+        x = list(range(len(values)))
+        slope, _, _, _, _ = stats.linregress(x, values)
+        
+        if abs(slope) < 0.1:
+            return "stable"
+        elif slope > 0:
+            return "increasing"
+        else:
+            return "decreasing"
+    
+    def _generate_narrative(self, metric, value, historical_context):
+        """Generate a narrative description based on the metric and context."""
+        if metric == 'gdp_growth':
+            return self._generate_gdp_growth_narrative(value, historical_context)
+        elif metric == 'inflation':
+            return self._generate_inflation_narrative(value, historical_context)
+        elif metric == 'unemployment':
+            return self._generate_unemployment_narrative(value, historical_context)
+        elif metric == 'trade_balance':
+            return self._generate_trade_balance_narrative(value, historical_context)
+        else:
+            return f"The {metric.replace('_', ' ')} is currently at {value}."
+    
+    def _generate_gdp_growth_narrative(self, value, historical_context):
+        """Generate narrative for GDP growth."""
+        if value > 3.0:
+            template_key = "positive"
+        elif value < 0:
+            template_key = "negative"
+            value = abs(value)
+        else:
+            template_key = "neutral"
+        
+        templates = self.narrative_templates["gdp_growth"][template_key]
+        base_narrative = random.choice(templates).format(value=value)
+        
+        if historical_context:
+            historical_avg = historical_context.get('historical_avg')
+            regional_avg = historical_context.get('regional_avg')
+            trend = historical_context.get('trend')
+            
+            if historical_avg is not None:
+                comparison = f"This compares to a {historical_avg:.1f}% historical average "
+                if trend == "increasing":
+                    comparison += "with an improving trend over recent years."
+                elif trend == "decreasing":
+                    comparison += "with a declining trend over recent years."
+                else:
+                    comparison += "which has been relatively stable in recent years."
+                
+                base_narrative += f" {comparison}"
+            
+            if regional_avg is not None:
+                rel_to_region = value - regional_avg
+                if abs(rel_to_region) < 0.5:
+                    regional_comparison = f"This is in line with the regional average of {regional_avg:.1f}%."
+                elif rel_to_region > 0:
+                    regional_comparison = f"This is {rel_to_region:.1f} percentage points above the regional average of {regional_avg:.1f}%."
+                else:
+                    regional_comparison = f"This is {abs(rel_to_region):.1f} percentage points below the regional average of {regional_avg:.1f}%."
+                
+                base_narrative += f" {regional_comparison}"
+        
+        return base_narrative
+    
+    def _generate_inflation_narrative(self, value, historical_context):
+        """Generate narrative for inflation."""
+        if value > 5.0:
+            template_key = "high"
+        elif value < 1.0:
+            template_key = "low"
+        else:
+            template_key = "target"
+        
+        templates = self.narrative_templates["inflation"][template_key]
+        base_narrative = random.choice(templates).format(value=value)
+        
+        if historical_context:
+            historical_avg = historical_context.get('historical_avg')
+            
+            if historical_avg is not None:
+                difference = value - historical_avg
+                if abs(difference) < 0.3:
+                    base_narrative += f" This is consistent with the historical average of {historical_avg:.1f}%."
+                elif difference > 0:
+                    base_narrative += f" This represents an increase from the historical average of {historical_avg:.1f}%."
+                else:
+                    base_narrative += f" This represents a decrease from the historical average of {historical_avg:.1f}%."
+        
+        return base_narrative
+    
+    def _generate_unemployment_narrative(self, value, historical_context):
+        """Generate narrative for unemployment rate."""
+        if value < 4.0:
+            base_narrative = f"The labor market is tight with unemployment at just {value:.1f}%."
+        elif value > 8.0:
+            base_narrative = f"The labor market is showing significant slack with unemployment at {value:.1f}%."
+        else:
+            base_narrative = f"The unemployment rate stands at {value:.1f}%, indicating a balanced labor market."
+        
+        if historical_context and 'historical_avg' in historical_context:
+            hist_avg = historical_context['historical_avg']
+            difference = value - hist_avg
+            
+            if abs(difference) < 0.5:
+                base_narrative += f" This is close to the historical norm of {hist_avg:.1f}%."
+            elif difference > 0:
+                base_narrative += f" This is above the historical average of {hist_avg:.1f}%, suggesting deteriorating labor market conditions."
+            else:
+                base_narrative += f" This is below the historical average of {hist_avg:.1f}%, indicating improving labor market conditions."
+        
+        return base_narrative
+    
+    def _generate_trade_balance_narrative(self, value, historical_context):
+        """Generate narrative for trade balance."""
+        hist_avg = historical_context.get('average', 0)
+        hist_min = historical_context.get('min', -5)
+        hist_max = historical_context.get('max', 5)
+        trend = historical_context.get('trend', 'stable')
+        
+        # Get the narrative based on the current value
+        if value > 0:
+            base_narrative = f"The trade balance is positive at {value:.1f}% of GDP, indicating a trade surplus."
+            if value > hist_avg * 1.5:
+                base_narrative += " This is a significantly strong trade position."
+            elif value > hist_avg:
+                base_narrative += " This is above the historical average, showing a healthy external position."
+        elif value < 0:
+            base_narrative = f"The trade balance is negative at {value:.1f}% of GDP, indicating a trade deficit."
+            if value < hist_min * 0.8:
+                base_narrative += " This deficit is substantially larger than historical norms and may require attention."
+            elif value < hist_avg:
+                base_narrative += " This is below the historical average, suggesting potential competitiveness issues."
+        else:
+            base_narrative = "The trade balance is balanced (0% of GDP), indicating equal exports and imports."
+        
+        # Add trend context
+        if trend == 'improving':
+            base_narrative += " The trend is improving, showing strengthening trade competitiveness."
+        elif trend == 'deteriorating':
+            base_narrative += " The trend is deteriorating, suggesting declining export competitiveness or increasing import dependency."
+        
+        # Add policy implications
+        if value < -3:
+            base_narrative += " Policy options might include export promotion, currency depreciation, or import substitution strategies."
+        elif value > 5:
+            base_narrative += " While a surplus is positive, an excessively high surplus might indicate underinvestment in the domestic economy."
+        
+        return base_narrative
+        
+    def generate_comparison_report(self, country_iso, metrics):
+        """
+        Generate a comprehensive report comparing current economic metrics with historical benchmarks.
+        
+        Args:
+            country_iso: ISO code for the country
+            metrics: List of metrics to include in the report
+            
+        Returns:
+            Dictionary with comparison narratives for each metric
+        """
+        if not self.historical_data or not self.historical_data.loaded:
+            return {"status": "No historical data available for comparison"}
+        
+        report = {}
+        recent_years = list(range(2010, 2023))  # Adjust this range based on available data
+        
+        for metric in metrics:
+            benchmark_data = self.historical_data.get_benchmark_data(country_iso, metric, recent_years)
+            
+            # Filter out None values
+            country_values = [v for v in benchmark_data['country_values'] if v is not None]
+            regional_values = [v for v in benchmark_data['regional_values'] if v is not None]
+            global_values = [v for v in benchmark_data['global_values'] if v is not None]
+            
+            if not country_values:
+                report[metric] = "Insufficient historical data for comparison"
+                continue
+            
+            country_avg = sum(country_values) / len(country_values) if country_values else 0
+            regional_avg = sum(regional_values) / len(regional_values) if regional_values else 0
+            global_avg = sum(global_values) / len(global_values) if global_values else 0
+            
+            narrative = f"Historical {metric} analysis:\n"
+            
+            # Country historical performance
+            narrative += f"- Historical average for this country: {country_avg:.2f}%\n"
+            if len(country_values) >= 2:
+                if country_values[-1] > country_values[0]:
+                    narrative += f"- Long-term trend: Increasing (from {country_values[0]:.2f}% to {country_values[-1]:.2f}%)\n"
+                elif country_values[-1] < country_values[0]:
+                    narrative += f"- Long-term trend: Decreasing (from {country_values[0]:.2f}% to {country_values[-1]:.2f}%)\n"
+                else:
+                    narrative += "- Long-term trend: Stable\n"
+            
+            # Regional and global comparison
+            if regional_values:
+                narrative += f"- Regional average: {regional_avg:.2f}%"
+                if country_avg > regional_avg:
+                    narrative += f" (Country performs {country_avg - regional_avg:.2f}% better than region)\n"
+                else:
+                    narrative += f" (Country performs {regional_avg - country_avg:.2f}% worse than region)\n"
+            
+            if global_values:
+                narrative += f"- Global average: {global_avg:.2f}%"
+                if country_avg > global_avg:
+                    narrative += f" (Country performs {country_avg - global_avg:.2f}% better than global average)\n"
+                else:
+                    narrative += f" (Country performs {global_avg - country_avg:.2f}% worse than global average)\n"
+            
+            report[metric] = narrative
+        
+        return report
+
+def _generate_turn_summary(self, country_iso):
+    """Generate a summary of the turn for the given country."""
+    country = self.countries[country_iso]
+    
+    summary = f"Turn {self.current_turn} Summary for {country.get('name', country_iso)}:\n\n"
+    
+    # Economic indicators summary
+    economic_summary = []
+    
+    if hasattr(country, 'gdp_growth'):
+        economic_summary.append(f"GDP Growth: {country.gdp_growth:.1f}%")
+    
+    if hasattr(country, 'inflation'):
+        economic_summary.append(f"Inflation: {country.inflation:.1f}%")
+        
+    if hasattr(country, 'unemployment'):
+        economic_summary.append(f"Unemployment: {country.unemployment:.1f}%")
+        
+    if hasattr(country, 'trade_balance'):
+        economic_summary.append(f"Trade Balance: {country.trade_balance:.1f}% of GDP")
+    
+    if economic_summary:
+        summary += "Economic Indicators:\n- " + "\n- ".join(economic_summary) + "\n\n"
+    
+    # Historical context if available
+    if self.historical_data and self.historical_data.loaded:
+        try:
+            metrics_to_compare = ['gdp_growth', 'inflation', 'unemployment', 'trade_balance']
+            available_metrics = [m for m in metrics_to_compare if hasattr(country, m)]
+            
+            if available_metrics:
+                historical_report = self.feedback_system.generate_comparison_report(
+                    country_iso,
+                    available_metrics
+                )
+                
+                if historical_report and not isinstance(historical_report, dict) or 'status' not in historical_report:
+                    summary += "Historical Benchmarking:\n"
+                    for metric, report in historical_report.items():
+                        if isinstance(report, str) and "Insufficient" not in report:
+                            summary += f"{report}\n\n"
+        except Exception as e:
+            logger.error(f"Error generating historical summary: {e}")
+    
+    # Policy consequences summary
+    if hasattr(country, 'policy_effects'):
+        summary += "Policy Effects:\n"
+        for policy, effect in country.policy_effects.items():
+            summary += f"- {policy}: {effect}\n"
+        summary += "\n"
+    
+    # Diplomatic status summary
+    if hasattr(self, 'diplomacy') and hasattr(self.diplomacy, 'get_diplomatic_overview'):
+        diplomatic_status = self.diplomacy.get_diplomatic_overview(country_iso)
+        if diplomatic_status:
+            summary += "Diplomatic Status:\n"
+            for relation in diplomatic_status[:5]:  # Show top 5 relations
+                summary += f"- {relation['country']}: {relation['status']} (Score: {relation['score']})\n"
+            summary += "\n"
+    
+    # Active events
+    active_events = self.event_manager.get_active_events()
+    if active_events:
+        summary += "Active Events:\n"
+        for event in active_events:
+            turns_remaining = event.duration - (self.current_turn - event.start_turn)
+            summary += f"- {event.name} ({turns_remaining} turns remaining)\n"
+        summary += "\n"
+    
+    # Add recommendations
+    recommendations = self._generate_policy_recommendations(country_iso)
+    if recommendations:
+        summary += "Recommendations:\n"
+        for rec in recommendations[:3]:  # Top 3 recommendations
+            summary += f"- {rec}\n"
+    
+    return summary
+
+class BudgetManager:
+    """
+    Handles the government budget and subsidy management for countries in the simulation.
+    """
+    def __init__(self, economic_model):
+        self.economic_model = economic_model
+    
+    def calculate_budget(self, country):
+        """
+        Calculate the country's budget based on its economic status.
+        Estimates revenues and updates budget balance.
+        """
+        # GDP-based revenue calculation (simplified)
+        tax_rate = self._get_effective_tax_rate(country)
+        country.budget['revenue']['taxation'] = country.gdp * tax_rate
+        
+        # Calculate tariff revenue
+        tariff_revenue = 0.0
+        for partner_iso, trade_data in country.trade_partners.items():
+            imports = trade_data.get('imports', 0.0)
+            if partner_iso in country.tariffs:
+                # Apply tariff rates to imports from this country
+                for category, rate in country.tariffs[partner_iso].items():
+                    # Estimate the proportion of this category in total imports
+                    # For simplicity, we'll use the industry breakdown
+                    if category == 'manufacturing':
+                        proportion = country.industries.manufacturing
+                    elif category == 'agriculture':
+                        proportion = country.industries.agriculture
+                    elif category == 'services':
+                        proportion = country.industries.services
+                    else:
+                        proportion = 0.1  # Default for other categories
+                    
+                    tariff_revenue += imports * proportion * rate
+        
+        country.budget['revenue']['tariffs'] = tariff_revenue
+        
+        # Update total revenue
+        total_revenue = sum(country.budget['revenue'].values())
+        
+        # Update balance (revenue - expenses)
+        total_expenses = sum(country.budget['expenses'].values())
+        country.budget['balance'] = total_revenue - total_expenses
+        
+        # Update debt and debt-to-GDP ratio if balance is negative
+        if country.budget['balance'] < 0:
+            country.budget['debt'] += abs(country.budget['balance'])
+        
+        # Calculate debt-to-GDP ratio
+        if country.gdp > 0:
+            country.budget['debt_to_gdp_ratio'] = (country.budget['debt'] / country.gdp) * 100
+        
+        return country.budget
+    
+    def _get_effective_tax_rate(self, country):
+        """
+        Determine an appropriate tax rate based on government type and other factors.
+        """
+        # Base rates by government type (simplified)
+        base_rates = {
+            'democracy': 0.35,
+            'republic': 0.33,
+            'monarchy': 0.38,
+            'dictatorship': 0.40,
+            'communist': 0.45,
+            'socialist': 0.42
+        }
+        
+        # Default rate if government type is not recognized
+        base_rate = base_rates.get(country.government_type.lower(), 0.35)
+        
+        # Adjust for economic conditions
+        if country.unemployment_rate > 10:
+            base_rate -= 0.03  # Lower tax rate for high unemployment
+        elif country.unemployment_rate < 4:
+            base_rate += 0.02  # Higher tax rate for strong employment
+        
+        if country.growth_rate < 0:
+            base_rate -= 0.04  # Lower taxes during recession
+        elif country.growth_rate > 3:
+            base_rate += 0.02  # Higher taxes during strong growth
+        
+        # Ensure the rate stays within reasonable bounds
+        return max(0.15, min(0.5, base_rate))
+    
+    def manage_subsidies(self, country, sector_name, subsidy_percentage):
+        """
+        Apply subsidies to a specific sector and calculate the economic effects.
+        
+        Args:
+            country: The Country object
+            sector_name: Name of the sector to subsidize
+            subsidy_percentage: Percentage of sector output to subsidize (0-100)
+        
+        Returns:
+            A dictionary with the effects of the subsidy
+        """
+        # Verify subsidy percentage is valid
+        subsidy_percentage = max(0, min(100, subsidy_percentage))
+        subsidy_fraction = subsidy_percentage / 100.0
+        
+        # Find the sector
+        target_sector = None
+        for sector in country.sectors:
+            if sector.name.lower() == sector_name.lower():
+                target_sector = sector
+                break
+        
+        if not target_sector:
+            return {"error": f"Sector '{sector_name}' not found"}
+        
+        # Calculate subsidy amount based on sector output
+        subsidy_amount = target_sector.output * subsidy_fraction
+        
+        # Store subsidy information
+        country.subsidies[sector_name] = {
+            'amount': subsidy_amount,
+            'percentage': subsidy_percentage,
+            'effects': {}
+        }
+        
+        # Update budget expenses
+        country.budget['expenses']['subsidies'] += subsidy_amount
+        
+        # Calculate economic effects
+        # 1. Production effect: Subsidies can increase output
+        output_boost = subsidy_amount * 0.7  # 70% efficiency in converting subsidies to output
+        original_output = target_sector.output
+        target_sector.output += output_boost
+        
+        # 2. Employment effect: Subsidies can reduce unemployment in the sector
+        employment_boost_percentage = subsidy_fraction * 0.5  # Half of subsidy percentage goes to employment
+        original_unemployment = target_sector.unemployment_rate
+        new_unemployment = max(0, target_sector.unemployment_rate - employment_boost_percentage)
+        target_sector.unemployment_rate = new_unemployment
+        
+        # 3. Price effect: Subsidies can reduce prices
+        price_reduction = subsidy_fraction * 0.3  # 30% of subsidy percentage goes to price reduction
+        original_price = target_sector.price
+        target_sector.price *= (1 - price_reduction)
+        
+        # 4. Export competitiveness: Lower prices can boost exports
+        export_boost = 0
+        if subsidy_percentage > 5:  # Only significant subsidies affect exports
+            export_boost_percentage = price_reduction * 1.5  # Price reduction has leveraged effect on exports
+            original_export = target_sector.export
+            export_boost = target_sector.export * export_boost_percentage
+            target_sector.export += export_boost
+        
+        # Store effects for reporting
+        effects = {
+            'output_increase': output_boost,
+            'output_increase_percentage': (output_boost / original_output) * 100 if original_output > 0 else 0,
+            'unemployment_reduction': original_unemployment - new_unemployment,
+            'price_reduction_percentage': price_reduction * 100,
+            'export_increase': export_boost
+        }
+        
+        country.subsidies[sector_name]['effects'] = effects
+        
+        # Recalculate country-level metrics
+        country.gdp = self.economic_model.aggregate_gdp(country)
+        country.unemployment_rate = self.economic_model.aggregate_unemployment(country)
+        
+        # Recalculate budget with the new expenses
+        self.calculate_budget(country)
+        
+        return effects
+    
+    def remove_subsidy(self, country, sector_name):
+        """
+        Remove subsidies from a specific sector and recalculate economic effects.
+        
+        Args:
+            country: The Country object
+            sector_name: Name of the sector to remove subsidy from
+        
+        Returns:
+            A dictionary with the economic effects of removing the subsidy
+        """
+        if sector_name not in country.subsidies:
+            return {"error": f"No subsidy found for sector '{sector_name}'"}
+        
+        # Get subsidy details
+        subsidy = country.subsidies[sector_name]
+        subsidy_amount = subsidy['amount']
+        
+        # Find the sector
+        target_sector = None
+        for sector in country.sectors:
+            if sector.name.lower() == sector_name.lower():
+                target_sector = sector
+                break
+        
+        if not target_sector:
+            return {"error": f"Sector '{sector_name}' not found"}
+        
+        # Reverse the economic effects
+        effects = subsidy['effects']
+        
+        # 1. Reverse production effect
+        if 'output_increase' in effects:
+            target_sector.output -= effects['output_increase']
+        
+        # 2. Reverse employment effect
+        if 'unemployment_reduction' in effects:
+            target_sector.unemployment_rate += effects['unemployment_reduction']
+        
+        # 3. Reverse price effect
+        if 'price_reduction_percentage' in effects:
+            price_increase_factor = 1 / (1 - effects['price_reduction_percentage'] / 100)
+            target_sector.price *= price_increase_factor
+        
+        # 4. Reverse export effect
+        if 'export_increase' in effects:
+            target_sector.export -= effects['export_increase']
+        
+        # Update budget expenses
+        country.budget['expenses']['subsidies'] -= subsidy_amount
+        
+        # Remove the subsidy
+        removed_subsidy = country.subsidies.pop(sector_name)
+        
+        # Recalculate country-level metrics
+        country.gdp = self.economic_model.aggregate_gdp(country)
+        country.unemployment_rate = self.economic_model.aggregate_unemployment(country)
+        
+        # Recalculate budget with the updated expenses
+        self.calculate_budget(country)
+        
+        return {
+            "message": f"Subsidy removed from {sector_name}",
+            "removed_amount": subsidy_amount,
+            "prior_effects": removed_subsidy['effects']
+        }
+    
+    def adjust_budget_allocation(self, country, category, amount):
+        """
+        Adjust budget allocation for a specific expense category.
+        
+        Args:
+            country: The Country object
+            category: Budget category to adjust (e.g., 'defense', 'education')
+            amount: New amount to allocate (absolute value)
+        
+        Returns:
+            Updated budget information
+        """
+        if category not in country.budget['expenses']:
+            return {"error": f"Budget category '{category}' not found"}
+        
+        # Store the original amount for reporting
+        original_amount = country.budget['expenses'][category]
+        
+        # Update the budget allocation
+        country.budget['expenses'][category] = amount
+        
+        # Recalculate budget balance
+        self.calculate_budget(country)
+        
+        # Calculate effects based on the category
+        effects = self._calculate_budget_allocation_effects(country, category, original_amount, amount)
+        
+        return {
+            "message": f"Budget for {category} adjusted from {original_amount} to {amount}",
+            "prior_amount": original_amount,
+            "new_amount": amount,
+            "effects": effects,
+            "budget_balance": country.budget['balance']
+        }
+    
+    def _calculate_budget_allocation_effects(self, country, category, old_amount, new_amount):
+        """
+        Calculate the economic effects of changing budget allocations.
+        
+        Different categories have different effects on the economy.
+        """
+        effects = {}
+        change = new_amount - old_amount
+        change_percentage = (change / old_amount) * 100 if old_amount > 0 else 0
+        
+        if category == 'education':
+            # Education affects long-term productivity and growth
+            if change > 0:
+                effects['long_term_growth'] = min(0.5, change_percentage * 0.01)
+                effects['description'] = "Increased education spending will boost long-term economic growth."
+            else:
+                effects['long_term_growth'] = max(-0.5, change_percentage * 0.01)
+                effects['description'] = "Decreased education spending may reduce long-term economic growth."
+        
+        elif category == 'healthcare':
+            # Healthcare affects population welfare and productivity
+            if change > 0:
+                effects['productivity'] = min(0.3, change_percentage * 0.005)
+                effects['description'] = "Improved healthcare spending will increase workforce productivity."
+            else:
+                effects['productivity'] = max(-0.3, change_percentage * 0.005)
+                effects['description'] = "Reduced healthcare spending may decrease workforce productivity."
+        
+        elif category == 'infrastructure':
+            # Infrastructure affects production capacity and efficiency
+            if change > 0:
+                effects['capacity_increase'] = min(1.0, change_percentage * 0.02)
+                effects['description'] = "Infrastructure investment will increase production capacity."
+            else:
+                effects['capacity_decrease'] = min(1.0, abs(change_percentage) * 0.01)
+                effects['description'] = "Reduced infrastructure spending may limit production capacity."
+        
+        elif category == 'defense':
+            # Defense affects national security and diplomatic leverage
+            if change > 0:
+                effects['diplomatic_strength'] = min(2.0, change_percentage * 0.04)
+                effects['description'] = "Increased defense spending enhances diplomatic position."
+            else:
+                effects['diplomatic_strength'] = max(-2.0, change_percentage * 0.04)
+                effects['description'] = "Decreased defense spending may weaken diplomatic position."
+        
+        elif category == 'social_services':
+            # Social services affect population welfare and inequality
+            if change > 0:
+                effects['approval_rating'] = min(2.0, change_percentage * 0.05)
+                effects['description'] = "Increased social spending improves public approval."
+            else:
+                effects['approval_rating'] = max(-3.0, change_percentage * 0.07)
+                effects['description'] = "Cuts to social spending may significantly decrease public approval."
+                
+            # Apply immediate effect to approval rating
+            country.approval_rating = max(0, min(100, country.approval_rating + effects.get('approval_rating', 0)))
+        
+        return effects
 
 class GameEngine:
-    def __init__(self, countries_data_path: str):
-        self.countries: Dict[str, Country] = load_countries_from_file(countries_data_path)
-        self.current_turn: int = 0
-        self.player_country_iso: str = ""  # Will be set when player chooses
-
-        if not self.countries:
-            raise ValueError("Failed to load country data. Cannot initialize engine.")
-
-    def set_player_country(self, iso_code: str):
-        if iso_code in self.countries:
-            self.player_country_iso = iso_code
-            print(f"Player country set to: {self.countries[iso_code].name}")
-        else:
-            print(f"Error: Country with ISO code {iso_code} not found.")
-
-    def next_turn(self):
-        """Advances the game by one turn."""
-        self.current_turn += 1
-        print(f"\n--- Advancing to Turn {self.current_turn} ---")
-
-        # 1. AI Decisions (Placeholder)
-        self._run_ai_turns()
-
-        # 2. Apply Policies / Actions (Placeholder)
-        # This is where tariff effects, etc., would be calculated
-
-        # 3. Economic Update (Placeholder)
-        self._update_economies()
-
-        # 4. Check Game End Conditions (Placeholder)
-
-        print(f"--- Turn {self.current_turn} End ---")
-
-    def apply_policy(self, iso_code: str, policy: dict):
-        """Modtager og anvender politikvalg fra UI (skat, G, subsidier, rente)."""
-        country = self.countries.get(iso_code)
-        if not country:
-            return {"status": "error", "message": "Country not found"}
-        # Fiskalpolitik
-        if 'tax' in policy:
-            country.tax_rate = float(policy['tax'])
-        if 'gov' in policy:
-            country.government_spending = float(policy['gov']) * country.gdp  # G i % af BNP
-        # Subsidier
-        if 'subsidySector' in policy and 'subsidyAmount' in policy:
-            for sector in getattr(country, 'sectors', []):
-                if sector.name == policy['subsidySector'] and policy['subsidySector'] != 'none':
-                    sector.output += float(policy['subsidyAmount']) * 0.00001  # Effektfaktor kan kalibreres
-                    country.government_spending = getattr(country, 'government_spending', 0.18 * country.gdp) + float(policy['subsidyAmount'])
-        # Rente
-        if 'interest' in policy:
-            country.policy_rate = float(policy['interest'])
-        # Told
-        if 'sector' in policy and 'rate' in policy:
-            if 'WORLD' not in country.tariffs:
-                country.tariffs['WORLD'] = {}
-            country.tariffs['WORLD'][policy['sector']] = float(policy['rate'])
-        return {"status": "success", "message": "Policy applied"}
-
-    def _run_ai_turns(self):
-        """AI-logik for ikke-spillerlande: utility-baseret beslutning + FSM-tilstand."""
-        print("AI countries are thinking...")
-        for iso_code, country in self.countries.items():
-            if iso_code == self.player_country_iso:
-                continue
-            # --- AI-profil/personlighed ---
-            regime = getattr(country, 'government_type', 'democracy')
-            ai_profile = AI_PROFILES.get(regime, AI_PROFILES['democracy'])
-            # --- FSM/BT-tilstand (placeholder: kun 'neutral' nu) ---
-            if not hasattr(country, 'ai_state'):
-                country.ai_state = AIStrategyState('neutral')
-            # --- Utility-baseret beslutning om told og sektorbeskyttelse ---
-            # Eksempel: vægtet sum af mål (kan udvides)
-            utility = 0
-            # Vægt på vækst
-            utility += ai_profile.growth_weight * getattr(country, 'growth_rate', 1.0)
-            # Vægt på trust/approval
-            utility += ai_profile.trust_weight * getattr(country, 'approval_rating', 50) / 100
-            # Vægt på sektorbeskyttelse (fx hvis nøglesektor falder)
-            if getattr(country, 'sectors', []):
-                key_sector = max(country.sectors, key=lambda s: s.output)
-                if key_sector.output < 0.9 * key_sector.potential_output:
-                    utility += ai_profile.sector_protection * (1 - key_sector.output / key_sector.potential_output)
-                    # Beskyt sektor med told hvis utility lav
-                    if utility < 1.5:
-                        if 'WORLD' not in country.tariffs:
-                            country.tariffs['WORLD'] = {}
-                        country.tariffs['WORLD'][key_sector.name] = min(0.3, country.tariffs['WORLD'].get(key_sector.name, 0.0) + 0.05)
-            # Retaliation: gengæld hvis spiller har hævet told
-            player = self.countries.get(self.player_country_iso)
-            if player and player.tariffs and iso_code in player.tariffs:
-                if ai_profile.retaliation > 0.5:
-                    for sector_name, rate in player.tariffs[iso_code].items():
-                        if iso_code not in country.tariffs:
-                            country.tariffs[iso_code] = {}
-                        country.tariffs[iso_code][sector_name] = rate
-            # Placeholder: juster skat/rente hvis gæld er høj
-            if getattr(country, 'debt', 0.0) > 1.0 * getattr(country, 'gdp', 1.0):
-                country.tax_rate = min(0.5, getattr(country, 'tax_rate', 0.2) + 0.01)
-                country.policy_rate = min(5.0, getattr(country, 'policy_rate', 2.0) + 0.1)
-            # Forklarende feedback (kan sendes til UI)
-            country.last_ai_explanation = f"AI ({regime}) utility: {utility:.2f}, state: {country.ai_state.state}, key sector: {key_sector.name if getattr(country, 'sectors', []) else 'N/A'}"
-
-    def _update_economies(self):
-        """Opdaterer økonomiske indikatorer for alle lande og deres sektorer."""
-        print("Updating economic indicators...")
-        for country in self.countries.values():
-            # --- Handelsblokke: brug fælles tariffer hvis landet er medlem ---
-            from .models import get_trade_bloc_for_country
-            bloc = get_trade_bloc_for_country(country.iso_code)
-            if bloc:
-                for sector in getattr(country, 'sectors', []):
-                    # Overskriv evt. nationale tariffer med blok-tariffer
-                    if not country.tariffs.get('WORLD'):
-                        country.tariffs['WORLD'] = {}
-                    country.tariffs['WORLD'][sector.name] = bloc.common_tariffs.get(sector.name, 0.0)
-            # Opdater sektorer først
-            for sector in getattr(country, 'sectors', []):
-                # --- Handels- og prisdynamik pr. sektor ---
-                # Eksempel: toldsats og importpris (kan udvides med flere lande og sektorer)
-                tariff = 0.0
-                if country.tariffs and sector.name in country.tariffs.get('WORLD', {}):
-                    tariff = country.tariffs['WORLD'][sector.name]
-                # Importpris: P_import = P_f * valutakurs * (1 + t_s)
-                # For nu antages P_f = 1, valutakurs = 1 (kan udvides)
-                sector.import_price = 1.0 * 1.0 * (1 + tariff)
-                # Sektorens pris: P_d = (1 - μ_s) * P_hjem + μ_s * P_import
-                sector.price = (1 - sector.import_share) * sector.price + sector.import_share * sector.import_price
-                # --- Import/eksport elasticitet (forenklet placeholder) ---
-                price_elasticity = -1.2  # Kan gøres sektorspecifik
-                # Importvolumen reagerer på prisændring
-                if hasattr(sector, 'import_'):
-                    sector.import_ *= (sector.import_price / 1.0) ** price_elasticity
-                # Eksportvolumen kan også afhænge af pris (placeholder)
-                if hasattr(sector, 'export'):
-                    sector.export *= (1.0 / sector.price) ** price_elasticity
-                # Nettoeksport: NX_s = Export_s - Import_s
-                sector.net_exports = sector.export - sector.import_
-                # Output kan påvirkes af nettoeksport (forenklet)
-                sector.output *= (1 + 0.01 * sector.net_exports / max(1, sector.output))
-                # Opdater ledighed via Okuns lov (sektorspecifikt, placeholder)
-                sector.unemployment_rate = max(0.5, sector.unemployment_rate - 0.05 * country.growth_rate)
-            # Aggreger BNP og arbejdsløshed fra sektorer
-            if getattr(country, 'sectors', []):
-                country.gdp = sum(s.output for s in country.sectors)
-                total_labor = sum(s.employment for s in country.sectors)
-                if total_labor > 0:
-                    country.unemployment_rate = sum(s.unemployment_rate * s.employment for s in country.sectors) / total_labor
-            # --- Konsumfunktion (forbrug) ---
-            mpc = 0.65
-            c0 = 0.0
-            tax_rate = getattr(country, 'tax_rate', 0.2)
-            y_disposable = (1 - tax_rate) * country.gdp
-            country.consumption = c0 + mpc * y_disposable
-            # --- Opdater statsbudget og gæld inkl. subsidier ---
-            g = getattr(country, 'government_spending', 0.18 * country.gdp)
-            if hasattr(country, 'subsidy_total'):
-                g += country.subsidy_total
-            country.tax_revenue = tax_rate * country.gdp
-            country.debt = getattr(country, 'debt', 0.0) + (g - country.tax_revenue)
-            # --- Politisk tillid/approval (forenklet) ---
-            growth = getattr(country, 'growth_rate', 1.0)
-            inflation = getattr(country, 'inflation', 2.0)
-            unemployment = getattr(country, 'unemployment_rate', 5.0)
-            approval = getattr(country, 'approval_rating', 50)
-            approval += 10 * (growth - 1) - 5 * (unemployment - 5) - 2 * max(0, inflation - 2)
-            country.approval_rating = max(0, min(100, approval))
-            # --- Makroøkonomisk feedback: valutakurs (placeholder) ---
-            # Eksempel: delta_fx = k1 * (policyRate - policyRate_foreign) - k2 * (NX_current - NX_last)
-            # For nu antages policyRate = 2.0, policyRate_foreign = 1.5, k1=0.5, k2=0.1
-            k1 = 0.5
-            k2 = 0.1
-            policy_rate = getattr(country, 'policy_rate', 2.0)
-            policy_rate_foreign = 1.5  # Kan gøres dynamisk
-            nx_current = sum(getattr(s, 'net_exports', 0.0) for s in getattr(country, 'sectors', []))
-            nx_last = getattr(country, 'nx_last', nx_current)
-            delta_fx = k1 * (policy_rate - policy_rate_foreign) - k2 * (nx_current - nx_last)
-            country.exchange_rate = getattr(country, 'exchange_rate', 1.0) + delta_fx
-            country.nx_last = nx_current
-            # --- Investering og kapacitetsudbygning (placeholder) ---
-            # I = max(0, i0 + i1 * ΔGDP - i2 * r)
-            i0, i1, i2 = 100, 1.0, 2.0
-            gdp_last = getattr(country, 'gdp_last', country.gdp)
-            delta_gdp = country.gdp - gdp_last
-            investment = max(0, i0 + i1 * delta_gdp - i2 * policy_rate)
-            # Fordel investering proportionalt med output
-            total_output = sum(s.output for s in getattr(country, 'sectors', []))
-            for sector in getattr(country, 'sectors', []):
-                share = sector.output / total_output if total_output > 0 else 0
-                sector.capital_stock += investment * share
-                sector.potential_output += investment * share  # Forenklet
-            country.gdp_last = country.gdp
-            # --- Finanspolitik (placeholder) ---
-            # Skatteprovenu og gæld
-            tax_rate = getattr(country, 'tax_rate', 0.2)
-            country.tax_revenue = tax_rate * country.gdp
-            g = getattr(country, 'government_spending', 0.18 * country.gdp)
-            country.debt = getattr(country, 'debt', 0.0) + (g - country.tax_revenue)
-
-    def get_country_data(self, iso_code: str) -> Optional[Country]:
-        """Returns the data for a specific country."""
-        return self.countries.get(iso_code)
-
-    def get_all_countries_data(self) -> Dict[str, Country]:
-        """Returns the data for all countries."""
-        return self.countries
-
-    def get_country_list(self):
-        """Returns a list of basic country info (name, iso_code)."""
-        return [{'name': c.name, 'iso_code': c.iso_code} for c in self.countries.values()]
-
-    def get_country_details(self, iso_code: str):
-        """Returns detailed info for a specific country."""
-        country = self.countries.get(iso_code)
-        if country:
-            # Convert Industry object to dict for JSON serialization
-            industries_dict = country.industries.__dict__ if country.industries else {}
-            # Return a dictionary representation of the country
-            return {
-                'name': country.name,
-                'iso_code': country.iso_code,
-                'gdp': country.gdp,
-                'population': country.population,
-                'industries': industries_dict,
-                'trade_partners': country.trade_partners,
-                'tariffs': country.tariffs,
-                'unemployment_rate': country.unemployment_rate,
-                'growth_rate': country.growth_rate,
-                'approval_rating': country.approval_rating,
-                'government_type': country.government_type,
-                'is_eu_member': country.is_eu_member
-            }
-        return None
-
-    def advance_turn(self):
-        """Advances the game simulation by one turn."""
-        self.current_turn += 1
-        print(f"Advancing to turn {self.current_turn}")
-
-        # --- Simple Economic Simulation Step ---
-        for country in self.countries.values():
-            # Basic GDP growth simulation (random fluctuation around growth rate)
-            growth_factor = 1 + (country.growth_rate / 100) + (random.uniform(-0.5, 0.5) / 100)
-            country.gdp *= growth_factor
-
-            # Basic unemployment change (inversely related to growth, with randomness)
-            unemployment_change = -0.1 * (growth_factor - 1) * 100 + random.uniform(-0.1, 0.1)
-            country.unemployment_rate = max(0.5, country.unemployment_rate + unemployment_change)  # Ensure unemployment doesn't go below 0.5
-
-            # Basic approval rating change (related to growth and unemployment)
-            approval_change = (growth_factor - 1) * 50 - unemployment_change * 10 + random.uniform(-1, 1)
-            country.approval_rating = max(0, min(100, country.approval_rating + approval_change))
-
-            # TODO: Implement more sophisticated economic model based on Neoklassisk_Model_Simulationsspil.pdf
-            # TODO: Simulate trade interactions, tariff effects, policy impacts, etc.
-
-        print("Turn simulation complete.")
-        # In a real application, you'd return the updated state or specific changes
-        return {"message": f"Advanced to turn {self.current_turn}", "status": "success"}
-
-# Example usage (can be removed later):
-# if __name__ == '__main__':
-#     import os
-#     script_dir = os.path.dirname(__file__)
-#     data_path = os.path.join(script_dir, '../data/countries.json')
-#     engine = GameEngine(data_path)
-#     print("Initial USA GDP:", engine.countries['USA'].gdp)
-#     engine.advance_turn()
-#     print("USA GDP after turn 1:", engine.countries['USA'].gdp)
-#     print("USA Unemployment after turn 1:", engine.countries['USA'].unemployment_rate)
-#     print("USA Approval after turn 1:", engine.countries['USA'].approval_rating)
+    """
+    Main game engine for managing the simulation.
+    """
+    def __init__(self, scenario=None):
+        self.scenario = scenario
+        self.countries = {}
+        self.current_turn = 0
+        self.historical_data = HistoricalDataset()
+        self.feedback_system = EnhancedFeedbackSystem(self.historical_data)
+        self.ai_explanation_system = AIExplanationSystem()
+        self.ai_decisions_history = []
+    
+    def get_country_profile(self, country_iso):
+        """Retrieve the country profile for AI decision explanations."""
+        return CountryProfile(self.countries[country_iso])
+    
+    def process_ai_country_decision(self, country_iso, decision_type, decision_details):
+        """Process an AI country's decision and generate detailed explanations"""
+        # Generate explanation
+        country_profile = self.get_country_profile(country_iso)
+        explanation = {}
+        
+        if decision_type == 'coalition':
+            explanation = self.ai_explanation_system.explain_coalition_decision(
+                country_iso, decision_details, country_profile
+            )
+        elif decision_type == 'trade':
+            explanation = self.ai_explanation_system.explain_trade_decision(
+                country_iso, decision_details, country_profile
+            )
+        elif decision_type == 'budget':
+            budget_policy = self.get_country_budget_policy(country_iso)
+            explanation = self.ai_explanation_system.explain_budget_decision(
+                country_iso, decision_details, country_profile, budget_policy
+            )
+        elif decision_type == 'diplomatic':
+            explanation = self.ai_explanation_system.explain_diplomatic_decision(
+                country_iso, decision_details, country_profile
+            )
+        
+        # Attach explanation to decision record
+        decision_record = {
+            'country': country_iso,
+            'type': decision_type,
+            'details': decision_details,
+            'explanation': explanation,
+            'timestamp': self.current_turn
+        }
+        
+        self.ai_decisions_history.append(decision_record)
+        return decision_record
+    
+    def get_recent_ai_decisions(self, count=10):
+        """Get the most recent AI decisions with their explanations"""
+        return self.ai_decisions_history[-count:] if self.ai_decisions_history else []
+    
+    def get_ai_decisions_by_country(self, country_iso, count=10):
+        """Get the most recent AI decisions for a specific country"""
+        country_decisions = [d for d in self.ai_decisions_history if d['country'] == country_iso]
+        return country_decisions[-count:] if country_decisions else []

@@ -1,0 +1,151 @@
+.event-feed-panel {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-feed-panel h3 {
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #333;
+  font-weight: 600;
+}
+
+.events-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.no-events-message {
+  color: #757575;
+  font-style: italic;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.event-item {
+  margin-bottom: 10px;
+  background-color: white;
+  border-left: 4px solid #888; /* Default color, overridden inline */
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+}
+
+.event-item.expanded {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.event-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.event-title {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.event-turn {
+  color: #757575;
+  font-size: 0.85em;
+  margin-right: 10px;
+}
+
+.expand-toggle {
+  color: #757575;
+  font-size: 0.85em;
+}
+
+.event-details {
+  padding: 0 15px 15px;
+  border-top: 1px solid #f0f0f0;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.event-description {
+  color: #555;
+  line-height: 1.5;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.event-effects h4, .event-options h4 {
+  color: #333;
+  font-size: 0.95em;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.event-effect {
+  padding: 5px 0;
+  color: #555;
+}
+
+.event-options {
+  margin-top: 15px;
+}
+
+.event-option-button {
+  margin-right: 8px;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  background-color: #f1f1f1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.event-option-button:hover {
+  background-color: #e9e9e9;
+  border-color: #ccc;
+}
+
+.event-option-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.25);
+}
+
+/* Farver for forskellige effekt-typer */
+.event-effect.positive {
+  color: #4CAF50;
+}
+
+.event-effect.negative {
+  color: #F44336;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .event-header {
+    flex-wrap: wrap;
+  }
+  
+  .event-title {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+}

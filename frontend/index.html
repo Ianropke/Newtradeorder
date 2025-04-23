@@ -1,41 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade War Simulator</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Add library for map visualization later (e.g., Leaflet, D3) -->
-</head>
-<body>
-    <h1>Trade War Simulator</h1>
-
-    <div id="game-container">
-        <div id="map-container">
-            <!-- Map will be rendered here -->
-            <p>World Map Area</p>
-        </div>
-        <div id="controls-container">
-            <h2>Controls</h2>
-            <label for="country-select">Select Country:</label>
-            <select id="country-select">
-                <!-- Options will be populated dynamically -->
-            </select>
-            <button id="next-turn">Next Turn</button>
-            <div id="country-info">
-                <!-- Selected country info will be displayed here -->
-            </div>
-        </div>
-        <div id="bnp-history-panel" class="widget" style="max-width:700px;margin:18px auto;">
-            <h4>BNP-udvikling (historik)</h4>
-            <canvas id="bnpHistoryChart" height="120"></canvas>
-        </div>
-        <div id="event-feed-panel" class="widget" style="max-width:700px;margin:18px auto;">
-            <h4>Event Feed</h4>
-            <ul id="event-feed" style="list-style:none;padding:0;"></ul>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

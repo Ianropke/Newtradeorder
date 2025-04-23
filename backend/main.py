@@ -1,101 +1,111 @@
-import os
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify
+from flask_cors import CORS
+from models import GameState, EventSystem
+from routes.countries import countries_bp
+from routes.policy import policy_bp
+from routes.diplomacy import diplomacy_bp
+from routes.events import events_bp, event_system
+from diplomacy_ai import DiplomacyAI
 from engine import GameEngine
 
-# --- Configuration ---
-# Determine the absolute path to the project root directory
-# This assumes main.py is in the 'backend' folder
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DATA_PATH = os.path.join(PROJECT_ROOT, 'data', 'countries.json')
-FRONTEND_FOLDER = os.path.join(PROJECT_ROOT, 'frontend')
+app = Flask(__name__)
+CORS(app)
 
-# --- Initialization ---
-app = Flask(__name__, static_folder=FRONTEND_FOLDER)
-try:
-    game_engine = GameEngine(DATA_PATH)
-except ValueError as e:
-    print(f"Error initializing game engine: {e}")
-    # Handle error appropriately - maybe exit or provide a default state
-    game_engine = None  # Or some fallback
+# Initialize game engine
+game_engine = GameEngine('data/countries.json')
+game_state = GameState()
+game_state.load_countries()
+game_state.current_turn = 0
 
-# --- API Endpoints ---
-@app.route('/api/countries', methods=['GET'])
-def get_countries():
-    """API endpoint to get data for all countries."""
-    if not game_engine:
-        return jsonify({"error": "Game engine not initialized"}), 500
-    countries_data = game_engine.get_all_countries_data()
-    # Convert Country objects to dictionaries for JSON serialization
-    countries_dict = {iso: country.__dict__ for iso, country in countries_data.items()}
-    # Convert Industry objects within country dicts
-    for iso in countries_dict:
-        if hasattr(countries_dict[iso]['industries'], '__dict__'):
-            countries_dict[iso]['industries'] = countries_dict[iso]['industries'].__dict__
-    return jsonify(countries_dict)
+# Initialize diplomacy AI system
+diplomacy_ai = DiplomacyAI(game_state)
+diplomacy_ai.initialize_personalities(game_state.countries)
+if not hasattr(game_state, 'diplomacy'):
+    game_state.diplomacy = type('obj', (), {})()
+game_state.diplomacy.ai = diplomacy_ai
 
-@app.route('/api/countries/<string:iso_code>', methods=['GET'])
-def get_country(iso_code):
-    """Returns details for a specific country."""
-    if not game_engine:
-        return jsonify({"error": "Game engine not initialized"}), 500
-    details = game_engine.get_country_details(iso_code.upper())
-    if details:
-        return jsonify(details)
-    else:
-        return jsonify({"error": "Country not found"}), 404
+# Initialize event system
+events_module_event_system = EventSystem()
+# Make the event_system variable in events.py point to our instance
+import routes.events
+routes.events.event_system = events_module_event_system
+game_state.events = events_module_event_system
 
-@app.route('/api/next_turn', methods=['POST'])
-def next_turn():
-    """Advances the simulation to the next turn."""
-    if not game_engine:
-        return jsonify({"error": "Game engine not initialized"}), 500
-    result = game_engine.advance_turn()
-    return jsonify(result)
+# Register blueprints
+app.register_blueprint(countries_bp, url_prefix='/api')
+app.register_blueprint(policy_bp, url_prefix='/api')
+app.register_blueprint(diplomacy_bp, url_prefix='/api')
+app.register_blueprint(events_bp, url_prefix='/api')
 
-@app.route('/api/game_state', methods=['GET'])
-def get_game_state():
-    """API endpoint to get the current game state (e.g., turn number)."""
-    if not game_engine:
-        return jsonify({"error": "Game engine not initialized"}), 500
-    state = {
-        'current_turn': game_engine.current_turn,
-        'player_country_iso': game_engine.player_country_iso
-    }
-    return jsonify(state)
+@app.route('/api/status', methods=['GET'])
+def status():
+    return jsonify({
+        'status': 'running',
+        'version': '0.2.0',
+        'countries_loaded': len(game_state.countries),
+        'active_events': len(routes.events.event_system.events),
+        'current_turn': game_state.current_turn,
+        'diplomacy_ai_initialized': hasattr(game_state, 'diplomacy') and hasattr(game_state.diplomacy, 'ai')
+    })
 
-@app.route('/api/policy', methods=['POST'])
-def apply_policy():
-    """API endpoint to apply a policy to a country (tax, gov spending, subsidy, interest, tariff)."""
-    if not game_engine:
-        return jsonify({"error": "Game engine not initialized"}), 500
-    data = request.get_json()
-    iso_code = data.get('iso_code', '').upper()
-    policy = data.get('policy', {})
-    if not iso_code or not policy:
-        return jsonify({"error": "iso_code and policy required"}), 400
-    result = game_engine.apply_policy(iso_code, policy)
-    # Return updated country details
-    details = game_engine.get_country_details(iso_code)
-    return jsonify({"result": result, "country": details})
+@app.route('/api/turn', methods=['POST'])
+def advance_turn():
+    """Advance the game by one turn"""
+    # Process turn logic using game engine
+    game_state.current_turn += 1
+    
+    # Set player country if not already set (temporary - should be set through proper route)
+    if not hasattr(game_state, 'player_country_iso') or not game_state.player_country_iso:
+        if game_state.countries:
+            game_state.player_country_iso = list(game_state.countries.keys())[0]  # First country as player by default
+    
+    # Pass required attributes to game engine
+    game_engine.current_turn = game_state.current_turn
+    game_engine.player_country_iso = getattr(game_state, 'player_country_iso', None)
+    if hasattr(game_state, 'diplomacy'):
+        game_engine.diplomacy = game_state.diplomacy
+    
+    # AI decisions for each country
+    ai_decisions = []
+    for country_iso, country in game_state.countries.items():
+        if country_iso != game_state.player_country_iso:  # Skip player country
+            if hasattr(game_state, 'diplomacy') and hasattr(game_state.diplomacy, 'ai'):
+                # Run AI decision logic
+                decisions = game_state.diplomacy.ai.ai_turn_logic(country_iso, game_state.current_turn)
+                if decisions:
+                    ai_decisions.append({
+                        'country': country_iso,
+                        'decisions': decisions
+                    })
+    
+    # Update economy for all countries
+    for country in game_state.countries.values():
+        game_state.update_economy(country.iso_code)
+    
+    # Generate events using our new system
+    import event_types
+    new_events = event_types.check_and_trigger_events(game_state)
+    
+    # Add new events to the event system
+    for event in new_events:
+        routes.events.event_system.add_event(event)
+    
+    # Apply immediate event effects
+    game_engine._apply_event_effects(new_events)
+    
+    # Update active events and remove expired ones
+    game_engine._update_active_events()
+    
+    return jsonify({
+        'message': f'Advanced to turn {game_state.current_turn}',
+        'new_events': new_events,
+        'ai_decisions': ai_decisions
+    })
 
-# --- Serve Frontend --- 
-# Route for serving index.html
-@app.route('/')
-def serve_index():
-    return send_from_directory(FRONTEND_FOLDER, 'index.html')
-
-# Route for serving other static files (CSS, JS, images, etc.)
-@app.route('/<path:path>')
-def serve_static_files(path):
-    # Basic security check: prevent accessing files outside frontend folder
-    if '..' in path or path.startswith('/'):
-        return "Not Found", 404
-    if os.path.exists(os.path.join(FRONTEND_FOLDER, path)):
-        return send_from_directory(FRONTEND_FOLDER, path)
-    else:
-        return send_from_directory(FRONTEND_FOLDER, 'index.html')
-
-# --- Run Application ---
 if __name__ == '__main__':
-    # Note: debug=True is helpful for development but should be False in production
-    app.run(debug=True, port=5001)  # Use a different port like 5001
+    # Initialize strategic interests for AI
+    if hasattr(game_state, 'diplomacy') and hasattr(game_state.diplomacy, 'ai'):
+        # Initialize with empty relations for now
+        game_state.diplomacy.ai.calculate_strategic_interests(game_state.countries, [])
+    
+    app.run(debug=True)

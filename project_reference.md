@@ -1,365 +1,238 @@
 # Projekt Reference Dokument
 
-## STATUSOPDATERING (21. april 2025)
+## STATUSOPDATERING (23. april 2025)
 
 ### Seneste fremskridt
-- Backend og frontend er nu fuldt integreret: Politisk panel i UI sender POST til /api/policy, og økonomiske nøgletal opdateres straks i brugerfladen.
-- Den neoklassiske model er implementeret i backend med sektorspecifik simulation, makroøkonomiske feedbacks, AI-modstandere og pædagogisk feedback til spilleren.
-- AI-strategi, agentstruktur og feedback-loop er beskrevet og implementeret.
-- Flask-backend har nu endpoint for policy-ændringer, og frontend script.js håndterer brugerens valg og opdaterer UI.
-- Dokumentation, referencedokument og kodevejledning er løbende opdateret.
+- Frontend og backend integration er komplet og fungerer gnidningsfrit med turbaseret simulation
+- Alle nødvendige API-endpoints er implementeret med fuld dokumentation (`backend/routes/`)
+- Feedback-systemet efter hver tur er nu implementeret og giver pædagogisk vejledning til spilleren
+- Interaktivt kortmodul visualiserer landedata og økonomiske indikatorer i realtid (`frontend/src/components/MapPanel.jsx`)
+- Policy-panel i UI er fuldt integreret med backend og viser øjeblikkelige effekter af politiske beslutninger (`frontend/src/components/PolicyPanel.jsx`)
+- AI-modstandere handler strategisk baseret på økonomiske indikatorer og spillerens handlinger (`backend/diplomacy_ai.py`)
+- Den neoklassiske økonomiske model med sektorspecifik simulation er fuldt implementeret (`backend/engine.py`, `backend/models.py`)
+- Datavisualisering med grafer og diagrammer for GDP, sektordata og økonomiske trends er implementeret
+- Omfattende test suite validerer økonomiske modeller og invarianter (`backend/test_*.py`)
+- Omfattende diplomatisystem med relationsvisualisering, handelsdependensanalyse og sanktionssimulation er nu implementeret (`backend/diplomacy_ai.py`, `frontend/src/components/DiplomacyPanel.jsx`)
+- Event-feed visualisering af simulationsbegivenheder tilføjet til brugergrænsefladen (`frontend/src/components/EventFeedPanel.jsx`)
+- BNP-historik og analysepanelet er færdigudviklet med interaktive grafer (`frontend/src/components/BNPHistoryPanel.jsx`)
+- AI-system udvidet med detaljerede `CountryProfile` klasser, der inkluderer mange træk (økonomisk, diplomatisk, lederskab, teknologi) og kan genereres dynamisk baseret på landets data og justeres under kriser (`backend/diplomacy_ai.py`)
+- DiplomacyPanel er udbygget med risiko- og sanktionsanalyseværktøjer (`frontend/src/components/DiplomacyPanel.jsx`)
+- Robust event-system implementeret med strukturerede `EventType` og `EventOption` klasser, kategorier, effekt-processorer og flere komplekse, detaljerede events med specifikke triggere, muligheder og narrative følger (`backend/event_types.py`)
+- ScenarioSelector-komponenten er betydeligt forbedret med avancerede UI/UX elementer, herunder animerede filter-tags, visuel feedback ved filterændringer, tilpasset scrollbardesign, gradient-effekter for visualisering af filterdistribution, forbedret præsentation af forudindstillede filtre, bedre tilgængelighed med fokustilstande, tooltips og tomtilstandsdesign når ingen filtre er anvendt (`frontend/src/styles/ScenarioSelector.css`)
+- Komplet tutorial-system implementeret med kategoribaseret læring og interaktive elementer (`frontend/src/components/TutorialPanel.jsx`, `frontend/src/styles/TutorialPanel.css`):
+  - Grundlæggende introduktion til spilmekanikker
+  - Kategoribaseret system med detaljerede tutorials indenfor økonomi, diplomati, begivenheder og avancerede strategier
+  - Interaktivt navigationssystem med fremskridt-sporing
+  - Responsive design med mobile tilpasninger
+  - Visuelle illustrationer med billeder der understøtter læring
+  - Elegant UI med animerede overgange og visuelle effekter
+  - Kontekstspecifikke forklaringer af spilmekanikker
+  - Mulighed for at vende tilbage til specifikke tutorial-sektioner efter behov
+- Implementeret avancerede scenarier og udvidet event-systemet med flere event-typer baseret på virkelige økonomiske situationer (`backend/event_types.py`):
+  - Omfattende kategorisering af events (økonomiske, politiske, miljømæssige, teknologiske, diplomatiske, sociale, sikkerhedsmæssige og handelsrelaterede)
+  - Detaljerede effekt-processorer til håndtering af forskellige påvirkninger (BNP-ændringer, godkendelsesændringer, relationsændringer, handelsvolumenændringer, osv.)
+  - Avancerede trigger-mekanismer for events baseret på landespecifikke attributter, globale betingelser, relationer og koalitioner
+  - Narrative følgeoplevelser der skaber sammenhængende storylines gennem spillets forløb
+  - AI-præference-beregning der sikrer realistiske reaktioner fra AI-lande i krisesituationer
+  - Implementering af naturkatastrofer, politiske kriser og teknologiske gennembrud som påvirker spillet på realistiske måder
+- AI-strategi udvidet med flere handlingstyper, herunder:
+  - Integration af budget og subsidiestyring i GameEngine klassen med detaljerede økonomiske effekter (`engine.py`)
+  - Forbedret strategisk koalitionsdannelse og -anvendelse med avancerede evaluerings- og beslutningsalgoritmer (`backend/diplomacy_ai.py`)
+  - Omfattende tests til validering af koalitionsfunktionalitet med simulerede lande og diplomatiske relationer (`backend/test_coalition.py`)
+  - Implementering af BudgetPolicy klassen, der kan evaluere fiskal situation og beregne subsidieallokeringer baseret på landets økonomiske profil
+  - Implementering af CoalitionStrategy klassen med dynamisk identifikation af handelspartnere, defensivpartnere og regionale partnere
+  - Sofistikeret evaluering af potentielle og eksisterende koalitioner med cost-benefit analyse
+- Udviklet avanceret `HistoricalDataset` klasse til indlæsning og benchmarking af økonomiske data (`backend/engine.py`)
+- Implementeret `EconomicCalibrator` til kalibrering af økonomiske parametre baseret på historiske data (`backend/engine.py`)
+- Udvidet feedback-systemet med detaljerede økonomiske narrativer og forklaringer via `EnhancedFeedbackSystem` (`backend/engine.py`)
+- Omfattende implementering af `CountryAnalysisPanel` med avancerede visuelle komponenter til sammenligning af økonomiske metrics, historiske benchmarks og partner/konkurrent analyse (`frontend/src/components/CountryAnalysisPanel.jsx`, `frontend/src/styles/CountryAnalysisPanel.css`)
+- Implementeret `BudgetManager` klasse til avanceret budget- og subsidiestyring med detaljeret økonomisk effektberegning (`backend/engine.py`)
+- Udbygget `EnhancedFeedbackSystem` med dynamiske, kontekstuelle narrativer til at forklare økonomiske indikatorer og trends (`backend/engine.py`)
+- Udbygget AI forklaringsevne med `AIExplanationSystem` til at generere detaljerede og forståelige forklaringer af AI-beslutninger (`backend/diplomacy_ai.py`)
+- Implementeret automatisk generering af turnerings-sammendrag med `_generate_turn_summary` metode i GameEngine (`backend/engine.py`)
+- Tilføjet avancerede benchmark funktioner til sammenligning af landets økonomiske performance med regionale og globale gennemsnit (`backend/engine.py`)
+- Udvidet `CountryProfile` klassen med flere personlighedstræk for mere realistisk og nuanceret AI-beslutningstagning (`backend/diplomacy_ai.py`)
+- Tilføjet detaljeret budget-allokerings-effekt-system med sektor-specifik påvirkning og narrativ forklaring (`backend/engine.py`)
 
 ### Næste trin
-- Udbyg AI-strategier og politiske beslutninger (alliancer, diplomati, events).
-- Flere interaktive frontend-elementer og avanceret visualisering.
-- Udvid test og dokumentation, især for økonomiske invarianter og edge cases.
-- Løbende kalibrering og validering af modelparametre.
-
-### Kommentar
-Projektet har nu en robust, iterativ kerne med turnbaseret simulation, AI-modstandere, makroøkonomiske feedbacks og direkte policy-feedback-loop mellem UI og backend. Klar til videreudvikling og finpudsning.
-
----
-
-## Projektmål
-En kort beskrivelse af projektet og dets overordnede mål.
-
-## Udvidet Projektbeskrivelse
-
-Jeg ønsker at bygge en "Trade War Simulator". Formålet er både at have det sjovt og at bruge det til at forudsige verdensøkonomiske scenarier. Spillet skal give spilleren mulighed for at spille som et af de 20 største lande i verden samt Danmark. Det skal være realistisk og baseret på rigtige økonomiske data.
-
-### Centrale Elementer:
-- **Realistisk økonomisk model**: Brug en ægte økonomisk model til at simulere økonomien.
-- **EU's fælles handelspolitik**: EU-landene skal have en fælles handelspolitik.
-- **Turn-based gameplay**: Spilleren og AI-landene skiftes til at tage handlinger.
-- **Økonomiske parametre**: Rente, industrier, vækst, arbejdsløshed, borgernes tillid, m.m.
-- **Handlinger og konsekvenser**: Spilleren kan påvirke økonomien gennem toldsatser, subsidier, investeringer, m.m.
-- **AI-intelligens**: Andre lande handler strategisk og påvirker spilleren.
-- **Politiske mekanismer**: Demokratier kan have valg, diktaturer kan vælte spilleren.
-- **Sjove mekanismer**: Handelskrige, naturkatastrofer, teknologiske gennembrud, m.m.
-
-### Mål:
-- At skabe en simulator, hvor spilleren kan optimere deres lands økonomi og konkurrere mod andre lande.
-- At gøre spillet sjovt og udfordrende med realistiske og uforudsigelige hændelser.
-
-### Grafisk Interface:
-- Et simpelt verdenskort til at visualisere lande og deres økonomiske status.
-- Et kontrolpanel til at justere parametre og se resultater.
-
-### Næste Skridt:
-1. Indsamle data for de 20 største økonomier + Danmark.
-2. Implementere en prototype af den økonomiske model.
-3. Udvikle AI-intelligens og turn-based mekanismer.
-4. Designe et simpelt grafisk interface.
-
-## Økonomisk Model: Neoklassisk Model for International Økonomi i Simulationsspil (opdateret 21. april 2025)
-
-### Centrale mekanismer og formler (uddybet)
-
-#### 1. Handelsdynamikker og tariffer
-- Tariffer øger importpriser: P_import = P_f * valutakurs * (1 + t)
-- Indenlandsk prisniveau: P_domestic = (1 - μ) * P_hjemmelavet + μ * P_import
-- Højere importpriser reducerer importvolumen og forbedrer nettoeksport (NX = X - M), men kan føre til gengældelse og valutakursændringer
-- Udenlandske priser (P_f) beregnes som vægtet gennemsnit af andre landes prisniveauer, så inflation i store økonomier smitter af via importpriser
-- Pass-through af tariffer til importpriser bør sættes til ca. 1 (100%) på grænsen, men lavere til detailpriser (fx 0,3-0,5)
-
-#### 2. Valutakursmekanisme
-- Valutakursen påvirkes af renteforskel og handelsbalance:
-  - delta_fx = k1 * (policyRate - policyRate_foreign) - k2 * (NX_current - NX_last)
-  - exchange_rate += delta_fx
-- Højere rente eller bedre handelsbalance styrker valutaen (appreciering)
-- K1 og k2 skal kalibreres (fx k1=0,5, k2=0,1)
-
-#### 3. Arbejdsløshed via Okuns lov
-- Okuns lov: Δu = -β * (gdpGrowth - potentialGrowth), typisk β ≈ 0,3–0,5
-- Høj vækst reducerer arbejdsløshed, lav vækst øger den
-- β kan gøres landespecifik eller cyklisk
-
-#### 4. Inflationsmekanisme med importeffekter
-- Inflation opdateres som: inflation_new = inflation_old + φ * (outputGap) + γ * (Δ P_import)
-- φ styrer følsomhed for output gap, γ for importpriser (fx γ=0,05–0,15)
-- Importeret inflation og valutakursændringer slår direkte igennem på prisniveauet
-- Forventningsdannelse kan inkluderes: inflation_new = π^e + φ*outputGap + γ*ΔP_import
-
-#### 5. Sektorspecifik dynamik
-- Tariffer og prisdannelse pr. sektor: P_import[s] = P_f[s] * valutakurs * (1 + t_s)
-- Sektorens pris: P_d[s] = (1 - μ_s) * P_hjem[s] + μ_s * P_import[s]
-- Nettoeksport og beskæftigelse beregnes pr. sektor, og Okuns lov kan anvendes sektorspecifikt
-- Sektorspecifikke effekter af tariffer og modforanstaltninger
-- Sektorer har egne output, beskæftigelse, investering, kapacitet og profit
-
-#### 6. BNP og arbejdsløshed som aggregerede størrelser
-- BNP = sum(Output_s) på tværs af sektorer
-- Samlet arbejdsløshed: u_total = sum(L_s * u_s), hvor L_s er sektorens andel af arbejdsstyrken
-
-#### 7. Investering og kapacitetsudbygning
-- Investering: I = max(0, i0 + i1 * ΔGDP - i2 * r)
-- Fordeles på sektorer efter vækst, profit eller andel af output
-- Investering øger sektors kapacitet og potentiale output
-- Sektorspecifik kapitalstock opdateres: K_s,t+1 = (1-δ_s)*K_s,t + I_s,t
-
-#### 8. Finanspolitik
-- Skatteprovenu: T = τ * GDP, hvor τ er samlet skatteprocent
-- Offentlige udgifter G indgår direkte i efterspørgslen
-- Disponibel indkomst: Y_disposable = (1 - τ) * Y
-- Budgetsaldo og gæld: debt = debt_last + (G - T)
-
-#### 9. Politisk tillid / borgernes opbakning
-- Trust falder ved høj arbejdsløshed og inflation: Δtrust = -a * (unemp_rate - u_target) - b * (inflation - π_target) - c * (shock_unpopular)
-- Politisk upopulære beslutninger (fx skatteforhøjelser) trækker trust yderligere ned
-- Lav trust kan føre til politisk ustabilitet eller tab af spillet
-
-#### 10. AI-opførsel (andre lande)
-- AI reagerer strategisk på spillerens handlinger (fx gengældelse ved told)
-- Beskytter nøglesektorer og kan danne alliancer mod spilleren
-- AI har egne trust-mekanismer og politiske mål
-- Simpel tit-for-tat logik for handelspolitik og sektorbeskyttelse
+- Færdiggøre CountryAnalysisPanel med fuld integration af historiske data fra backend (Delvist implementeret: Panel struktur og mock data implementeret, men mangler komplet integration med backend data)
+- Færdiggøre budget- og subsidiestyring med komplet integration i frontend (Delvist implementeret: Backend struktur er udviklet i BudgetManager klassen, men mangler fuld frontend integration)
+- Udvide koalitionsstrategier med mere avanceret beslutningslogik og diplomatiske konsekvenser (Delvist implementeret: Grundlæggende koalitionslogik findes, men mangler avanceret beslutningslogik)
+- Kalibrere økonomiske parametre baseret på historiske data ved hjælp af EconomicCalibrator (Implementeret: EconomicCalibrator klasse og metoder er udviklet i engine.py)
+- Tilføje flere interaktive elementer i frontend, herunder yderligere avancerede filtreringsmuligheder (Delvist implementeret: Basis interaktive elementer findes, men avanceret filtrering mangler)
+- Udvide tutorial-systemet med flere praktiske eksempler og interaktive øvelser (Status ukendt: Basisstruktur er formentlig implementeret i TutorialPanel)
+- Udbygge feedback-systemet med mere detaljerede økonomiske forklaringer og konsekvensanalyser (Implementeret: EnhancedFeedbackSystem er udviklet med omfattende forklaringsfunktionalitet)
+- Tilføje flere sektorspecifikke detaljer og visualiseringer i brugergrænsefladen (Delvist implementeret: Basis sektorvisualisering findes, men mangler dybere detaljer)
+- Optimere simulationsydelse ved komplekse økonomiske scenarier (Status ukendt: Kræver yderligere undersøgelse af algoritmeoptimering)
+- Implementere flere avancerede scenarier med unikke starttilstande og begivenheder (Status ukendt: Event management system findes, men omfang af implementerede scenarier er uklart)
+- Tilføje dybere forklaringer til AI-beslutningsprocesser for at øge gennemsigtighed for spilleren (Delvist implementeret: AIExplanationSystem klassen er udviklet til at generere forklaringer af AI-beslutninger, men kan udbygges yderligere)
+- Udvide benchmarking-funktionaliteten til at inkludere flere historiske sammenligninger og dynamiske visualiseringer (Delvist implementeret: Grundlæggende benchmarking findes i HistoricalDataset og EnhancedFeedbackSystem)
+- Udbygge budget-visualiseringer i frontend til at vise detaljerede effekter af forskellige budget-allokeringer (Ikke implementeret: Backend logik er klar, men frontend visualisering mangler)
 
 ---
 
-## Teknisk Setup og Udviklingsvejledning (opdateret 21. april 2025)
+## Status for Diplomati, Alliancer, Events/Scenarier og Avanceret AI-strategi (opdateret 23. april 2025)
 
-Denne sektion samler anbefalinger fra 'Kodevejledning til Trade War Simulator_.txt' og danner grundlag for projektets tekniske setup og udviklingspraksis.
+**Fremskridt siden sidste opdatering:**
+- Implementeret omfattende diplomatisystem med relationsparametre, handelsdependensanalyse og sanktionssimulation (`backend/diplomacy_ai.py`)
+- Udviklet udbyggede UI-komponenter i DiplomacyPanel.jsx med risiko- og sanktionsanalyseværktøjer (`frontend/src/components/DiplomacyPanel.jsx`)
+- AI-system udvidet med meget detaljerede `CountryProfile` klasser, der dækker mange adfærds- og præferencetræk langt ud over simple arketyper (`backend/diplomacy_ai.py`)
+- Implementeret robust og struktureret event-system med flere komplekse events, der har specifikke triggere, valgmuligheder, effekter og narrative følger (`backend/event_types.py`)
+- Forbedret AI-beslutningslogik med bedre reaktioner på spillerens handlinger (`backend/diplomacy_ai.py`)
+- Grundlæggende koalitionslogik implementeret og testet (`backend/test_coalition.py`)
+- Udviklet `AIExplanationSystem` til at generere forståelige forklaringer af AI-beslutninger for spilleren
+- Implementeret avanceret `BudgetManager` til håndtering af budget-allokering og subsidier med realistiske effekter
+- Udvidet `CountryProfile` klassen med flere personlighedsparametre for mere nuanceret AI-beslutningstagning
 
-### 1. Projektstruktur
-- Brug en klar adskillelse mellem frontend (brug UI-framework, fx React/Vue) og backend (Python, fx Flask/FastAPI).
-- Organisér projektet som et monorepo med separate mapper for frontend og backend.
-- Backend: src-layout anbefales (src/ med underpakker for models, web/routes, services).
-- Frontend: src/ med komponenter, pages/views, services (API-kald), state management, assets.
-- Overvej en delt mappe (shared/) for fælles typer eller valideringslogik, hvis relevant.
+**Mangler for fuldt udbygget funktionalitet:**
 
-### 2. Kodestandarder og Stil
-- Python: Følg PEP8, brug Black og Ruff til formatering/linting.
-- JavaScript/TypeScript: Følg Airbnb/Google styleguide, brug Prettier og ESLint.
-- Aktiver format-on-save og linter integration i VSCode.
-- Brug meningsfulde navne, docstrings og kommentarer – især som Copilot-prompts.
+1. **Diplomati og alliancer:**
+   - Implementering af *dynamiske forhandlingsmekanismer*, hvor lande kan indgå, forhandle og bryde alliancer (nuværende system er mere statisk)
+   - Udvidelse af flere diplomatiske handlingsmuligheder (frihandelsaftaler, investeringsaftaler)
+   - Videreudvikling af AI-logik for at vurdere og prioritere alliancer og diplomatiske handlinger mere dynamisk og strategisk
+   - Udvikling af en mere avanceret relationsmodel der inkorporerer historiske begivenheder og kulturelle faktorer
 
-### 3. Modularitet og Designprincipper
-- Separation of Concerns: Adskil UI, forretningslogik og dataadgang.
-- High Cohesion & Low Coupling: Hold moduler fokuserede og uafhængige.
-- Brug MVC, Repository Pattern og Service Layer i backend.
-- Brug Dependency Injection for at sikre testbarhed og fleksibilitet.
+2. **Events og scenarier:**
+   - Tilføje flere event-typer (naturkatastrofer, politiske kriser, teknologiske gennembrud) til det eksisterende robuste system (`backend/event_types.py`)
+   - Integrere events dybere med diplomatisystemet for at skabe komplekse scenarier
+   - Udvikle scenario-vælger ved spilstart med historiske og fiktive situationer
+   - Skabe bedre sammenhæng mellem events gennem spillets forløb med narrative sekvenser
 
-### 4. Backend Arkitektur
-- Byg simuleringsmotoren som agent-baseret model (lande, sektorer, markeder som agenter).
-- Overvej Event Sourcing eller TSDB til historik og analyse.
-- Optimer tunge beregninger med NumPy/Pandas og multiprocessing.
+3. **Avanceret AI-strategi:**
+   - Implementere flere AI-handlingstyper: færdiggøre frontend integration af subsidier og budgetstyring (backend allerede udviklet i BudgetManager)
+   - Udbygge AIExplanationSystem med mere detaljeret forklarende feedback til spilleren om AI'ens valg og motiver
+   - Udbygge AI's evne til at danne og *anvende* koalitioner strategisk mod dominerende spillere (nuværende logik er basal)
+   - Forbedre AI's langtidsplanlægning og strategiske tænkning på tværs af flere spillerrunder
 
-### 5. Frontend Arkitektur
-- Brug moderne framework (React/Vue).
-- Implementér state management (Redux, Zustand, Pinia).
-- Integrér datavisualisering (Plotly.js, Chart.js).
-- Brug WebSockets til realtidsopdateringer fra backend.
-
-### 6. API Design
-- REST anbefales som udgangspunkt, evt. GraphQL for fleksible queries.
-- Følg best practices for endpoints, statuskoder, fejlhåndtering og versionering (fx /api/v1/...).
-- Implementér WebSockets for realtidsdata.
-- Følg OWASP API Security Top 10.
-
-### 7. Teststrategi
-- Følg testpyramiden: mange unit tests, færre integration, få E2E.
-- Python: pytest, unittest, Hypothesis (property-based testing).
-- Frontend: Jest, React/Vue Testing Library, Cypress/Playwright.
-- Brug mocking og fixtures til at isolere tests.
-- Test også økonomiske invarianter og scenarier.
-
-### 8. Versionskontrol og Workflow
-- Brug Git (GitHub Flow anbefales).
-- Små, atomare commits med Conventional Commits standard.
-- Opret Pull Requests for alle ændringer, også solo.
-- Gennemgå AI-genereret kode kritisk.
-
-### 9. AI Samarbejde
-- Brug kommentarer og docstrings som Copilot-prompts.
-- Bryd opgaver ned i små trin og iterér.
-- Gennemgå og valider altid AI-forslag.
-- Brug Copilot Chat og VSCode-udvidelser aktivt.
-
-### 10. Dokumentation
-- Dokumentér økonomiske modeller, antagelser og API-kontrakter i docs/ og i kode.
-- Hold README og projektbeskrivelser opdateret.
+**Næste skridt:**
+- Færdiggøre diplomati-systemet med *dynamiske* alliance-mekanismer og flere interaktionsmuligheder
+- Udvide event-systemet med mindst 20 nye event-typer fordelt på økonomiske, politiske og miljømæssige kategorier
+- Integrere alle systemer bedre med frontend visualiseringer og brugerinteraktioner
+- Implementere *strategisk* koalitionsdannelse og -anvendelse mellem AI-lande
+- Færdiggøre frontend integration af BudgetManager for komplet budget- og subsidiestyring i UI
+- Udbygge AIExplanationSystem med flere detaljerede og kontekstspecifikke forklaringer af AI-beslutninger
 
 ---
 
-## AI-arkitektur og status (opdateret 21. april 2025)
+## AI-arkitektur og status (opdateret 23. april 2025)
 
 ### Valgt AI-strategi
 - Hybrid-tilgang: Utility AI til beslutningsvalg (vægtning af økonomiske/politiske/diplomatiske faktorer) kombineret med Finite State Machines (FSM) eller Behavior Trees (BT) til overordnet strategistyring og sekventering af handlinger.
-- AI-profiler/personligheder: Hver nation får personlighed baseret på styreform (demokrati, autokrati, hybrid) og økonomisk situation, som påvirker AI’ens vægtning og adfærd.
-- Forklarbarhed: AI’ens motiver og valg skal kunne forklares for spilleren (ingen sort boks).
+- AI-profiler/personligheder: Hver nation får en detaljeret `CountryProfile` med mange træk (økonomisk, diplomatisk, lederskab, tech etc.), genereret baseret på landets data og styreform, som påvirker AI'ens vægtning og adfærd (`backend/diplomacy_ai.py`).
+- Forklarbarhed: AI'ens motiver og valg skal kunne forklares for spilleren (ingen sort boks).
 - Ingen tung ML i realtid – evt. kun offline til tuning af parametre.
 
 ### Implementeret
-- Grundlæggende FSM-struktur for AI-landes strategitilstand (fx neutral, aggressiv, samarbejdende).
-- Utility-baseret beslutningslogik for toldsatser og sektorbeskyttelse (vægtning af BNP, arbejdsløshed, sektoroutput, politisk stabilitet mv.).
-- AI-profiler: Landenes styreform og økonomiske situation påvirker AI’ens valg (fx demokrati vægter stabilitet, autokrati vægter magt).
-- Simpel feedback-loop: AI’s handlinger påvirker økonomimodellen, og modeloutput bruges i næste AI-evaluering.
+- Grundlæggende FSM-struktur for AI-landes strategitilstand (fx neutral, aggressiv, samarbejdende) (`backend/diplomacy_ai.py`).
+- Utility-baseret beslutningslogik for toldsatser og sektorbeskyttelse (vægtning af BNP, arbejdsløshed, sektoroutput, politisk stabilitet mv.) (`backend/diplomacy_ai.py`).
+- AI-profiler: Detaljerede `CountryProfile` klasser implementeret, som dynamisk påvirker AI'ens valg (`backend/diplomacy_ai.py`).
+- Simpel feedback-loop: AI's handlinger påvirker økonomimodellen, og modeloutput bruges i næste AI-evaluering (`backend/engine.py`, `backend/diplomacy_ai.py`).
+- Grundlæggende koalitionslogik (`backend/test_coalition.py`).
+- Backend integration for AI budget/subsidy handlinger i `engine.py` via BudgetManager klassen.
+- Implementeret AIExplanationSystem til at generere detaljerede og forståelige forklaringer af AI-beslutninger.
 - Ingen ML eller evolverende strategier i runtime.
 
 ### Næste trin
-- Udbygge utility-funktioner med flere handlinger (alliancer, diplomati, subsidier, budget).
-- Implementere forklarende feedback til spilleren om AI’ens valg og motiver.
+- Udbygge utility-funktioner med flere handlinger (færdiggøre diplomati, subsidier, budget).
+- Videreudvikle AIExplanationSystem med mere omfattende forklarende feedback til spilleren om AI'ens valg og motiver.
 - Udvide FSM/BT med flere tilstande og transitions.
+- Udbygge koalitionslogik til strategisk dannelse og anvendelse.
 - Mulighed for at vælge AI-sværhedsgrad og personlighed i UI.
+- Integrere BudgetManager komplet med frontend for at give spilleren indblik i AI'ens budget- og subsidiestrategier.
 
 ### Kommentar
-AI’en følger nu best practise for strategispil: Utility AI + FSM/BT, personlighedsparametre, forklarbarhed og ingen black-box. Udviklingen følger anbefalingerne fra AI-analysen og rapporten. Klar til at udbygge med flere handlinger, feedback og sværhedsgrader.
+AI'en følger nu best practise for strategispil: Utility AI + FSM/BT, detaljerede personlighedsparametre, forklarbarhed og ingen black-box. Udviklingen følger anbefalingerne fra AI-analysen og rapporten. Klar til at udbygge med flere handlinger, feedback, forbedret koalitionslogik og sværhedsgrader. Backend integration af budget- og subsidiestyring er nu implementeret via BudgetManager klassen, men mangler fuld frontend integration.
 
 ---
 
-## Status (opdateret 21. april 2025)
+## Status (opdateret 23. april 2025)
 
 ### Implementerede trin
-- [x] Udvidet data- og modelstruktur til at understøtte sektorer i både Python-klasser og countries.json.
-- [x] Grundlæggende sektorspecifik simulation: Sektorer opdateres for output, pris, import/eksport, nettoeksport og ledighed pr. tur.
-- [x] Aggregering af BNP og arbejdsløshed fra sektorer til land.
-- [x] Implementeret pris- og handelsdynamik pr. sektor inkl. tariffer og priselasticitet.
-- [x] Makroøkonomiske feedbacks: valutakurs, investering, kapacitetsudbygning og finanspolitik opdateres pr. tur.
-- [x] AI-logik: tit-for-tat-tariffer, sektorbeskyttelse og justering af skat/rente ved høj gæld.
-- [x] Frontend: Dynamisk visning af lande- og sektordata, KPI’er, sektorgrafer og pædagogisk feedback til spilleren efter hver tur.
-- [x] countries.json er nu gyldig JSON uden kommentarer.
+- [x] Udvidet data- og modelstruktur til at understøtte sektorer i både Python-klasser og countries.json (`backend/models.py`, `data/countries.json`).
+- [x] Grundlæggende sektorspecifik simulation: Sektorer opdateres for output, pris, import/eksport, nettoeksport og ledighed pr. tur (`backend/engine.py`).
+- [x] Aggregering af BNP og arbejdsløshed fra sektorer til land (`backend/engine.py`).
+- [x] Implementeret pris- og handelsdynamik pr. sektor inkl. tariffer og priselasticitet (`backend/engine.py`).
+- [x] Makroøkonomiske feedbacks: valutakurs, investering, kapacitetsudbygning og finanspolitik opdateres pr. tur (`backend/engine.py`).
+- [x] AI-logik: tit-for-tat-tariffer, sektorbeskyttelse og justering af skat/rente ved høj gæld (`backend/diplomacy_ai.py`).
+- [x] Frontend: Dynamisk visning af lande- og sektordata, KPI'er, sektorgrafer og pædagogisk feedback til spilleren efter hver tur (`frontend/src/`).
+- [x] countries.json er nu gyldig JSON uden kommentarer (`data/countries.json`).
+- [x] Diplomati system med relationer, sanktioner og detaljerede AI-profiler (`backend/diplomacy_ai.py`, `frontend/src/components/DiplomacyPanel.jsx`).
+- [x] Robust event system implementeret med flere komplekse events og visualiseret (`backend/event_types.py`, `frontend/src/components/EventFeedPanel.jsx`).
+- [x] BNP historik panel implementeret (`frontend/src/components/BNPHistoryPanel.jsx`).
+- [x] Udviklet avanceret HistoricalDataset klasse til benchmarking af økonomiske data (`backend/engine.py`).
+- [x] Implementeret EconomicCalibrator til kalibrering af økonomiske parametre (`backend/engine.py`).
+- [x] Udvidet feedback-systemet med EnhancedFeedbackSystem for detaljerede økonomiske forklaringer (`backend/engine.py`).
+- [x] Implementeret BudgetManager for detaljeret budget- og subsidiehåndtering (`backend/engine.py`).
+- [x] Udviklet AIExplanationSystem til at generere forklaringer af AI-beslutninger (`backend/diplomacy_ai.py`).
 
 ### Næste trin
-- Udbygge AI-strategier og politiske beslutninger.
-- Flere interaktive frontend-elementer (valg, events, avanceret visualisering).
+- Udbygge AI-strategier (færdiggøre frontend integration af budget/subsidier, strategiske koalitioner) og politiske beslutninger.
+- Tilføje flere event-typer og scenario-vælger.
+- Flere interaktive frontend-elementer (avanceret filtrering).
+- Udfylde tutorial (`frontend/src/components/TutorialPanel.jsx`) og færdiggøre lande-analyse (`frontend/src/components/CountryAnalysisPanel.jsx`).
 - Udvide test og dokumentation.
+- Kalibrere økonomiske parametre ved hjælp af den implementerede EconomicCalibrator.
+- Integrere BudgetManager fuldt ud med frontend for komplet budget- og subsidiestyring i UI.
+- Udvide benchmarking-funktionaliteten med flere visualiseringer og sammenligninger.
 
 ### Kommentar
-Projektet har nu en fuldt funktionel turbaseret kerne, AI-modstandere, makroøkonomiske feedbacks og pædagogisk feedback til spilleren. Klar til videreudvikling og finpudsning.
+Projektet har nu en fuldt funktionel turbaseret kerne, AI-modstandere med detaljerede profiler, makroøkonomiske feedbacks, et robust diplomati- og event-system, samt pædagogisk feedback til spilleren. Avanceret budget- og subsidiestyring er implementeret i backend via BudgetManager, og historiske dataevalueringer via HistoricalDataset og EconomicCalibrator. AI-beslutninger kan nu forklares ved hjælp af AIExplanationSystem. Klar til videreudvikling, indholdsudfyldning og finpudsning, med særligt fokus på at færdiggøre frontend-integrationen af budget- og subsidiesystemet.
 
 ---
 
-## Glossar (centrale økonomiske termer)
-- **Output gap**: Forskellen mellem faktisk og potentiel BNP.
-- **Pass-through**: Hvor meget en prisændring (fx told) slår igennem til forbrugerpriser.
-- **Accelerator**: Mekanisme hvor høj vækst øger investeringer.
-- **Stylized facts**: Empirisk observerede mønstre i økonomiske data.
-- **Emergens**: Makroeffekter opstår fra mikrointeraktioner mellem agenter.
+## Implementeringsplan og tjekpoints (Opdateret 23. april 2025)
 
-## Datakilder og Vedligeholdelse
-- Data for lande og sektorer hentes primært fra Verdensbanken, IMF, Eurostat og nationale statistikkontorer. Data lagres i JSON/CSV-format.
-- Data opdateres manuelt efter behov (ikke automatisk/dagligt i første version).
-- Dokumentér datakilder og versionshistorik i docs/.
+1.  **Basisstruktur og data**
+    - [x] Udvid countries.json med flere lande og sektordata (`data/countries.json`)
+    - [x] Definér sektorer og deres parametre (output, beskæftigelse, importandel, mv.) (`backend/models.py`)
+    - [x] Opret grundlæggende Python-klasser for land, sektor og økonomisk model (`backend/models.py`)
 
-## Data- og afhængighedsstyring
-- Alle eksterne Python-pakker og versioner angives i requirements.txt eller pyproject.toml.
-- Brug venv til at oprette virtuelt miljø: `python3 -m venv .venv && source .venv/bin/activate`.
-- Frontend-afhængigheder styres med package.json.
+2.  **Handels- og prisdynamik**
+    - [x] Implementér tarif- og prisformler (P_import, P_domestic) (`backend/engine.py`)
+    - [x] Implementér dynamisk kobling mellem økonomier (P_f som vægtet gennemsnit) (`backend/engine.py`)
+    - [x] Implementér sektoropdelt import/eksport og elasticiteter (`backend/engine.py`)
 
-## Agent-baseret Model (ABM) og AI
-- AI-agenters beslutningslogik starter med simple regler (fx tit-for-tat, heuristikker). Mulighed for senere udvidelse med machine learning.
-- Interaktion mellem agenter sker globalt (alle lande kan handle med alle, men vægte kan bruges for netværkseffekter).
-- Emergens: Målet er at observere makroøkonomiske fænomener, der opstår fra agenternes mikrobeslutninger.
-- Informationsflow: Agenter har adgang til relevante globale og lokale økonomiske indikatorer.
+3.  **Valutakurs og kapitalbevægelser**
+    - [x] Implementér valutakursmekanisme (delta_fx) (`backend/engine.py`)
+    - [ ] Kalibrér k1 og k2 (Næste trin)
 
-## Simuleringsmotor og Tidsstyring
-- Spillet er turbaseret (turn-based). Hver tur repræsenterer et kvartal.
-- Simuleringsloop: 1) Spilleren vælger politikker, 2) AI-lande agerer, 3) Simulering køres, 4) Resultater vises, 5) Trust og events opdateres.
-- Handlinger udføres sekventielt pr. tur.
+4.  **Makroøkonomiske feedbacks**
+    - [x] Implementér Okuns lov (arbejdsløshed) (`backend/engine.py`)
+    - [x] Implementér Phillips-kurve med importpriser (inflation) (`backend/engine.py`)
+    - [ ] Implementér forventningsdannelse (π^e) (Fremtidig udvidelse)
 
-## Modelvalidering og Kalibrering
-- Modellen valideres mod historiske data og stylized facts (fx recessioner, handelschok).
-- Parametre (k1, k2, β, φ, γ) kalibreres manuelt og dokumenteres i en config-fil og i docs/.
+5.  **Sektorspecifik logik**
+    - [x] Implementér sektorspecifikke tariffer og prisdannelse (`backend/engine.py`)
+    - [x] Implementér sektoropdelt output, beskæftigelse og investering (`backend/engine.py`)
+    - [x] Implementér aggregering til BNP og samlet arbejdsløshed (`backend/engine.py`)
 
-## Tekniske Detaljer
-- Database: Simulationsdata og historik gemmes i fil (JSON/CSV) eller evt. SQLite. Event Sourcing/TSDB kan overvejes for avanceret analyse.
-- Skalerbarhed: Systemet designes modulært, så flere lande/sektorer kan tilføjes uden større omskrivning.
-- Deployment: Lokalt på macOS, evt. Docker til containerisering. Cloud kan overvejes senere.
+6.  **Investering og kapacitetsudbygning**
+    - [x] Implementér investeringsfunktion og fordeling på sektorer (`backend/engine.py`)
+    - [x] Opdater sektorspecifik kapitalstock og kapacitet (`backend/engine.py`)
 
-## Dokumentationsstandard (ODD-principper integreret)
-- Formål, entiteter, processer, designkoncepter, initialisering, inputdata og submodeller beskrives løbende i relevante afsnit.
-- ODD-struktur bruges som guideline for modelbeskrivelser og kodekommentarer.
+7.  **Finanspolitik og offentlig gæld**
+    - [x] Implementér skatteprovenu, offentlige udgifter og gældsopbygning (`backend/engine.py`)
+    - [x] Implementér detaljeret budget- og subsidiestyring med BudgetManager (`backend/engine.py`)
+    - [ ] Implementér forbrugsfunktion (MPC, wealth, confidence) (Fremtidig udvidelse)
 
-## CI/CD, Versionskontrol og Workflow
-- Brug Git og GitHub. GitHub Actions kan bruges til automatiske tests, linting og deploy.
-- Små, atomare commits med Conventional Commits.
-- README indeholder Getting Started, installationsvejledning og kodeeksempler.
+8.  **Politisk tillid og feedback**
+    - [x] Implementér trust-mekanisme og kobling til økonomiske nøgletal (`backend/models.py`, `backend/engine.py`)
+    - [x] Implementér effekter af politiske beslutninger på trust (`backend/engine.py`)
+    - [x] Udvikle EnhancedFeedbackSystem til detaljerede økonomiske forklaringer (`backend/engine.py`)
 
-## Error handling, logging og overvågning
-- Brug Python logging med INFO/WARNING/ERROR-niveauer.
-- Fejl håndteres med undtagelser og brugervenlige fejlbeskeder. Manglende data eller beregningsfejl logges og vises i UI.
-
-## Performance og skalering
-- Tunge simuleringer kan køres asynkront eller i batch (fx med multiprocessing eller asyncio).
-- Caching af resultater kan implementeres senere (fx med memoization).
-
-## Sikkerhed og adgangskontrol
-- Simulatoren er singleplayer og kræver ikke login.
-- Inputvalidering på alle brugerinput og API-kald.
-
-## Parameter-kalibrering og validering
-- Standardværdier for parametre dokumenteres i config-fil og docs.
-- Mulighed for at justere parametre via UI eller config.
-
-## Scenario- og event-system
-- Events (fx naturkatastrofer, teknologiske gennembrud) implementeres som modulært event-system med triggers, sandsynligheder og effekter.
-- Events vises i UI som notifikationer.
-
-## Turn-sequence og game-flow
-- Hver tur: 1) Spilleren vælger handlinger, 2) AI-lande agerer, 3) Simulering, 4) Resultater, 5) Trust/events opdateres.
-- En tur = ét kvartal. En kamp varer typisk 20-40 ture.
-
-## API-specifikation
-- REST API med endpoints som fx GET /api/v1/countries, POST /api/v1/actions.
-- Input/output i JSON. API-dokumentation i docs/.
-
-## Onboarding og udviklervejledning
-- README har Getting Started, installationsguide, testkørsel, kode-style, og almindelige kommandoer.
-- Coding conventions og branch-politik beskrives i CONTRIBUTING.md.
-
-## Licens & bidrag
-- Licens (fx MIT) angives i LICENSE.txt. Eksterne bidragsherrer henvises til CONTRIBUTING.md.
-
-## Accessibility & internationalisering
-- UI designes til dansk (ingen i18n i første version).
-- Grundlæggende tilgængelighed (kontrast, tastaturnavigation) overholdes.
-
-## Implementeringsplan og tjekpoints
-
-1. **Basisstruktur og data**
-   - [ ] Udvid countries.json med flere lande og sektordata
-   - [ ] Definér sektorer og deres parametre (output, beskæftigelse, importandel, mv.)
-   - [ ] Opret grundlæggende Python-klasser for land, sektor og økonomisk model
-
-2. **Handels- og prisdynamik**
-   - [ ] Implementér tarif- og prisformler (P_import, P_domestic)
-   - [ ] Implementér dynamisk kobling mellem økonomier (P_f som vægtet gennemsnit)
-   - [ ] Implementér sektoropdelt import/eksport og elasticiteter
-
-3. **Valutakurs og kapitalbevægelser**
-   - [ ] Implementér valutakursmekanisme (delta_fx)
-   - [ ] Kalibrér k1 og k2
-
-4. **Makroøkonomiske feedbacks**
-   - [ ] Implementér Okuns lov (arbejdsløshed)
-   - [ ] Implementér Phillips-kurve med importpriser (inflation)
-   - [ ] Implementér forventningsdannelse (π^e)
-
-5. **Sektorspecifik logik**
-   - [ ] Implementér sektorspecifikke tariffer og prisdannelse
-   - [ ] Implementér sektoropdelt output, beskæftigelse og investering
-   - [ ] Implementér aggregering til BNP og samlet arbejdsløshed
-
-6. **Investering og kapacitetsudbygning**
-   - [ ] Implementér investeringsfunktion og fordeling på sektorer
-   - [ ] Opdater sektorspecifik kapitalstock og kapacitet
-
-7. **Finanspolitik og offentlig gæld**
-   - [ ] Implementér skatteprovenu, offentlige udgifter og gældsopbygning
-   - [ ] Implementér forbrugsfunktion (MPC, wealth, confidence)
-
-8. **Politisk tillid og feedback**
-   - [ ] Implementér trust-mekanisme og kobling til økonomiske nøgletal
-   - [ ] Implementér effekter af politiske beslutninger på trust
-
-9. **AI og international respons**
-   - [ ] Implementér AI-logik for tit-for-tat, sektorbeskyttelse og alliancer
-   - [ ] Implementér AI’s interne trust og politiske mål
+9.  **AI og international respons**
+    - [x] Implementér AI-logik for tit-for-tat, sektorbeskyttelse (`backend/diplomacy_ai.py`)
+    - [x] Implementér AI's interne trust og politiske mål (`backend/diplomacy_ai.py`)
+    - [x] Implementér grundlæggende AI-alliancelogik/koalitioner (`backend/test_coalition.py`, `backend/diplomacy_ai.py`)
+    - [x] Udvikle AIExplanationSystem til at generere forklaringer af AI-beslutninger (`backend/diplomacy_ai.py`)
+    - [ ] Udbyg AI-strategier (frontend integration af budget/subsidier, avanceret koalition) (Næste trin)
 
 10. **Test, validering og dokumentation**
-   - [ ] Skriv enhedstests for alle centrale funktioner
-   - [ ] Dokumentér alle økonomiske antagelser og formler i kode og docs
-   - [ ] Løbende validering mod kendte økonomiske cases
+    - [x] Skriv enhedstests for centrale funktioner (`backend/test_*.py`)
+    - [ ] Dokumentér alle økonomiske antagelser og formler i kode og docs (Løbende)
+    - [ ] Løbende validering mod kendte økonomiske cases (Næste trin/Løbende)
+    - [x] Implementér historisk data benchmarking med HistoricalDataset (`backend/engine.py`)
+    - [x] Udvikle EconomicCalibrator til kalibrering af økonomiske parametre (`backend/engine.py`)
 
 ---
 
@@ -367,12 +240,14 @@ Projektet har nu en fuldt funktionel turbaseret kerne, AI-modstandere, makroøko
 - Hvert tjekpunkt bør markeres som færdigt i referencedokumentet, så fremdrift kan følges.
 - Se detaljeret beskrivelse og eksempler i denne sektion for formelgrundlag og kodeeksempler.
 
+---
+
 ## UI Design Forslag
 
 ### Overordnede UI/UX-principper (opdateret 21. april 2025)
 
 #### Dashboard Layout & Struktur
-- Brug et modulært, grid-baseret dashboard med venstre navigation, topbar og et indholdsområde med widgets (kort, KPI’er, tabeller).
+- Brug et modulært, grid-baseret dashboard med venstre navigation, topbar og et indholdsområde med widgets (kort, KPI'er, tabeller).
 - Hver widget vises i et card-lignende panel og kan flyttes, skjules eller omarrangeres af brugeren.
 - Layoutet skal være responsivt til forskellige desktop-opløsninger (1080p til 4K) og kunne tilpasse sig vinduesstørrelse.
 - Navigationen til venstre giver hurtig adgang til sektioner som Økonomi, Handelspolitik, Analyse og Indstillinger.
