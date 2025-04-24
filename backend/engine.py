@@ -173,6 +173,31 @@ class HistoricalDataset:
                 result['global_values'].append(None)
         
         return result
+    
+    def get_country_benchmarks(self, country_iso, years=None, metrics=None):
+        """
+        Get benchmarks data structured for API: years list and metrics dict mapping each metric
+        to country, regional, and global series.
+        """
+        import datetime
+        if not self.loaded or country_iso not in self.data:
+            return {'years': years or [], 'metrics': {}}
+        # Default to last 10 years if not provided
+        current_year = datetime.datetime.now().year
+        if years is None:
+            years = [str(current_year - i) for i in reversed(range(10))]
+        # Default metrics to available ones
+        available = set(self.global_averages.keys())
+        if metrics is None:
+            metrics = list(available)
+        # Build metrics structure
+        result_metrics = {}
+        for metric in metrics:
+            # get_benchmark_data expects years as ints
+            year_ints = [int(y) for y in years]
+            bench = self.get_benchmark_data(country_iso, metric, year_ints)
+            result_metrics[metric] = bench
+        return {'years': years, 'metrics': result_metrics}
 
 class EconomicCalibrator:
     """
@@ -1087,6 +1112,7 @@ class GameEngine:
         self.countries = {}
         self.current_turn = 0
         self.historical_data = HistoricalDataset()
+        self.historical_dataset = self.historical_data  # Alias for API routes compatibility
         self.feedback_system = EnhancedFeedbackSystem(self.historical_data)
         self.ai_explanation_system = None
         self.ai_decisions_history = []

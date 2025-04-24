@@ -1,0 +1,43 @@
+.policy-panel {
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+  margin-bottom: 15px;
+}
+
+.policy-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.policy-selection {
+  margin-bottom: 10px;
+}
+
+.policy-feedback {
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.policy-feedback-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.policy-feedback-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.policy-feedback-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.policy-feedback-loading {
+  background-color: #e2e3e5;
+  color: #383d41;
+}

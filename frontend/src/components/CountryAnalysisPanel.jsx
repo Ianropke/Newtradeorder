@@ -34,6 +34,19 @@ ChartJS.register(
   annotationPlugin
 );
 
+// Add the missing debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [competitorData, setCompetitorData] = useState([]);
@@ -53,6 +66,21 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
   const [retryCount, setRetryCount] = useState(0);
   const chartRef = useRef(null);
   const maxRetries = 3;
+
+  // Helper function for getting human-readable metric labels
+  const getMetricLabel = (metricKey) => {
+    const metricLabels = {
+      'gdp_growth': 'BNP Vækst',
+      'inflation': 'Inflation',
+      'unemployment': 'Arbejdsløshed',
+      'trade_balance': 'Handelsbalance',
+      'government_debt': 'Offentlig Gæld',
+      'fdi': 'Udenlandske Investeringer',
+      'industrial_production': 'Industriproduktion'
+    };
+    
+    return metricLabels[metricKey] || metricKey;
+  };
 
   // Debounced data fetching to prevent excessive API calls
   const debouncedFetch = useCallback(
@@ -111,65 +139,94 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
           } else if (endpoint.includes('historical')) {
             fetchHistoricalBenchmarks(country.iso_code);
           } else {
-            // Retry all
-            fetchTradeData(country.iso_code);
-            fetchHistoricalBenchmarks(country.iso_code);
+            // General retry
+            debouncedFetch(() => fetchAllData());
           }
         }
-      }, 1000 * Math.pow(2, retryCount));
+      }, Math.pow(2, retryCount) * 1000); // Exponential backoff: 2s, 4s, 8s
     } else {
-      // Max retries reached, show final error and fallback to mock data
-      setError(`${userMessage} - Bruger simulerede data i stedet.`);
-      setRetryCount(0);
+      setError(userMessage);
       
-      // Generate mock data as fallback
-      if (endpoint.includes('trade') || !endpoint) {
-        generateDummyTradeData();
-        generateDummyCompetitors();
-      }
-      
-      if (endpoint.includes('historical') || !endpoint) {
-        generateMockHistoricalData();
-        setDataSource('mock');
+      // If we've exhausted retries, generate mock data
+      if (endpoint.includes('historical') && country) {
+        generateMockHistoricalData(country.iso_code);
+      } else if (endpoint.includes('trade') && country) {
+        generateMockTradeData(country.iso_code);
       }
     }
   };
 
-  const fetchTradeData = async (iso) => {
+  const fetchTradeData = async (countryIso) => {
     try {
-      const partnersRes = await fetch(`/api/trade_partners/${iso}`);
+      const response = await fetch(`/api/trade_partners/${countryIso}`);
       
-      if (!partnersRes.ok) {
-        throw new Error(`Status ${partnersRes.status}: ${await partnersRes.text().catch(() => 'Ukendt fejl')}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => `${response.status} ${response.statusText}`);
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
       }
       
-      const partnersData = await partnersRes.json();
-
-      if (partnersData.partners) {
-        setTradePartners(partnersData.partners);
-
-        const totalTrade = partnersData.partners.reduce((sum, partner) =>
-          sum + (partner.importVolume || 0) + (partner.exportVolume || 0), 0);
-        setTradeDependency(totalTrade / (country.gdp || 1));
-      }
-
-      const competitorsRes = await fetch(`/api/competitors/${iso}`);
+      const data = await response.json();
       
-      if (!competitorsRes.ok) {
-        throw new Error(`Status ${competitorsRes.status}: ${await competitorsRes.text().catch(() => 'Ukendt fejl')}`);
+      if (data.error) {
+        throw new Error(data.error);
       }
       
-      const competitorsData = await competitorsRes.json();
-      
-      if (competitorsData.competitors) {
-        setCompetitorData(competitorsData.competitors);
+      if (data.partners) {
+        setTradePartners(data.partners);
+        
+        // Calculate trade dependency
+        const totalTradeVolume = data.partners.reduce((sum, partner) => sum + partner.tradeVolume, 0);
+        const countryGdp = country?.gdp || 1;
+        const dependencyRatio = totalTradeVolume / countryGdp;
+        setTradeDependency(dependencyRatio);
+      } else {
+        setTradePartners([]);
+        setTradeDependency(0);
       }
       
       // Reset retry count on success
       setRetryCount(0);
+      setError(null);
     } catch (error) {
-      handleFetchError(error, 'handelsdata');
+      console.error("Trade data fetch error:", error);
+      handleFetchError(error, 'trade partners');
     }
+  };
+
+  const generateMockTradeData = (countryIso) => {
+    console.log("Generating mock trade data as fallback");
+    const mockPartners = [];
+    
+    // Use existing countries data to generate realistic mock trade partners
+    if (allCountries && allCountries.length > 0) {
+      const partnerCount = Math.min(5, allCountries.length - 1);
+      
+      for (let i = 0; i < partnerCount; i++) {
+        const partner = allCountries[i];
+        if (partner.iso_code === countryIso) continue;
+        
+        const importVolume = Math.floor(Math.random() * 5000) + 1000;
+        const exportVolume = Math.floor(Math.random() * 5000) + 1000;
+        
+        mockPartners.push({
+          country: {
+            name: partner.name,
+            iso_code: partner.iso_code,
+            region: partner.region
+          },
+          iso_code: partner.iso_code,
+          importVolume,
+          exportVolume,
+          tradeVolume: importVolume + exportVolume,
+          tradeBalance: exportVolume - importVolume,
+          dependencyScore: (importVolume + exportVolume) / (country?.gdp || 10000),
+          isCritical: Math.random() > 0.7
+        });
+      }
+    }
+    
+    setTradePartners(mockPartners);
+    setTradeDependency(0.15 + Math.random() * 0.1);
   };
 
   const fetchHistoricalBenchmarks = async (iso) => {
@@ -179,16 +236,22 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       setHistoricalBenchmarks(null);
       setEconomicTrends([]);
       
-      // Fetch from our new historical benchmarks endpoint
-      const response = await fetch(`/api/countries/${iso}/historical-benchmarks`);
+      // Fetch from our historical benchmarks endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`/api/countries/${iso}/historical-benchmarks`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const errorMessage = await response.text().catch(() => 'Ukendt fejl');
-        throw new Error(`Status ${response.status}: ${errorMessage}`);
+        const errorText = await response.text().catch(() => `${response.status} ${response.statusText}`);
+        throw new Error(`Status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log("Received historical data:", data);
       
       if (data.status === 'mock') {
         console.info("Using mock historical data from server:", data.message);
@@ -211,8 +274,14 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       
       // Reset retry count on success
       setRetryCount(0);
+      setError(null);
     } catch (error) {
-      handleFetchError(error, 'historiske data');
+      console.error("Historical data fetch error:", error);
+      if (error.name === 'AbortError') {
+        handleFetchError(new Error('Request timed out after 10 seconds'), 'historiske data');
+      } else {
+        handleFetchError(error, 'historiske data');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -249,6 +318,292 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
     
     // Generate summary trends for overview tab
     generateTrendSummaries(data);
+  };
+
+  // Mock data generation functions
+  const generateDummyTradeData = () => {
+    // Create mock trade partners data
+    const mockPartners = [];
+    const partnerCount = 5 + Math.floor(Math.random() * 4);
+    
+    const possiblePartners = Object.values(allCountries || {})
+      .filter(c => c.iso_code !== country.iso_code)
+      .slice(0, 10);
+    
+    for(let i = 0; i < partnerCount && i < possiblePartners.length; i++) {
+      const partner = possiblePartners[i];
+      const importVolume = Math.random() * 100;
+      const exportVolume = Math.random() * 100;
+      
+      mockPartners.push({
+        country: partner,
+        iso_code: partner.iso_code,
+        importVolume,
+        exportVolume,
+        tradeBalance: exportVolume - importVolume,
+        dependencyScore: (importVolume + exportVolume) / (country.gdp || 1000),
+        isCritical: Math.random() > 0.7
+      });
+    }
+    
+    setTradePartners(mockPartners);
+    
+    // Calculate trade dependency
+    const totalTrade = mockPartners.reduce((sum, partner) => 
+      sum + partner.importVolume + partner.exportVolume, 0);
+    setTradeDependency(totalTrade / (country.gdp || 1000));
+  };
+  
+  const generateDummyCompetitors = () => {
+    // Create mock competitor data
+    const mockCompetitors = [];
+    const competitorCount = 3 + Math.floor(Math.random() * 3);
+    
+    const possibleCompetitors = Object.values(allCountries || {})
+      .filter(c => c.iso_code !== country.iso_code)
+      .slice(0, 8);
+    
+    const industries = [
+      'Agriculture', 'Manufacturing', 'Services', 'Technology', 
+      'Mining', 'Energy', 'Finance', 'Tourism'
+    ];
+    
+    for(let i = 0; i < competitorCount && i < possibleCompetitors.length; i++) {
+      const competitor = possibleCompetitors[i];
+      
+      // Create random overlapping industries
+      const mainIndustries = {};
+      const industryCount = 2 + Math.floor(Math.random() * 3);
+      
+      for(let j = 0; j < industryCount; j++) {
+        const industry = industries[Math.floor(Math.random() * industries.length)];
+        mainIndustries[industry] = 0.3 + Math.random() * 0.6;
+      }
+      
+      mockCompetitors.push({
+        country: competitor,
+        mainIndustries,
+        competitionIntensity: 0.3 + Math.random() * 0.6,
+        markets: ['Domestic', 'Regional', 'Global'].filter(() => Math.random() > 0.3)
+      });
+    }
+    
+    setCompetitorData(mockCompetitors);
+  };
+  
+  const generateMockHistoricalData = () => {
+    const years = [];
+    const currentYear = new Date().getFullYear();
+    
+    // Generate last 10 years
+    for(let i = 0; i < 10; i++) {
+      years.push(currentYear - 9 + i);
+    }
+    
+    // Generate metrics with country, regional and global values
+    const metrics = {
+      gdp_growth: {
+        country_values: years.map(() => (Math.random() * 6) - 0.5),
+        regional_values: years.map(() => (Math.random() * 4) + 0.5),
+        global_values: years.map(() => (Math.random() * 3) + 1)
+      },
+      inflation: {
+        country_values: years.map(() => (Math.random() * 5) + 0.5),
+        regional_values: years.map(() => (Math.random() * 3) + 1),
+        global_values: years.map(() => (Math.random() * 2) + 1.5)
+      },
+      unemployment: {
+        country_values: years.map(() => (Math.random() * 8) + 2),
+        regional_values: years.map(() => (Math.random() * 5) + 3),
+        global_values: years.map(() => (Math.random() * 3) + 4)
+      },
+      trade_balance: {
+        country_values: years.map(() => (Math.random() * 14) - 7),
+        regional_values: years.map(() => (Math.random() * 10) - 5),
+        global_values: years.map(() => (Math.random() * 6) - 3)
+      }
+    };
+    
+    // Generate performance metrics
+    const performance = {
+      gdp_growth: metrics.gdp_growth.country_values[years.length - 1],
+      region_gdp_growth: metrics.gdp_growth.regional_values[years.length - 1],
+      relative_performance: metrics.gdp_growth.country_values[years.length - 1] - 
+                           metrics.gdp_growth.regional_values[years.length - 1],
+      unemployment: metrics.unemployment.country_values[years.length - 1],
+      region_unemployment: metrics.unemployment.regional_values[years.length - 1],
+      unemployment_performance: metrics.unemployment.regional_values[years.length - 1] - 
+                               metrics.unemployment.country_values[years.length - 1]
+    };
+    
+    // Generate key events
+    const keyEvents = [
+      {
+        year: years[2],
+        event: 'Handelspolitisk reform',
+        impact: 'Positive',
+        magnitude: 'Medium'
+      },
+      {
+        year: years[5],
+        event: 'Global finanskrise',
+        impact: 'Negative',
+        magnitude: 'Very High'
+      },
+      {
+        year: years[8],
+        event: 'Teknologisk gennembrud',
+        impact: 'Positive',
+        magnitude: 'High'
+      }
+    ];
+    
+    // Set the historical data
+    setHistoricalBenchmarks({
+      country_name: country.name,
+      region: country.region,
+      years,
+      metrics,
+      performance,
+      key_events: keyEvents
+    });
+    
+    // Process trends data
+    const trends = [
+      {
+        metric: 'gdp_growth',
+        years,
+        countryValues: metrics.gdp_growth.country_values,
+        regionalValues: metrics.gdp_growth.regional_values,
+        globalValues: metrics.gdp_growth.global_values
+      },
+      {
+        metric: 'inflation',
+        years,
+        countryValues: metrics.inflation.country_values,
+        regionalValues: metrics.inflation.regional_values,
+        globalValues: metrics.inflation.global_values
+      },
+      {
+        metric: 'unemployment',
+        years,
+        countryValues: metrics.unemployment.country_values,
+        regionalValues: metrics.unemployment.regional_values,
+        globalValues: metrics.unemployment.global_values
+      },
+      {
+        metric: 'trade_balance',
+        years,
+        countryValues: metrics.trade_balance.country_values,
+        regionalValues: metrics.trade_balance.regional_values,
+        globalValues: metrics.trade_balance.global_values
+      }
+    ];
+    setEconomicTrends(trends);
+    
+    // Generate trend summaries for the overview tab
+    generateTrendSummaries({years, metrics});
+    
+    // Set key events
+    setKeyEvents(keyEvents);
+  };
+  
+  // Calculate performance metrics if not provided by the backend
+  const calculatePerformanceMetrics = (data) => {
+    if (!data.metrics || !data.years || data.years.length === 0) return;
+    
+    const latestYearIndex = data.years.length - 1;
+    
+    const performance = {
+      gdp_growth: data.metrics.gdp_growth?.country_values?.[latestYearIndex] || 0,
+      region_gdp_growth: data.metrics.gdp_growth?.regional_values?.[latestYearIndex] || 0,
+      relative_performance: (data.metrics.gdp_growth?.country_values?.[latestYearIndex] || 0) - 
+                           (data.metrics.gdp_growth?.regional_values?.[latestYearIndex] || 0),
+      unemployment: data.metrics.unemployment?.country_values?.[latestYearIndex] || 0,
+      region_unemployment: data.metrics.unemployment?.regional_values?.[latestYearIndex] || 0,
+      unemployment_performance: (data.metrics.unemployment?.regional_values?.[latestYearIndex] || 0) - 
+                               (data.metrics.unemployment?.country_values?.[latestYearIndex] || 0)
+    };
+    
+    // Update the historical benchmarks with the calculated performance
+    setHistoricalBenchmarks(prev => ({ ...prev, performance }));
+  };
+  
+  // Generate trend summaries for the overview tab
+  const generateTrendSummaries = (data) => {
+    if (!data.metrics || !data.years || data.years.length === 0) return;
+    
+    const latestYearIndex = data.years.length - 1;
+    const fiveYearsAgoIndex = Math.max(0, latestYearIndex - 5);
+    
+    const trendSummaries = [
+      {
+        trend: 'BNP Vækst',
+        current: data.metrics.gdp_growth?.country_values?.[latestYearIndex]?.toFixed(1) + '%' || 'N/A',
+        last_5_years: calculateAverage(
+          data.metrics.gdp_growth?.country_values?.slice(fiveYearsAgoIndex, latestYearIndex + 1) || []
+        ).toFixed(1) + '%',
+        outlook: generateOutlook(data.metrics.gdp_growth?.country_values)
+      },
+      {
+        trend: 'Inflation',
+        current: data.metrics.inflation?.country_values?.[latestYearIndex]?.toFixed(1) + '%' || 'N/A',
+        last_5_years: calculateAverage(
+          data.metrics.inflation?.country_values?.slice(fiveYearsAgoIndex, latestYearIndex + 1) || []
+        ).toFixed(1) + '%',
+        outlook: generateOutlook(data.metrics.inflation?.country_values, false)
+      },
+      {
+        trend: 'Arbejdsløshed',
+        current: data.metrics.unemployment?.country_values?.[latestYearIndex]?.toFixed(1) + '%' || 'N/A',
+        last_5_years: calculateAverage(
+          data.metrics.unemployment?.country_values?.slice(fiveYearsAgoIndex, latestYearIndex + 1) || []
+        ).toFixed(1) + '%',
+        outlook: generateOutlook(data.metrics.unemployment?.country_values, false)
+      },
+      {
+        trend: 'Handelsbalance',
+        current: data.metrics.trade_balance?.country_values?.[latestYearIndex]?.toFixed(1) + '%' || 'N/A',
+        last_5_years: calculateAverage(
+          data.metrics.trade_balance?.country_values?.slice(fiveYearsAgoIndex, latestYearIndex + 1) || []
+        ).toFixed(1) + '%',
+        outlook: generateOutlook(data.metrics.trade_balance?.country_values)
+      }
+    ];
+    
+    setEconomicTrends(prev => [...prev, ...trendSummaries]);
+  };
+  
+  // Helper function to calculate average
+  const calculateAverage = (values) => {
+    if (!values || values.length === 0) return 0;
+    return values.reduce((sum, val) => sum + val, 0) / values.length;
+  };
+  
+  // Helper function to generate outlook descriptions
+  const generateOutlook = (values, isPositiveBetter = true) => {
+    if (!values || values.length < 3) return 'Utilstrækkelige data';
+    
+    const lastThree = values.slice(-3);
+    const trend = (lastThree[2] - lastThree[0]) / lastThree[0] * 100;
+    
+    // For metrics where lower is better (like unemployment, inflation)
+    if (!isPositiveBetter) {
+      if (trend < -10) return 'Stærk forbedring';
+      if (trend < -5) return 'Moderat forbedring';
+      if (trend < 0) return 'Let forbedring';
+      if (trend < 5) return 'Stabil';
+      if (trend < 10) return 'Let forværring';
+      return 'Betydelig forværring';
+    }
+    
+    // For metrics where higher is better (like GDP growth)
+    if (trend > 10) return 'Stærk positiv';
+    if (trend > 5) return 'Moderat positiv';
+    if (trend > 0) return 'Let positiv';
+    if (trend > -5) return 'Stabil';
+    if (trend > -10) return 'Let negativ';
+    return 'Betydelig negativ';
   };
 
   const renderBenchmarkChart = () => {
@@ -426,19 +781,6 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
       </div>
     );
   };
-
-  // Utility function for debouncing
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
 
   if (!country) {
     return (
@@ -743,23 +1085,7 @@ function CountryAnalysisPanel({ country, allCountries, diplomacy, historicalData
                   {dataSource === 'real' ? 'Faktiske data' : 'Simulerede data'}
                 </span>
               </div>
-              
               <div className="metrics-visualization-container">
-                <div className="metric-selector">
-                  <label htmlFor="metric-select">Metrik:</label>
-                  <select 
-                    id="metric-select"
-                    value={selectedBenchmarkMetric}
-                    onChange={(e) => setSelectedBenchmarkMetric(e.target.value)}
-                    disabled={isLoading}
-                  >
-                    <option value="gdp_growth">BNP Vækst</option>
-                    <option value="inflation">Inflation</option>
-                    <option value="unemployment">Arbejdsløshed</option>
-                    <option value="trade_balance">Handelsbalance</option>
-                  </select>
-                </div>
-                
                 {renderBenchmarkControls()}
               </div>
             </div>

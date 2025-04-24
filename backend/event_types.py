@@ -492,6 +492,33 @@ COMMON_DIPLOMATIC_OPTIONS = [
     )
 ]
 
+# Define new economic and diplomatic event types using common options
+ECONOMIC_EVENT_TYPES = [
+    EventType(
+        id="economic_policy_event",
+        category="economic",
+        title_template="Økonomisk Politisk Debat i {country}",
+        description_template="Regeringen diskuterer økonomisk politik, herunder stimuli og besparelser.",
+        base_probability=0.05,
+        min_turn=1,
+        effects=[],
+        options=COMMON_ECONOMIC_OPTIONS
+    )
+]
+
+DIPLOMATIC_EVENT_TYPES = [
+    EventType(
+        id="diplomatic_incident",
+        category="diplomatic",
+        title_template="Diplomatisk Hændelse med {other_country}",
+        description_template="Der opstår en diplomatisk hændelse mellem {country} og {other_country}.",
+        base_probability=0.04,
+        min_turn=1,
+        effects=[],
+        options=COMMON_DIPLOMATIC_OPTIONS
+    )
+]
+
 # Event types specific to trade conflicts
 TRADE_EVENT_TYPES = [
     EventType(
@@ -746,7 +773,7 @@ TRADE_EVENT_TYPES = [
     )
 ]
 
-ALL_EVENT_TYPES = TRADE_EVENT_TYPES
+ALL_EVENT_TYPES = ECONOMIC_EVENT_TYPES + DIPLOMATIC_EVENT_TYPES + TRADE_EVENT_TYPES
 
 def check_and_trigger_events(game_engine):
     """

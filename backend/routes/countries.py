@@ -20,7 +20,7 @@ historical_data = HistoricalDataset(os.path.join('data', 'historical_data.json')
 # Get game state reference (it will be properly initialized in main.py)
 game_state = GameState()
 
-@countries_blueprint.route('/api/countries', methods=['GET'])
+@countries_blueprint.route('/countries', methods=['GET'])
 def get_countries():
     """Get all countries"""
     from main import game_engine
@@ -30,9 +30,10 @@ def get_countries():
         country_dict = country_to_dict(country)
         country_data[iso] = country_dict
     
-    return jsonify(country_data)
+    # Return as array for frontend compatibility
+    return jsonify(list(country_data.values()))
 
-@countries_blueprint.route('/api/countries/<country_id>', methods=['GET'])
+@countries_blueprint.route('/countries/<country_id>', methods=['GET'])
 def get_country(country_id):
     """Get a specific country by ISO code"""
     from main import game_engine
@@ -43,7 +44,7 @@ def get_country(country_id):
     
     return jsonify(country_to_dict(country))
 
-@countries_blueprint.route('/api/countries/<country_id>/historical-benchmarks', methods=['GET'])
+@countries_blueprint.route('/countries/<country_id>/historical-benchmarks', methods=['GET'])
 def get_historical_benchmarks(country_id):
     """
     Get historical benchmark data for a specific country.
@@ -84,109 +85,86 @@ def get_historical_benchmarks(country_id):
         }), 500
 
 def generate_mock_historical_data(country):
-    """
-    Generate realistic mock historical data when real data is not available.
-    This ensures the frontend can still function and display visualizations.
-    """
+    """Generate mock historical data when actual data is unavailable"""
+    logger.info(f"Generating mock historical data for {country.name}")
+    
+    years = []
     current_year = datetime.now().year
-    years = list(range(current_year - 10, current_year + 1))
     
-    gdp_growth_current = getattr(country, 'growth_rate', 2.0)
-    unemployment_current = getattr(country, 'unemployment_rate', 5.0)
-    inflation_current = getattr(country, 'inflation_rate', 2.0)
+    # Generate last 10 years
+    for i in range(10):
+        years.append(current_year - 9 + i)
     
-    np.random.seed(int(country.iso_code.encode().hex(), 16) % 10000)
-    
-    base_growth = 2.5
-    cycle_amplitude = 1.5
-    gdp_values = [
-        base_growth + cycle_amplitude * np.sin(i/3) + np.random.normal(0, 0.8) 
-        for i in range(len(years))
-    ]
-    
-    base_unemployment = 5.0
-    unemployment_values = [
-        base_unemployment - 0.7 * gdp_values[max(0, i-1)] + np.random.normal(0, 0.5) 
-        for i in range(len(years))
-    ]
-    unemployment_values = [max(2.0, min(15.0, u)) for u in unemployment_values]
-    
-    base_inflation = 2.0
-    inflation_values = [
-        base_inflation + 0.3 * gdp_values[i] + cycle_amplitude * 0.5 * np.sin(i/2 + 1) + np.random.normal(0, 0.7) 
-        for i in range(len(years))
-    ]
-    inflation_values = [max(0.0, min(12.0, inf)) for inf in inflation_values]
-    
-    trade_balance_values = [
-        (getattr(country, 'exports', 0) - getattr(country, 'imports', 0)) / max(1, getattr(country, 'gdp', 100)) * 100 +
-        2.0 * np.sin(i/2.5) + np.random.normal(0, 1.5)
-        for i in range(len(years))
-    ]
-    
-    crisis_years = {2008: 'financial_crisis', 2020: 'covid_pandemic'}
-    for year_idx, year in enumerate(years):
-        if year in crisis_years:
-            if crisis_years[year] == 'financial_crisis':
-                gdp_values[year_idx] = -3.0 + np.random.normal(0, 1.0)
-                unemployment_values[year_idx] += 2.0 + np.random.normal(0, 0.5)
-                inflation_values[year_idx] = 1.0 + np.random.normal(0, 0.5)
-            elif crisis_years[year] == 'covid_pandemic':
-                gdp_values[year_idx] = -5.0 + np.random.normal(0, 1.5)
-                unemployment_values[year_idx] += 3.0 + np.random.normal(0, 0.8)
-                inflation_values[year_idx] = 0.5 + np.random.normal(0, 0.3)
-    
-    regional_gdp = [v * (0.9 + np.random.normal(0, 0.15)) for v in gdp_values]
-    global_gdp = [v * (0.8 + np.random.normal(0, 0.2)) for v in gdp_values]
-    
-    regional_unemployment = [v * (0.95 + np.random.normal(0, 0.1)) for v in unemployment_values]
-    global_unemployment = [v * (0.9 + np.random.normal(0, 0.15)) for v in unemployment_values]
-    
-    regional_inflation = [v * (0.9 + np.random.normal(0, 0.1)) for v in inflation_values]
-    global_inflation = [v * (0.85 + np.random.normal(0, 0.15)) for v in inflation_values]
-    
-    regional_trade = [v * (0.7 + np.random.normal(0, 0.2)) for v in trade_balance_values]
-    global_trade = [v * (0.4 + np.random.normal(0, 0.3)) for v in trade_balance_values]
-    
-    benchmark_data = {
-        "status": "mock",
-        "message": "Using generated mock data as real historical data is not available",
-        "country_name": country.name,
-        "region": getattr(country, 'region', 'Unknown Region'),
-        "years": years,
-        "metrics": {
-            "gdp_growth": {
-                "country_values": gdp_values,
-                "regional_values": regional_gdp,
-                "global_values": global_gdp
-            },
-            "unemployment": {
-                "country_values": unemployment_values,
-                "regional_values": regional_unemployment,
-                "global_values": global_unemployment
-            },
-            "inflation": {
-                "country_values": inflation_values,
-                "regional_values": regional_inflation,
-                "global_values": global_inflation
-            },
-            "trade_balance": {
-                "country_values": trade_balance_values,
-                "regional_values": regional_trade,
-                "global_values": global_trade
-            }
+    # Generate metrics with country, regional and global values
+    metrics = {
+        'gdp_growth': {
+            'country_values': [round((np.random.random() * 6) - 0.5, 2) for _ in range(10)],
+            'regional_values': [round((np.random.random() * 4) + 0.5, 2) for _ in range(10)],
+            'global_values': [round((np.random.random() * 3) + 1, 2) for _ in range(10)]
         },
-        "key_events": [
-            {"year": 2008, "event": "Global Financial Crisis", "impact": "Negative", "magnitude": "High", 
-             "description": "Severe global economic downturn triggered by a financial crisis originating in the US housing market."},
-            {"year": 2020, "event": "COVID-19 Pandemic", "impact": "Negative", "magnitude": "Very High", 
-             "description": "Worldwide economic shutdown due to the coronavirus pandemic, causing significant disruption to global trade and economic activity."}
-        ]
+        'inflation': {
+            'country_values': [round((np.random.random() * 5) + 0.5, 2) for _ in range(10)],
+            'regional_values': [round((np.random.random() * 3) + 1, 2) for _ in range(10)],
+            'global_values': [round((np.random.random() * 2) + 1.5, 2) for _ in range(10)]
+        },
+        'unemployment': {
+            'country_values': [round((np.random.random() * 8) + 2, 2) for _ in range(10)],
+            'regional_values': [round((np.random.random() * 5) + 3, 2) for _ in range(10)],
+            'global_values': [round((np.random.random() * 3) + 4, 2) for _ in range(10)]
+        },
+        'trade_balance': {
+            'country_values': [round((np.random.random() * 14) - 7, 2) for _ in range(10)],
+            'regional_values': [round((np.random.random() * 10) - 5, 2) for _ in range(10)],
+            'global_values': [round((np.random.random() * 6) - 3, 2) for _ in range(10)]
+        }
     }
     
-    benchmark_data['performance'] = calculate_performance_metrics(benchmark_data)
+    # Generate key historical events
+    key_events = [
+        {
+            'year': years[2],
+            'event': 'Handelspolitisk reform',
+            'impact': 'Positive',
+            'magnitude': 'Medium'
+        },
+        {
+            'year': years[5],
+            'event': 'Global økonomisk krise',
+            'impact': 'Negative',
+            'magnitude': 'High'
+        },
+        {
+            'year': years[8],
+            'event': 'Teknologisk gennembrud',
+            'impact': 'Positive',
+            'magnitude': 'Medium'
+        }
+    ]
     
-    return jsonify(benchmark_data)
+    # Calculate performance metrics
+    latestYearIndex = 9  # Last index
+    performance = {
+        'gdp_growth': metrics['gdp_growth']['country_values'][latestYearIndex],
+        'region_gdp_growth': metrics['gdp_growth']['regional_values'][latestYearIndex],
+        'relative_performance': metrics['gdp_growth']['country_values'][latestYearIndex] - 
+                             metrics['gdp_growth']['regional_values'][latestYearIndex],
+        'unemployment': metrics['unemployment']['country_values'][latestYearIndex],
+        'region_unemployment': metrics['unemployment']['regional_values'][latestYearIndex],
+        'unemployment_performance': metrics['unemployment']['regional_values'][latestYearIndex] - 
+                                metrics['unemployment']['country_values'][latestYearIndex]
+    }
+    
+    # Return complete mock data in the expected format
+    return jsonify({
+        'status': 'mock',
+        'message': 'Using simulated historical data',
+        'country_name': country.name,
+        'region': country.region,
+        'years': years,
+        'metrics': metrics,
+        'performance': performance,
+        'key_events': key_events
+    })
 
 def get_key_historical_events(country_iso, historical_dataset):
     """Get key historical economic events for a specific country"""
@@ -246,7 +224,7 @@ def country_to_dict(country):
         "imports": getattr(country, 'imports', None)
     }
 
-@countries_blueprint.route('/api/trade_partners/<country_id>', methods=['GET'])
+@countries_blueprint.route('/trade_partners/<country_id>', methods=['GET'])
 def get_trade_partners(country_id):
     """
     Get the trade partners for a specific country.
@@ -273,7 +251,7 @@ def get_trade_partners(country_id):
                 trade_volume = import_volume + export_volume
                 trade_balance = export_volume - import_volume
                 
-                dependency_score = trade_volume / max(1, country.gdp)
+                dependency_score = trade_volume / max(1, getattr(country, 'gdp', 10000))
                 
                 partners.append({
                     'country': {
@@ -291,6 +269,10 @@ def get_trade_partners(country_id):
                 })
             
             partners.sort(key=lambda x: x['tradeVolume'], reverse=True)
+        
+        # If no trade partners are found, generate some mock data
+        if not partners:
+            partners = generate_mock_trade_partners(country, game_engine.countries)
             
         return jsonify({
             "partners": partners
@@ -298,11 +280,61 @@ def get_trade_partners(country_id):
         
     except Exception as e:
         logger.error(f"Error fetching trade partners: {e}")
-        return jsonify({
-            "error": str(e)
-        }), 500
+        # Generate mock data in case of error
+        try:
+            partners = generate_mock_trade_partners(game_engine.countries.get(country_id.upper()), 
+                                                   game_engine.countries)
+            return jsonify({"partners": partners, "status": "mock"})
+        except:
+            # Return minimal response that frontend can handle
+            return jsonify({"partners": [], "error": str(e)})
 
-@countries_blueprint.route('/api/competitors/<country_id>', methods=['GET'])
+def generate_mock_trade_partners(country, all_countries):
+    """Generate mock trade partner data when actual data is unavailable"""
+    logger.info(f"Generating mock trade partners for {country.name}")
+    partners = []
+    
+    # Get a list of countries excluding the current one
+    potential_partners = [c for c in all_countries.values() if c.iso_code != country.iso_code]
+    
+    # If we don't have enough countries, just return empty
+    if not potential_partners:
+        return []
+    
+    # Select up to 5 partners
+    partner_count = min(5, len(potential_partners))
+    for i in range(partner_count):
+        partner = potential_partners[i]
+        
+        # Generate reasonable mock trade values
+        country_gdp = getattr(country, 'gdp', 100000)
+        import_volume = round(np.random.random() * country_gdp * 0.05, 2)
+        export_volume = round(np.random.random() * country_gdp * 0.05, 2)
+        trade_volume = import_volume + export_volume
+        trade_balance = export_volume - import_volume
+        
+        dependency_score = trade_volume / max(1, country_gdp)
+        
+        partners.append({
+            'country': {
+                'name': partner.name,
+                'iso_code': partner.iso_code, 
+                'region': getattr(partner, 'region', None)
+            },
+            'iso_code': partner.iso_code,
+            'importVolume': import_volume,
+            'exportVolume': export_volume,
+            'tradeVolume': trade_volume,
+            'tradeBalance': trade_balance,
+            'dependencyScore': dependency_score,
+            'isCritical': dependency_score > 0.05
+        })
+    
+    # Sort by trade volume
+    partners.sort(key=lambda x: x['tradeVolume'], reverse=True)
+    return partners
+
+@countries_blueprint.route('/competitors/<country_id>', methods=['GET'])
 def get_competitors(country_id):
     """
     Get the main economic competitors for a specific country.

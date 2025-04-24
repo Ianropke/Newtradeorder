@@ -4,6 +4,16 @@ import { geoMercator, geoPath } from 'd3-geo';
 import { zoom } from 'd3-zoom';
 import '../styles/MapPanel.css';
 
+// Mock data for testing when API calls fail
+const mockRegionColors = {
+  'North America': '#5D9CEC',
+  'South America': '#A0D568',
+  'Europe': '#AC92EB',
+  'Africa': '#FFCE54',
+  'Asia': '#FC6E51',
+  'Oceania': '#48CFAD',
+};
+
 const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) => {
   const mapRef = useRef(null);
   const svgRef = useRef(null);
@@ -12,6 +22,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
   const [mapMode, setMapMode] = useState('political'); // political, economic, trade, diplomatic
   const [highlightedRegions, setHighlightedRegions] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [error, setError] = useState(null);
 
   // Fetch world map data
   useEffect(() => {
@@ -25,6 +36,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
         }, 500);
       } catch (err) {
         console.error('Error loading map data:', err);
+        setError('Failed to load map data. Using placeholder instead.');
       }
     };
 
@@ -65,24 +77,15 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
 
       case 'political':
       default:
-        const regionColors = {
-          'North America': '#5D9CEC',
-          'South America': '#A0D568',
-          'Europe': '#AC92EB',
-          'Africa': '#FFCE54',
-          'Asia': '#FC6E51',
-          'Oceania': '#48CFAD',
-        };
-
-        return regionColors[country.region] || '#e0e0e0';
+        return mockRegionColors[country.region] || '#e0e0e0';
     }
   };
 
   // Create placeholder map
   const createPlaceholderMap = () => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !mapRef.current) return;
 
-    const width = mapRef.current.clientWidth;
+    const width = mapRef.current.clientWidth || 800;
     const height = 500;
 
     d3.select(svgRef.current).selectAll('*').remove();
@@ -94,6 +97,16 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
       .attr('style', 'width: 100%; height: auto; max-height: 500px;');
 
     const g = svg.append('g');
+
+    // Setup zoom functionality
+    const zoomBehavior = zoom()
+      .scaleExtent([0.5, 8])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+        setZoomLevel(event.transform.k);
+      });
+
+    svg.call(zoomBehavior);
 
     if (countries) {
       const projection = geoMercator()
@@ -182,15 +195,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
         }
       });
 
-      const zoomBehavior = zoom()
-        .scaleExtent([0.5, 8])
-        .on('zoom', (event) => {
-          g.attr('transform', event.transform);
-          setZoomLevel(event.transform.k);
-        });
-
-      svg.call(zoomBehavior);
-
+      // Draw region labels
       const regions = [...new Set(Object.values(countries).map(c => c.region))];
       regions.forEach(region => {
         let x, y;
@@ -243,8 +248,8 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
 
     const svg = d3.select(svgRef.current);
 
-    svg.selectAll('.country-marker').attr('stroke-width', c => {
-      const code = d3.select(c).attr('data-country');
+    svg.selectAll('.country-marker').attr('stroke-width', function() {
+      const code = d3.select(this).attr('data-country');
       return selectedCountry && selectedCountry.iso_code === code ? 3 : 1;
     });
 
@@ -259,29 +264,62 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
     });
   }, [highlightedRegions, countries, selectedCountry]);
 
+  // Helper functions for zoom controls
+  const handleZoomIn = () => {
+    d3.select(svgRef.current).transition().call(
+      zoom().scaleBy, 1.5
+    );
+  };
+
+  const handleZoomOut = () => {
+    d3.select(svgRef.current).transition().call(
+      zoom().scaleBy, 0.75
+    );
+  };
+
+  const handleResetZoom = () => {
+    d3.select(svgRef.current).transition().call(
+      zoom().transform, d3.zoomIdentity
+    );
+  };
+
+  // Simple icon components to replace FontAwesome
+  const IconGlobe = () => <span>🌎</span>;
+  const IconChart = () => <span>📈</span>;
+  const IconExchange = () => <span>🔄</span>;
+  const IconHandshake = () => <span>🤝</span>;
+  const IconZoomIn = () => <span>➕</span>;
+  const IconZoomOut = () => <span>➖</span>;
+  const IconExpand = () => <span>⤢</span>;
+  const IconCamera = () => <span>📷</span>;
+  const IconClose = () => <span>✖</span>;
+  const IconMarker = () => <span>📍</span>;
+
   return (
     <div className="map-panel" ref={mapRef}>
+      {error && <div className="map-error-message">{error}</div>}
+      
       <div className="map-controls">
         <div className="map-mode-selector">
           <button 
             className={`mode-btn ${mapMode === 'political' ? 'active' : ''}`} 
             onClick={() => setMapMode('political')}
           >
-            <i className="fas fa-globe-americas"></i>
+            <IconGlobe />
             <span>Political</span>
           </button>
           <button 
             className={`mode-btn ${mapMode === 'economic' ? 'active' : ''}`} 
             onClick={() => setMapMode('economic')}
           >
-            <i className="fas fa-chart-line"></i>
+            <IconChart />
             <span>Economic</span>
           </button>
           <button 
             className={`mode-btn ${mapMode === 'trade' ? 'active' : ''}`} 
             onClick={() => setMapMode('trade')}
           >
-            <i className="fas fa-exchange-alt"></i>
+            <IconExchange />
             <span>Trade</span>
           </button>
           <button 
@@ -289,35 +327,39 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
             onClick={() => setMapMode('diplomatic')}
             disabled={!selectedCountry}
           >
-            <i className="fas fa-handshake"></i>
+            <IconHandshake />
             <span>Diplomatic</span>
           </button>
         </div>
         
         <div className="map-navigation">
-          <button className="nav-btn zoom-in" onClick={() => 
-            d3.select(svgRef.current).transition().call(
-              d3.zoom().scaleBy, 1.5
-            )
-          } title="Zoom In">
-            <i className="fas fa-search-plus"></i>
+          <button 
+            className="nav-btn zoom-in" 
+            onClick={handleZoomIn} 
+            title="Zoom In"
+          >
+            <IconZoomIn />
           </button>
-          <button className="nav-btn zoom-out" onClick={() => 
-            d3.select(svgRef.current).transition().call(
-              d3.zoom().scaleBy, 0.75
-            )
-          } title="Zoom Out">
-            <i className="fas fa-search-minus"></i>
+          <button 
+            className="nav-btn zoom-out" 
+            onClick={handleZoomOut} 
+            title="Zoom Out"
+          >
+            <IconZoomOut />
           </button>
-          <button className="nav-btn reset" onClick={() => 
-            d3.select(svgRef.current).transition().call(
-              d3.zoom().transform, d3.zoomIdentity
-            )
-          } title="Reset View">
-            <i className="fas fa-expand"></i>
+          <button 
+            className="nav-btn reset" 
+            onClick={handleResetZoom} 
+            title="Reset View"
+          >
+            <IconExpand />
           </button>
-          <button className="nav-btn screenshot" onClick={() => captureMapScreenshot()} title="Take Screenshot">
-            <i className="fas fa-camera"></i>
+          <button 
+            className="nav-btn screenshot" 
+            onClick={captureMapScreenshot} 
+            title="Take Screenshot"
+          >
+            <IconCamera />
           </button>
         </div>
       </div>
@@ -373,14 +415,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
               {['North America', 'South America', 'Europe', 'Africa', 'Asia', 'Oceania'].map(region => (
                 <div className="legend-item" key={region}>
                   <span className="color-sample" style={{
-                    backgroundColor: {
-                      'North America': '#5D9CEC',
-                      'South America': '#A0D568',
-                      'Europe': '#AC92EB',
-                      'Africa': '#FFCE54',
-                      'Asia': '#FC6E51',
-                      'Oceania': '#48CFAD'
-                    }[region]
+                    backgroundColor: mockRegionColors[region]
                   }}></span>
                   <span className="legend-label">{region}</span>
                 </div>
@@ -396,12 +431,6 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
           </div>
           {selectedCountry && (
             <div className="selected-country-info">
-              <img 
-                src={`/flags/${selectedCountry.iso_code.toLowerCase()}.png`} 
-                alt="" 
-                className="country-flag"
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
               <span>{selectedCountry.name}</span>
             </div>
           )}
@@ -412,13 +441,10 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
       {gameData && gameData.currentEvent && (
         <div className="map-event-notification">
           <div className="event-icon">
-            <i className={`fas ${
-              gameData.currentEvent.type === 'economic' ? 'fa-chart-line' :
-              gameData.currentEvent.type === 'political' ? 'fa-landmark' :
-              gameData.currentEvent.type === 'natural' ? 'fa-cloud-showers-heavy' :
-              gameData.currentEvent.type === 'technological' ? 'fa-microchip' :
-              'fa-exclamation-circle'
-            }`}></i>
+            {gameData.currentEvent.type === 'economic' ? <IconChart /> :
+             gameData.currentEvent.type === 'political' ? '🏛️' :
+             gameData.currentEvent.type === 'natural' ? '🌧️' :
+             gameData.currentEvent.type === 'technological' ? '🔧' : '❗'}
           </div>
           <div className="event-content">
             <h4>Global Event: {gameData.currentEvent.title}</h4>
@@ -433,7 +459,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
                     setTimeout(() => setHighlightedRegions([]), 3000);
                   }}
                 >
-                  <i className="fas fa-map-marker-alt"></i>
+                  <IconMarker />
                   {region}
                 </span>
               ))}
@@ -442,7 +468,7 @@ const MapPanel = ({ countries, selectedCountry, setSelectedCountry, gameData }) 
           <button className="close-event-btn" onClick={() => {
             console.log('Event dismissed');
           }}>
-            <i className="fas fa-times"></i>
+            <IconClose />
           </button>
         </div>
       )}
