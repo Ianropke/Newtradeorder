@@ -1,13 +1,17 @@
 from flask import Blueprint, request, jsonify
 from ..engine import BudgetManager
 from ..models import Country
+import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 budget_blueprint = Blueprint('budget', __name__)
 
 @budget_blueprint.route('/api/countries/<country_id>/budget', methods=['GET'])
 def get_country_budget(country_id):
-    # Assuming we have a function to get country from the engine
-    # This would normally be pulled from a database or from the engine's state
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
@@ -18,7 +22,6 @@ def get_country_budget(country_id):
 
 @budget_blueprint.route('/api/countries/<country_id>/budget', methods=['POST'])
 def update_budget_allocation(country_id):
-    # Get request data
     data = request.json
     if not data or 'category' not in data or 'amount' not in data:
         return jsonify({"error": "Missing required parameters: category and amount"}), 400
@@ -26,20 +29,17 @@ def update_budget_allocation(country_id):
     category = data['category']
     amount = data['amount']
     
-    # Validate amount
     try:
         amount = float(amount)
     except ValueError:
         return jsonify({"error": "Amount must be a number"}), 400
     
-    # Get country and update budget
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Create budget manager and adjust allocation
     budget_manager = BudgetManager(game_engine.economic_model)
     result = budget_manager.adjust_budget_allocation(country, category, amount)
     
@@ -50,7 +50,6 @@ def update_budget_allocation(country_id):
 
 @budget_blueprint.route('/api/countries/<country_id>/subsidies', methods=['GET'])
 def get_country_subsidies(country_id):
-    # Get country data
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
@@ -61,14 +60,12 @@ def get_country_subsidies(country_id):
 
 @budget_blueprint.route('/api/countries/<country_id>/subsidies/<sector_name>', methods=['POST'])
 def add_subsidy(country_id, sector_name):
-    # Get request data
     data = request.json
     if not data or 'percentage' not in data:
         return jsonify({"error": "Missing required parameter: percentage"}), 400
     
     subsidy_percentage = data['percentage']
     
-    # Validate percentage
     try:
         subsidy_percentage = float(subsidy_percentage)
         if subsidy_percentage < 0 or subsidy_percentage > 100:
@@ -76,14 +73,12 @@ def add_subsidy(country_id, sector_name):
     except ValueError:
         return jsonify({"error": "Percentage must be a number"}), 400
     
-    # Get country and apply subsidy
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Create budget manager and apply subsidy
     budget_manager = BudgetManager(game_engine.economic_model)
     effects = budget_manager.manage_subsidies(country, sector_name, subsidy_percentage)
     
@@ -98,18 +93,15 @@ def add_subsidy(country_id, sector_name):
 
 @budget_blueprint.route('/api/countries/<country_id>/subsidies/<sector_name>', methods=['DELETE'])
 def remove_subsidy(country_id, sector_name):
-    # Get country
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Check if subsidy exists
     if sector_name not in country.subsidies:
         return jsonify({"error": f"No subsidy found for sector {sector_name}"}), 404
     
-    # Create budget manager and remove subsidy
     budget_manager = BudgetManager(game_engine.economic_model)
     result = budget_manager.remove_subsidy(country, sector_name)
     
@@ -118,10 +110,8 @@ def remove_subsidy(country_id, sector_name):
     
     return jsonify(result)
 
-# Get possible budget categories
 @budget_blueprint.route('/api/budget/categories', methods=['GET'])
 def get_budget_categories():
-    # Return the standard budget categories that can be used
     categories = {
         "revenue": ["taxation", "tariffs", "other"],
         "expenses": ["subsidies", "social_services", "defense", "infrastructure", "education", "healthcare"]
@@ -131,43 +121,33 @@ def get_budget_categories():
 
 @budget_blueprint.route('/api/countries/<country_id>/calibrate', methods=['POST'])
 def calibrate_economic_parameters(country_id):
-    """
-    Calibrate economic parameters for a country based on historical data.
-    """
     data = request.json
     target_metrics = data.get('target_metrics', ['gdp_growth', 'inflation', 'unemployment'])
     
-    # Get country
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Check if historical data is available
     if not hasattr(game_engine, 'historical_data') or not game_engine.historical_data.loaded:
         return jsonify({"error": "Historical data not available for calibration"}), 400
     
-    # Create calibrator and calibrate parameters
     calibrator = game_engine.economic_calibrator
     if not calibrator:
         from ..engine import EconomicCalibrator
         calibrator = EconomicCalibrator(game_engine.historical_data)
         game_engine.economic_calibrator = calibrator
     
-    # Store original parameters for comparison
     original_params = country.economic_model.copy() if hasattr(country, 'economic_model') else {}
     
-    # Perform calibration
     try:
         calibrated_params = calibrator.calibrate_parameters(country_id, 
                                                           country.economic_model, 
                                                           target_metrics)
         
-        # Update country's economic model with calibrated parameters
         country.economic_model = calibrated_params
         
-        # Get calibration report
         report = calibrator.get_calibration_report(country_id)
         
         return jsonify({
@@ -181,10 +161,6 @@ def calibrate_economic_parameters(country_id):
 
 @budget_blueprint.route('/api/budget/<country_id>/subsidies/preview', methods=['POST'])
 def preview_subsidy_effects(country_id):
-    """
-    Preview the economic effects of a subsidy without actually applying it.
-    """
-    # Get request data
     data = request.json
     if not data or 'sector' not in data or 'percentage' not in data:
         return jsonify({"error": "Missing required parameters: sector and percentage"}), 400
@@ -192,7 +168,6 @@ def preview_subsidy_effects(country_id):
     sector_name = data['sector']
     subsidy_percentage = data['percentage']
     
-    # Validate percentage
     try:
         subsidy_percentage = float(subsidy_percentage)
         if subsidy_percentage < 0 or subsidy_percentage > 100:
@@ -200,14 +175,12 @@ def preview_subsidy_effects(country_id):
     except ValueError:
         return jsonify({"error": "Percentage must be a number"}), 400
     
-    # Get country 
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Find the sector
     target_sector = None
     for sector in country.sectors:
         if sector.name.lower() == sector_name.lower():
@@ -217,30 +190,23 @@ def preview_subsidy_effects(country_id):
     if not target_sector:
         return jsonify({"error": f"Sector '{sector_name}' not found"}), 404
     
-    # Create budget manager and calculate effects without applying
     budget_manager = BudgetManager(game_engine.economic_model)
     
-    # Convert percentage to fraction
     subsidy_fraction = subsidy_percentage / 100.0
     
-    # Calculate projected effects (similar to manage_subsidies but without actually applying)
-    output_boost_efficiency = 0.7  # 70% efficiency in converting subsidies to output
+    output_boost_efficiency = 0.7
     subsidy_amount = target_sector.output * subsidy_fraction
     output_boost = subsidy_amount * output_boost_efficiency
     
-    # Calculate unemployment effect
     employment_boost_percentage = subsidy_fraction * 0.5
     unemployment_reduction = target_sector.unemployment_rate * employment_boost_percentage
     
-    # Calculate price effect
-    price_reduction_percentage = subsidy_fraction * 0.3 * 100  # Convert to percentage
+    price_reduction_percentage = subsidy_fraction * 0.3 * 100
     
-    # Calculate export boost
     export_increase_percentage = 0
-    if subsidy_percentage > 5:  # Only significant subsidies affect exports
-        export_increase_percentage = price_reduction_percentage * 1.5  # Price reduction has leveraged effect on exports
+    if subsidy_percentage > 5:
+        export_increase_percentage = price_reduction_percentage * 1.5
     
-    # Return preview data
     preview_data = {
         "annual_cost": subsidy_amount,
         "output_increase": output_boost,
@@ -254,59 +220,44 @@ def preview_subsidy_effects(country_id):
 
 @budget_blueprint.route('/api/budget/<country_id>/historical', methods=['GET'])
 def get_historical_budgets(country_id):
-    """
-    Get historical budget data for a country across multiple years.
-    """
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
     if not country:
         return jsonify({"error": f"Country with ID {country_id} not found"}), 404
     
-    # Check if historical budget data exists
     if not hasattr(country, 'budget_history') or not country.budget_history:
-        # Generate some mock historical data if real data doesn't exist
         current_year = game_engine.current_year
         history = []
         
-        # Use current budget as template and create historical variations
         current_budget = country.budget
         gdp_baseline = country.gdp
         
         for year in range(current_year - 10, current_year):
-            # Create GDP variation - assuming 1-3% growth on average
-            year_factor = (year - (current_year - 10)) / 10  # 0 to 1 factor based on proximity to current year
-            gdp_variation = gdp_baseline * (0.85 + year_factor * 0.25)  # 85% to 110% of current GDP
+            year_factor = (year - (current_year - 10)) / 10
+            gdp_variation = gdp_baseline * (0.85 + year_factor * 0.25)
             
-            # Create budget variations based on GDP
             gdp_ratio = gdp_variation / gdp_baseline
             
-            # Create year entry
             year_budget = {
                 "year": year,
                 "gdp": gdp_variation,
                 "totalRevenue": current_budget["totalRevenue"] * gdp_ratio * (0.9 + (year_factor * 0.2)),
                 "totalExpenditure": current_budget["totalExpenditure"] * gdp_ratio * (0.85 + (year_factor * 0.3)),
-                "balance": 0,  # Will be calculated below
-                "debt": current_budget["debt"] * (0.7 + year_factor * 0.4)  # Debt grows over time
+                "balance": 0,
+                "debt": current_budget["debt"] * (0.7 + year_factor * 0.4)
             }
             
-            # Calculate balance
             year_budget["balance"] = year_budget["totalRevenue"] - year_budget["totalExpenditure"]
             
             history.append(year_budget)
         
         return jsonify({"history": history})
     
-    # Return real historical data if it exists
     return jsonify({"history": country.budget_history})
 
 @budget_blueprint.route('/api/budget/<country_id>/simulate', methods=['POST'])
 def simulate_budget_effects(country_id):
-    """
-    Simulate the effects of a budget change without actually applying it.
-    """
-    # Get request data
     data = request.json
     if not data or 'category' not in data or 'value' not in data:
         return jsonify({"error": "Missing required parameters: category and value"}), 400
@@ -314,7 +265,6 @@ def simulate_budget_effects(country_id):
     category = data['category']
     new_value = float(data['value'])
     
-    # Get country
     from main import game_engine
     
     country = game_engine.countries.get(country_id.upper())
@@ -324,16 +274,12 @@ def simulate_budget_effects(country_id):
     if category not in country.budget['expenses']:
         return jsonify({"error": f"Budget category '{category}' not found"}), 400
     
-    # Get current value
     current_value = country.budget['expenses'][category]
     
-    # Create budget manager
     budget_manager = BudgetManager(game_engine.economic_model)
     
-    # Calculate effects (similar to adjust_budget_allocation but without actually applying)
     effects = budget_manager._calculate_budget_allocation_effects(country, category, current_value, new_value)
     
-    # Calculate new balance
     total_revenue = country.budget['totalRevenue']
     total_expenses = sum([
         value if expense != category else new_value 
@@ -341,11 +287,9 @@ def simulate_budget_effects(country_id):
     ])
     new_balance = total_revenue - total_expenses
     
-    # Generate economic impact estimates
     change = new_value - current_value
     change_ratio = change / country.gdp if country.gdp > 0 else 0
     
-    # Simplified effects based on category
     gdp_growth_change = 0
     unemployment_change = 0
     inflation_change = 0
@@ -376,7 +320,6 @@ def simulate_budget_effects(country_id):
         inflation_change = change_ratio * 0.4
         approval_change = change_ratio * 0.6
     
-    # Generate description based on changes
     descriptions = {
         'education': [
             "Increasing education budget will improve long-term economic growth and workforce quality.",
@@ -406,7 +349,6 @@ def simulate_budget_effects(country_id):
     
     description = descriptions.get(category, ["Budget changes will impact economic performance."])[0 if change > 0 else 1]
     
-    # Return simulated effects
     simulation_results = {
         "gdpGrowthChange": gdp_growth_change,
         "unemploymentChange": unemployment_change,
@@ -418,3 +360,168 @@ def simulate_budget_effects(country_id):
     }
     
     return jsonify(simulation_results)
+
+@budget_blueprint.route('/api/budget/<country_id>', methods=['GET'])
+def get_budget(country_id):
+    from main import game_engine
+    
+    try:
+        country = game_engine.countries.get(country_id.upper())
+        if not country:
+            return jsonify({"error": f"Country with ID {country_id} not found"}), 404
+        
+        budget_data = {
+            "gdp": country.gdp,
+            "balance": country.budget.get('balance', 0),
+            "debt": country.budget.get('debt', 0),
+            "debt_to_gdp_ratio": country.budget.get('debt_to_gdp_ratio', 0),
+            "totalRevenue": sum(country.budget.get('revenue', {}).values()),
+            "totalExpenditure": sum(country.budget.get('expenses', {}).values()),
+            "revenue": country.budget.get('revenue', {}),
+            "expenses": country.budget.get('expenses', {}),
+            "editableCategories": [
+                "education", "healthcare", "infrastructure", 
+                "military", "social_services", "research_development"
+            ],
+            "economicImpact": {
+                "growthEffect": country.budget.get('growth_effect', 0),
+                "employmentEffect": country.budget.get('employment_effect', 0),
+                "investmentEffect": country.budget.get('investment_effect', 0),
+                "publicApproval": country.budget.get('approval_effect', 0)
+            }
+        }
+        
+        return jsonify(budget_data)
+        
+    except Exception as e:
+        logger.error(f"Error fetching budget: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@budget_blueprint.route('/api/budget/<country_id>/allocate', methods=['POST'])
+def allocate_budget(country_id):
+    from main import game_engine
+    
+    try:
+        data = request.get_json()
+        if not data or 'category' not in data or 'value' not in data:
+            return jsonify({"error": "Missing required data (category, value)"}), 400
+        
+        country = game_engine.countries.get(country_id.upper())
+        if not country:
+            return jsonify({"error": f"Country with ID {country_id} not found"}), 404
+        
+        category = data['category']
+        value = float(data['value'])
+        
+        editable_categories = [
+            "education", "healthcare", "infrastructure", 
+            "military", "social_services", "research_development"
+        ]
+        
+        if category not in editable_categories:
+            return jsonify({"error": f"Category {category} is not editable"}), 400
+        
+        previous_value = country.budget.get('expenses', {}).get(category, 0)
+        
+        effects = game_engine.budget_manager.adjust_budget_allocation(country, category, value)
+        
+        store_budget_impact(country_id, category, previous_value, value, effects)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Budget for {category} has been adjusted to {value}",
+            "effects": effects
+        })
+        
+    except Exception as e:
+        logger.error(f"Error allocating budget: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@budget_blueprint.route('/api/budget/<country_id>/impact-history', methods=['GET'])
+def get_impact_history(country_id):
+    from main import game_engine
+    
+    try:
+        country = game_engine.countries.get(country_id.upper())
+        if not country:
+            return jsonify({"error": f"Country with ID {country_id} not found"}), 404
+        
+        impact_history = get_budget_impact_history(country_id)
+        
+        return jsonify({
+            "history": impact_history
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting impact history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def get_budget_impact_history(country_id):
+    from main import game_engine
+    
+    if hasattr(game_engine, 'state_manager') and hasattr(game_engine.state_manager, 'budget_impact_history'):
+        return game_engine.state_manager.budget_impact_history.get(country_id, {})
+    
+    try:
+        import os
+        history_file = os.path.join('data', 'budget_impacts', f'{country_id}.json')
+        
+        if os.path.exists(history_file):
+            with open(history_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load budget impact history from file: {e}")
+    
+    return {}
+
+def store_budget_impact(country_id, category, previous_value, new_value, effects):
+    from main import game_engine
+    
+    impact_data = {
+        "gdpGrowthChange": effects.get('gdp_effect', 0),
+        "unemploymentChange": effects.get('unemployment_effect', 0),
+        "inflationChange": effects.get('inflation_effect', 0),
+        "approvalChange": effects.get('approval_effect', 0),
+        "timestamp": effects.get('timestamp', ''),
+        "prior_amount": previous_value,
+        "new_amount": new_value,
+        "description": effects.get('description', '')
+    }
+    
+    if hasattr(game_engine, 'state_manager'):
+        if not hasattr(game_engine.state_manager, 'budget_impact_history'):
+            game_engine.state_manager.budget_impact_history = {}
+        
+        if country_id not in game_engine.state_manager.budget_impact_history:
+            game_engine.state_manager.budget_impact_history[country_id] = {}
+        
+        if category not in game_engine.state_manager.budget_impact_history[country_id]:
+            game_engine.state_manager.budget_impact_history[country_id][category] = []
+        
+        history = game_engine.state_manager.budget_impact_history[country_id][category]
+        history.append(impact_data)
+        game_engine.state_manager.budget_impact_history[country_id][category] = history[-10:]
+    
+    try:
+        import os
+        
+        os.makedirs(os.path.join('data', 'budget_impacts'), exist_ok=True)
+        
+        history_file = os.path.join('data', 'budget_impacts', f'{country_id}.json')
+        history = {}
+        
+        if os.path.exists(history_file):
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+        
+        if category not in history:
+            history[category] = []
+        
+        history[category].append(impact_data)
+        history[category] = history[category][-10:]
+        
+        with open(history_file, 'w') as f:
+            json.dump(history, f, indent=2)
+            
+    except Exception as e:
+        logger.warning(f"Could not save budget impact to file: {e}")

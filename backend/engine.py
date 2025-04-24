@@ -9,7 +9,7 @@ import numpy as np
 from scipy import stats, optimize
 import os
 import logging
-from backend.diplomacy_ai import CountryProfile, Coalition, CoalitionStrategy
+from backend.diplomacy_ai import CountryProfile, Coalition, CoalitionStrategy, DiplomacyAI, DiplomaticConsequence
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

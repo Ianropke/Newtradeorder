@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './BudgetPanel.css';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement } from 'chart.js';
+import { Pie, Bar, Line } from 'react-chartjs-2';
 
 // Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title);
 
 const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
   const [budgetData, setBudgetData] = useState(null);
@@ -53,6 +53,15 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
   
   // Advanced view toggle
   const [showAdvancedView, setShowAdvancedView] = useState(false);
+
+  // New state for allocation impact visualization
+  const [impactVisualization, setImpactVisualization] = useState(null);
+  const [showImpactChart, setShowImpactChart] = useState(false);
+  const [impactHistory, setImpactHistory] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [comparisonMode, setComparisonMode] = useState(false);
+  
+  const impactChartRef = useRef(null);
   
   // Fetch budget data when country or year changes
   useEffect(() => {
@@ -72,6 +81,10 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
       }
       const data = await response.json();
       setBudgetData(data);
+      
+      // Also fetch impact history if available
+      fetchImpactHistory();
+      
       setError(null);
     } catch (err) {
       console.error('Error fetching budget data:', err);
@@ -107,6 +120,23 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     }
   };
 
+  const fetchImpactHistory = async () => {
+    try {
+      const response = await fetch(`/api/budget/${countryId}/impact-history`);
+      if (!response.ok) {
+        // This endpoint might not exist yet, handle silently
+        return;
+      }
+      const data = await response.json();
+      if (data && data.history) {
+        setImpactHistory(data.history);
+      }
+    } catch (err) {
+      console.error('Error fetching impact history:', err);
+      // Handle silently as this is enhancement functionality
+    }
+  };
+
   const handleEditClick = (item, currentValue) => {
     setEditingItem(item);
     setEditValue(currentValue);
@@ -116,6 +146,7 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     setEditingItem(null);
     setEditValue(0);
     setSimulatedEffects(null);
+    setShowImpactChart(false); // Hide impact chart on cancel
   };
 
   const handleEditSave = async () => {
@@ -137,6 +168,14 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
         throw new Error('Failed to update budget allocation');
       }
       
+      // Save impact data to history if we have it
+      if (impactVisualization && impactVisualization.effects) {
+        setImpactHistory(prev => ({
+          ...prev,
+          [editingItem]: impactVisualization.effects
+        }));
+      }
+      
       // Refresh budget data
       fetchBudgetData();
       
@@ -151,6 +190,7 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
     } finally {
       setEditingItem(null);
       setSimulatedEffects(null);
+      setShowImpactChart(false);
     }
   };
 
@@ -286,10 +326,310 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
       setSimulatedEffects(effects);
       setShowEffects(true);
       
+      // Generate visualization data
+      generateImpactVisualization(editingItem, effects);
+      
     } catch (err) {
       console.error('Error simulating budget effects:', err);
       setError('Failed to simulate budget effects. Please try again.');
     }
+  };
+
+  const generateImpactVisualization = (category, effects) => {
+    if (!effects) return;
+    
+    // Format data for visualization
+    const visualizationData = {
+      category: category,
+      timestamp: new Date().toISOString(),
+      effects: {...effects},
+      priorAmount: effects.prior_amount || 0,
+      newAmount: effects.new_amount || parseFloat(editValue)
+    };
+    
+    setImpactVisualization(visualizationData);
+    setShowImpactChart(true);
+    setSelectedCategory(category);
+  };
+
+  const renderImpactChart = () => {
+    if (!impactVisualization || !showImpactChart) {
+      return null;
+    }
+    
+    // Prepare chart data
+    const metrics = [
+      { key: 'gdpGrowthChange', label: 'BNP Vækst', color: '#4CAF50' },
+      { key: 'unemploymentChange', label: 'Arbejdsløshed', color: '#F44336', inverted: true }, // inverted = negative is good
+      { key: 'inflationChange', label: 'Inflation', color: '#FF9800', inverted: true },
+      { key: 'approvalChange', label: 'Offentlig Støtte', color: '#2196F3' }
+    ];
+    
+    const labels = metrics.map(m => m.label);
+    
+    // Create current simulation data
+    const currentData = metrics.map(metric => {
+      const value = impactVisualization.effects[metric.key] || 0;
+      // For inverted metrics, multiply by -1 so positive display = good
+      return metric.inverted ? value * -1 : value;
+    });
+    
+    // Get historical data if available and in comparison mode
+    let historicalData = null;
+    if (comparisonMode && impactHistory[selectedCategory]) {
+      historicalData = metrics.map(metric => {
+        const histValue = impactHistory[selectedCategory][metric.key] || 0;
+        return metric.inverted ? histValue * -1 : histValue;
+      });
+    }
+    
+    // Create chart data
+    const chartData = {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Forventet Påvirkning',
+          data: currentData,
+          backgroundColor: metrics.map(m => `${m.color}80`), // 50% transparency
+          borderColor: metrics.map(m => m.color),
+          borderWidth: 2,
+        }
+      ]
+    };
+    
+    // Add historical comparison if available
+    if (historicalData) {
+      chartData.datasets.push({
+        label: 'Tidligere Påvirkning',
+        data: historicalData,
+        backgroundColor: 'rgba(100, 100, 100, 0.5)',
+        borderColor: 'rgba(100, 100, 100, 1)',
+        borderWidth: 2,
+        borderDash: [5, 5]
+      });
+    }
+    
+    // Chart options
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y', // Horizontal bar chart
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: '% Ændring'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const value = context.raw;
+              // Return original value (before potential inversion for display)
+              const originalValue = metrics[context.dataIndex].inverted ? value * -1 : value;
+              return `${context.dataset.label}: ${originalValue > 0 ? '+' : ''}${originalValue.toFixed(2)}%`;
+            }
+          }
+        }
+      }
+    };
+    
+    const getChartTitle = () => {
+      const categoryName = selectedCategory ? selectedCategory.replace(/_/g, ' ') : '';
+      const action = impactVisualization.newAmount > impactVisualization.priorAmount ? 'Øgning' : 'Reduktion';
+      return `${action} af ${categoryName} budget - Økonomiske Effekter`;
+    };
+    
+    return (
+      <div className="impact-visualization">
+        <h4>{getChartTitle()}</h4>
+        
+        <div className="visualization-controls">
+          <button 
+            className={`viz-toggle ${comparisonMode ? 'active' : ''}`}
+            onClick={() => setComparisonMode(!comparisonMode)}
+            disabled={!impactHistory[selectedCategory]}
+          >
+            {comparisonMode ? 'Skjul Sammenligning' : 'Sammenlign med Tidligere'}
+          </button>
+        </div>
+        
+        <div className="impact-chart-container">
+          <Bar
+            data={chartData}
+            options={chartOptions}
+            ref={impactChartRef}
+          />
+        </div>
+        
+        <div className="impact-explanation">
+          <h5>Nøgle-konsekvenser</h5>
+          <ul className="key-impacts">
+            {Object.entries(impactVisualization.effects).map(([key, value]) => {
+              if (['description', 'newBalance', 'prior_amount', 'new_amount'].includes(key)) return null;
+              
+              // Format the key name for display
+              const keyName = key
+                .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+                .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+                .replace('Change', '') // Remove "Change" suffix
+                .replace('Gdp', 'BNP'); // Replace GDP with Danish equivalent
+              
+              const isPositive = 
+                (key === 'approvalChange' && value > 0) ||
+                (key === 'gdpGrowthChange' && value > 0) ||
+                ((key === 'unemploymentChange' || key === 'inflationChange') && value < 0);
+              
+              return (
+                <li key={key} className={`impact-item ${isPositive ? 'positive' : 'negative'}`}>
+                  <span className="impact-name">{keyName}</span>
+                  <span className="impact-value">
+                    {value > 0 ? '+' : ''}{value.toFixed(2)}%
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        
+        {impactVisualization.effects.description && (
+          <div className="impact-description">
+            <h5>Økonomisk analyse</h5>
+            <p>{impactVisualization.effects.description}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSectorImpact = () => {
+    if (!impactVisualization || !impactVisualization.effects.sectorImpacts) {
+      return null;
+    }
+    
+    const { sectorImpacts } = impactVisualization.effects;
+    
+    return (
+      <div className="sector-impacts">
+        <h5>Sektorspecifik Påvirkning</h5>
+        <div className="sector-grid">
+          {Object.entries(sectorImpacts).map(([sector, impact]) => (
+            <div key={sector} className="sector-impact-item">
+              <div className="sector-name">{sector}</div>
+              <div className="sector-metrics">
+                {impact.output !== undefined && (
+                  <div className={`sector-metric ${impact.output >= 0 ? 'positive' : 'negative'}`}>
+                    <span className="metric-label">Output:</span>
+                    <span className="metric-value">
+                      {impact.output > 0 ? '+' : ''}{impact.output.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+                {impact.employment !== undefined && (
+                  <div className={`sector-metric ${impact.employment >= 0 ? 'positive' : 'negative'}`}>
+                    <span className="metric-label">Beskæftigelse:</span>
+                    <span className="metric-value">
+                      {impact.employment > 0 ? '+' : ''}{impact.employment.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+                {impact.growth !== undefined && (
+                  <div className={`sector-metric ${impact.growth >= 0 ? 'positive' : 'negative'}`}>
+                    <span className="metric-label">Vækst:</span>
+                    <span className="metric-value">
+                      {impact.growth > 0 ? '+' : ''}{impact.growth.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTimelineProjection = () => {
+    if (!impactVisualization || !impactVisualization.effects.timelineProjection) {
+      return null;
+    }
+    
+    const { timelineProjection } = impactVisualization.effects;
+    const years = timelineProjection.years || [];
+    
+    if (years.length < 2) return null;
+    
+    const metrics = [
+      { key: 'gdpGrowth', label: 'BNP Vækst (%)', color: '#4CAF50' },
+      { key: 'unemployment', label: 'Arbejdsløshed (%)', color: '#F44336' }
+    ];
+    
+    const datasets = metrics.map(metric => ({
+      label: metric.label,
+      data: years.map(year => timelineProjection[year]?.[metric.key] || 0),
+      borderColor: metric.color,
+      backgroundColor: `${metric.color}20`,
+      tension: 0.3,
+      fill: false
+    }));
+    
+    const chartData = {
+      labels: years,
+      datasets
+    };
+    
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: 'Værdi (%)'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'År'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        }
+      }
+    };
+    
+    return (
+      <div className="timeline-projection">
+        <h5>Fremtidig Påvirkning (Prognose)</h5>
+        <div className="timeline-chart-container">
+          <Line
+            data={chartData}
+            options={chartOptions}
+          />
+        </div>
+        <div className="projection-note">
+          <p>Bemærk: Denne prognose er baseret på nuværende økonomiske forhold og kan ændre sig baseret på fremtidige politikker og globale forhold.</p>
+        </div>
+      </div>
+    );
   };
 
   const getBudgetHealthClass = () => {
@@ -605,6 +945,15 @@ const BudgetPanel = ({ countryId, gameYear, onBudgetUpdate }) => {
             options={historicalChartOptions}
             ref={historicalChartRef}
           />
+        </div>
+      )}
+      
+      {/* New impact visualization section - always display after showing effects */}
+      {showImpactChart && impactVisualization && (
+        <div className="budget-impacts-container">
+          {renderImpactChart()}
+          {renderSectorImpact()}
+          {renderTimelineProjection()}
         </div>
       )}
       

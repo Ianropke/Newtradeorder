@@ -16,6 +16,461 @@ if TYPE_CHECKING:
     from typing import TypeVar
     Coalition = TypeVar('Coalition')
 
+class CountryProfile:
+    """
+    Represents the personality and behavioral traits of a country in the simulation.
+    These traits influence AI decision-making, diplomatic behavior, and responses to events.
+    """
+    
+    def __init__(self, 
+                 # Economic traits
+                 protectionism: float = 0.5,
+                 free_market_belief: float = 0.5,
+                 export_orientation: float = 0.5,
+                 self_sufficiency: float = 0.5,
+                 sector_protection: float = 0.5,
+                 innovation_focus: float = 0.5,
+                 economic_focus: float = 0.5,
+                 debt_tolerance: float = 0.5,
+                 
+                 # Diplomatic traits
+                 cooperation: float = 0.5,
+                 isolationism: float = 0.5,
+                 retaliation: float = 0.5,
+                 aggression: float = 0.5,
+                 regional_focus: float = 0.5,
+                 pride: float = 0.5,
+                 pragmatism: float = 0.5,
+                 
+                 # Leadership traits
+                 risk_aversion: float = 0.5,
+                 accountability: float = 0.5,
+                 
+                 # New parameters
+                 sanctions_resilience: float = 0.5,
+                 technology_policy: float = 0.5,
+                 environmental_policy: float = 0.5,
+                 geopolitical_alignment: float = 0.5,
+                 state_enterprise_dominance: float = 0.5,
+                 corruption_index: float = 0.5,
+                 labor_market_flexibility: float = 0.5,
+                 regional_leadership_role: float = 0.5,
+                 resource_nationalism: float = 0.5):
+        """
+        Initialize a country profile with behavioral traits.
+        All traits are on a 0.0-1.0 scale where 0.5 is neutral.
+        
+        Args:
+            protectionism: Tendency to protect domestic industries (0=open markets, 1=highly protectionist)
+            free_market_belief: Commitment to free market principles (0=state control, 1=laissez-faire)
+            export_orientation: Focus on exports vs. domestic consumption (0=domestic focus, 1=export focus)
+            self_sufficiency: Emphasis on self-sufficiency vs. interdependence (0=interdependent, 1=autarkic)
+            sector_protection: Willingness to protect vulnerable sectors (0=let markets decide, 1=protect key sectors)
+            innovation_focus: Emphasis on innovation and R&D (0=traditional, 1=innovation-focused)
+            economic_focus: Primacy of economic interests in foreign policy (0=non-economic priorities, 1=economy first)
+            debt_tolerance: Tolerance for government debt (0=fiscally conservative, 1=comfortable with high debt)
+            
+            cooperation: Tendency to cooperate internationally (0=uncooperative, 1=highly cooperative)
+            isolationism: Preference for isolation vs. engagement (0=internationalist, 1=isolationist)
+            retaliation: Likelihood to retaliate against perceived threats (0=passive, 1=retaliatory)
+            aggression: Tendency toward aggressive postures (0=peaceful, 1=aggressive)
+            regional_focus: Focus on regional vs. global affairs (0=global focus, 1=regional focus)
+            pride: Level of national pride and prestige-seeking (0=pragmatic, 1=prestige-focused)
+            pragmatism: Flexibility in foreign policy (0=ideological, 1=pragmatic)
+            
+            risk_aversion: Aversion to risk in policy choices (0=risk-taking, 1=risk-averse)
+            accountability: Democratic accountability vs. authoritarianism (0=authoritarian, 1=democratic)
+            
+            sanctions_resilience: Ability to withstand economic sanctions (0=vulnerable, 1=highly resilient)
+            technology_policy: Approach to technology development (0=import-dependent, 1=tech sovereignty)
+            environmental_policy: Emphasis on environmental protection (0=minimal, 1=strong climate policies)
+            geopolitical_alignment: Political alignment (0=Western-aligned, 0.5=non-aligned, 1=anti-Western)
+            state_enterprise_dominance: Role of state-owned enterprises (0=private sector, 1=state dominance)
+            corruption_index: Level of corruption (0=low corruption, 1=high corruption)
+            labor_market_flexibility: Adaptability of labor markets (0=rigid, 1=highly flexible)
+            regional_leadership_role: Aspiration for regional leadership (0=minimal, 1=strong aspirations)
+            resource_nationalism: Control over natural resources (0=open to foreign investment, 1=strict state control)
+        """
+        # Ensure all traits are in valid range
+        def validate_trait(value):
+            return max(0.0, min(1.0, value))
+        
+        # Economic traits
+        self.protectionism = validate_trait(protectionism)
+        self.free_market_belief = validate_trait(free_market_belief)
+        self.export_orientation = validate_trait(export_orientation)
+        self.self_sufficiency = validate_trait(self_sufficiency)
+        self.sector_protection = validate_trait(sector_protection)
+        self.innovation_focus = validate_trait(innovation_focus)
+        self.economic_focus = validate_trait(economic_focus)
+        self.debt_tolerance = validate_trait(debt_tolerance)
+        
+        # Diplomatic traits
+        self.cooperation = validate_trait(cooperation)
+        self.isolationism = validate_trait(isolationism)
+        self.retaliation = validate_trait(retaliation)
+        self.aggression = validate_trait(aggression)
+        self.regional_focus = validate_trait(regional_focus)
+        self.pride = validate_trait(pride)
+        self.pragmatism = validate_trait(pragmatism)
+        
+        # Leadership traits
+        self.risk_aversion = validate_trait(risk_aversion)
+        self.accountability = validate_trait(accountability)
+        
+        # New traits
+        self.sanctions_resilience = validate_trait(sanctions_resilience)
+        self.technology_policy = validate_trait(technology_policy)
+        self.environmental_policy = validate_trait(environmental_policy)
+        self.geopolitical_alignment = validate_trait(geopolitical_alignment)
+        self.state_enterprise_dominance = validate_trait(state_enterprise_dominance)
+        self.corruption_index = validate_trait(corruption_index)
+        self.labor_market_flexibility = validate_trait(labor_market_flexibility)
+        self.regional_leadership_role = validate_trait(regional_leadership_role)
+        self.resource_nationalism = validate_trait(resource_nationalism)
+    
+    @classmethod
+    def generate_random(cls):
+        """Generate a random country profile for testing."""
+        return cls(**{trait: random.uniform(0.1, 0.9) for trait in [
+            'protectionism', 'free_market_belief', 'export_orientation', 'self_sufficiency',
+            'sector_protection', 'innovation_focus', 'economic_focus', 'debt_tolerance',
+            'cooperation', 'isolationism', 'retaliation', 'aggression', 'regional_focus',
+            'pride', 'pragmatism', 'risk_aversion', 'accountability',
+            'sanctions_resilience', 'technology_policy', 'environmental_policy',
+            'geopolitical_alignment', 'state_enterprise_dominance', 'corruption_index',
+            'labor_market_flexibility', 'regional_leadership_role', 'resource_nationalism'
+        ]})
+    
+    def get_trade_strategy(self) -> Dict[str, float]:
+        """
+        Get the country's overall trade strategy preferences based on its traits.
+        
+        Returns:
+            Dictionary mapping strategy types to preference values (0.0-1.0)
+        """
+        strategies = {
+            "protectionism": (self.protectionism * 0.5 + self.self_sufficiency * 0.3 + 
+                             (1 - self.free_market_belief) * 0.2),
+            
+            "free_trade": (self.free_market_belief * 0.4 + (1 - self.protectionism) * 0.3 + 
+                          (1 - self.isolationism) * 0.2 + self.cooperation * 0.1),
+            
+            "strategic_trade": (self.sector_protection * 0.3 + self.pragmatism * 0.3 + 
+                               self.economic_focus * 0.2 + self.innovation_focus * 0.2),
+            
+            "resource_focus": (self.resource_nationalism * 0.5 + 
+                              self.state_enterprise_dominance * 0.3 + 
+                              self.self_sufficiency * 0.2),
+            
+            "technology_control": (self.technology_policy * 0.4 + 
+                                  self.innovation_focus * 0.3 + 
+                                  self.state_enterprise_dominance * 0.3),
+            
+            "regional_integration": (self.regional_focus * 0.4 + 
+                                    self.regional_leadership_role * 0.3 + 
+                                    self.cooperation * 0.3)
+        }
+        
+        # Normalize to ensure all values are between 0 and 1
+        for strategy in strategies:
+            strategies[strategy] = max(0.0, min(1.0, strategies[strategy]))
+            
+        return strategies
+    
+    def get_sanctions_approach(self) -> Dict[str, float]:
+        """
+        Calculate the country's approach to imposing and responding to sanctions.
+        
+        Returns:
+            Dictionary mapping sanction approaches to preference values (0.0-1.0)
+        """
+        approaches = {
+            "impose_sanctions": (self.aggression * 0.3 + 
+                                self.retaliation * 0.3 + 
+                                self.economic_focus * 0.2 + 
+                                self.pride * 0.2),
+            
+            "withstand_sanctions": (self.sanctions_resilience * 0.4 + 
+                                   self.self_sufficiency * 0.3 + 
+                                   self.pride * 0.2 + 
+                                   (1 - self.cooperation) * 0.1),
+            
+            "diplomatic_resolution": (self.cooperation * 0.4 + 
+                                     self.pragmatism * 0.3 + 
+                                     (1 - self.aggression) * 0.3),
+            
+            "counter_sanctions": (self.retaliation * 0.5 + 
+                                 self.aggression * 0.3 + 
+                                 self.pride * 0.2)
+        }
+        
+        # Normalize to ensure all values are between 0 and 1
+        for approach in approaches:
+            approaches[approach] = max(0.0, min(1.0, approaches[approach]))
+            
+        return approaches
+    
+    def alliance_compatibility(self, other_profile) -> float:
+        """
+        Calculate compatibility score with another country for potential alliance.
+        
+        Args:
+            other_profile: CountryProfile of another country
+            
+        Returns:
+            Compatibility score (0.0-1.0) where higher means more compatible
+        """
+        # Economic compatibility
+        economic_compatibility = 1.0 - (
+            abs(self.free_market_belief - other_profile.free_market_belief) * 0.3 +
+            abs(self.protectionism - other_profile.protectionism) * 0.3 +
+            abs(self.economic_focus - other_profile.economic_focus) * 0.2 +
+            abs(self.innovation_focus - other_profile.innovation_focus) * 0.2
+        ) / 1.0
+        
+        # Diplomatic compatibility
+        diplomatic_compatibility = 1.0 - (
+            abs(self.cooperation - other_profile.cooperation) * 0.3 +
+            abs(self.isolationism - other_profile.isolationism) * 0.2 +
+            abs(self.pragmatism - other_profile.pragmatism) * 0.3 +
+            abs(self.regional_focus - other_profile.regional_focus) * 0.2
+        ) / 1.0
+        
+        # Geopolitical compatibility
+        geopolitical_compatibility = 1.0 - (
+            abs(self.geopolitical_alignment - other_profile.geopolitical_alignment) * 0.6 +
+            abs(self.regional_leadership_role - other_profile.regional_leadership_role) * 0.4
+        ) / 1.0
+        
+        # Calculate overall compatibility with weighted components
+        overall_compatibility = (
+            economic_compatibility * 0.3 +
+            diplomatic_compatibility * 0.4 +
+            geopolitical_compatibility * 0.3
+        )
+        
+        return max(0.0, min(1.0, overall_compatibility))
+    
+    def calculate_technology_stance(self, other_country):
+        """
+        Calculate the compatibility of technology policies between two countries.
+        
+        Args:
+            other_country: Another CountryProfile instance to compare with
+            
+        Returns:
+            float: Score between 0-1 indicating technology policy compatibility
+        """
+        # Check if both countries have numeric technology_policy values
+        if (hasattr(self, 'technology_policy') and hasattr(other_country, 'technology_policy') and
+            isinstance(self.technology_policy, (int, float)) and isinstance(other_country.technology_policy, (int, float))):
+            # Similar technology policies increase compatibility
+            compatibility = 1 - abs(self.technology_policy - other_country.technology_policy)
+        else:
+            # Default to moderate compatibility when values are missing
+            compatibility = 0.5
+            
+        # Adjust based on government type - similar government types increase compatibility
+        if hasattr(self, 'government_type') and hasattr(other_country, 'government_type'):
+            if self.government_type == other_country.government_type:
+                compatibility += 0.1
+                
+        # Adjust based on research investment - similar levels increase compatibility
+        if hasattr(self, 'research_percent_gdp') and hasattr(other_country, 'research_percent_gdp'):
+            research_diff = abs(self.research_percent_gdp - other_country.research_percent_gdp)
+            if research_diff < 0.5:
+                compatibility += 0.1
+                
+        return min(max(compatibility, 0), 1)  # Ensure result is between 0 and 1
+    
+    def regional_influence_factor(self):
+        """
+        Calculate a country's regional influence factor based on its profile attributes.
+        
+        Returns:
+            float: Score between 0-1 indicating regional influence
+        """
+        influence = 0.5  # Default value
+        
+        # If we have specific regional leadership attribute, prioritize it
+        if hasattr(self, 'regional_leadership_role') and isinstance(self.regional_leadership_role, (int, float)):
+            influence = self.regional_leadership_role
+        else:
+            # Calculate from other factors
+            if hasattr(self, 'exports_percent_gdp'):
+                # Higher exports relative to GDP indicate greater economic influence
+                influence += min(self.exports_percent_gdp / 100, 0.3)
+                
+            if hasattr(self, 'key_trade_partners') and isinstance(self.key_trade_partners, list):
+                # More trade partners indicate wider influence
+                influence += min(len(self.key_trade_partners) / 10, 0.2)
+                
+            # Government stability adds to influence
+            if hasattr(self, 'leadership_traits'):
+                if hasattr(self.leadership_traits, 'stability'):
+                    influence += self.leadership_traits.stability * 0.2
+                    
+        return min(max(influence, 0), 1)  # Ensure result is between 0 and 1
+    
+    def resource_vulnerability_assessment(self):
+        """
+        Assess a country's vulnerability to resource-related trade disruptions.
+        
+        Returns:
+            float: Score between 0-1 indicating vulnerability (higher = more vulnerable)
+        """
+        vulnerability = 0.5  # Default value
+        
+        # Resource dependency directly impacts vulnerability
+        if hasattr(self, 'resource_dependency'):
+            if isinstance(self.resource_dependency, (int, float)):
+                vulnerability = self.resource_dependency
+            elif isinstance(self.resource_dependency, str):
+                # Text-based assessment - look for key terms
+                dependency_text = self.resource_dependency.lower()
+                if "heavily" in dependency_text or "significant" in dependency_text:
+                    vulnerability += 0.2
+                if "diversif" in dependency_text:  # Catches diversify, diversification
+                    vulnerability -= 0.1
+                    
+        # Resource nationalism increases vulnerability for importers, decreases for exporters
+        if hasattr(self, 'resource_nationalism') and isinstance(self.resource_nationalism, (int, float)):
+            if hasattr(self, 'exports_percent_gdp') and hasattr(self, 'imports_percent_gdp'):
+                if self.exports_percent_gdp > self.imports_percent_gdp:
+                    # Net exporter - resource nationalism reduces vulnerability
+                    vulnerability -= self.resource_nationalism * 0.2
+                else:
+                    # Net importer - resource nationalism increases vulnerability
+                    vulnerability += self.resource_nationalism * 0.2
+        
+        # Sanctions resilience decreases vulnerability
+        if hasattr(self, 'sanctions_resilience') and isinstance(self.sanctions_resilience, (int, float)):
+            vulnerability -= self.sanctions_resilience * 0.2
+            
+        return min(max(vulnerability, 0), 1)  # Ensure result is between 0 and 1
+    
+    def environmental_policy_compatibility(self, other_country):
+        """
+        Calculate the compatibility of environmental policies between two countries.
+        
+        Args:
+            other_country: Another CountryProfile instance to compare with
+            
+        Returns:
+            float: Score between 0-1 indicating environmental policy compatibility
+        """
+        # Default moderate compatibility
+        compatibility = 0.5
+        
+        # If both countries have numerical environmental policy values
+        if (hasattr(self, 'environmental_policy') and hasattr(other_country, 'environmental_policy') and
+            isinstance(self.environmental_policy, (int, float)) and 
+            isinstance(other_country.environmental_policy, (int, float))):
+            
+            # Similar environmental policies increase compatibility
+            compatibility = 1 - abs(self.environmental_policy - other_country.environmental_policy)
+        else:
+            # Text-based assessment if available
+            if (hasattr(self, 'environmental_policy') and hasattr(other_country, 'environmental_policy') and
+                isinstance(self.environmental_policy, str) and isinstance(other_country.environmental_policy, str)):
+                
+                # Look for similar terms in both descriptions
+                self_env = self.environmental_policy.lower()
+                other_env = other_country.environmental_policy.lower()
+                
+                # Check for common environmental policy terms
+                common_terms = ["renewable", "sustainable", "climate", "green", "carbon"]
+                matches = 0
+                for term in common_terms:
+                    if (term in self_env) == (term in other_env):
+                        matches += 1
+                
+                compatibility = 0.3 + (0.7 * (matches / len(common_terms)))
+        
+        return min(max(compatibility, 0), 1)  # Ensure result is between 0 and 1
+    
+    def calculate_overall_cooperation_potential(self, other_country):
+        """
+        Calculate the overall potential for cooperation between two countries
+        based on all available factors in their profiles.
+        
+        Args:
+            other_country: Another CountryProfile instance to compare with
+            
+        Returns:
+            float: Score between 0-1 indicating cooperation potential
+            dict: Breakdown of factors contributing to the score
+        """
+        # Start with basic diplomatic compatibility
+        if hasattr(self, 'calculate_alliance_compatibility'):
+            diplomatic_score = self.calculate_alliance_compatibility(other_country)
+        else:
+            diplomatic_score = 0.5  # Default if method not available
+            
+        # Calculate trade compatibility
+        if hasattr(self, 'calculate_trade_strategy_compatibility'):
+            trade_score = self.calculate_trade_strategy_compatibility(other_country)
+        else:
+            trade_score = 0.5  # Default if method not available
+            
+        # Calculate technology stance compatibility
+        tech_score = self.calculate_technology_stance(other_country)
+        
+        # Calculate environmental policy compatibility
+        env_score = self.environmental_policy_compatibility(other_country)
+        
+        # Look at geopolitical alignment if available
+        geo_score = 0.5  # Default
+        if (hasattr(self, 'geopolitical_alignment') and hasattr(other_country, 'geopolitical_alignment') and
+            isinstance(self.geopolitical_alignment, (int, float)) and 
+            isinstance(other_country.geopolitical_alignment, (int, float))):
+            
+            geo_score = 1 - abs(self.geopolitical_alignment - other_country.geopolitical_alignment)
+        
+        # Check for existing diplomatic incidents
+        incident_modifier = 0
+        if hasattr(self, 'diplomatic_incidents') and isinstance(self.diplomatic_incidents, list):
+            # Look for incidents involving the other country
+            for incident in self.diplomatic_incidents:
+                if isinstance(incident, dict) and 'type' in incident:
+                    if incident.get('description', '').find(other_country.name) >= 0:
+                        if incident['type'] == 'cooperative':
+                            incident_modifier += 0.1
+                        elif incident['type'] == 'aggressive':
+                            incident_modifier -= 0.2
+            
+            # Cap the modifier
+            incident_modifier = max(min(incident_modifier, 0.3), -0.3)
+        
+        # Calculate weighted average of all factors
+        factors = {
+            'diplomatic_compatibility': diplomatic_score,
+            'trade_compatibility': trade_score,
+            'technology_compatibility': tech_score,
+            'environmental_compatibility': env_score,
+            'geopolitical_alignment': geo_score
+        }
+        
+        # Calculate overall score (weighted average)
+        weights = {
+            'diplomatic_compatibility': 0.3,
+            'trade_compatibility': 0.3,
+            'technology_compatibility': 0.15,
+            'environmental_compatibility': 0.1,
+            'geopolitical_alignment': 0.15
+        }
+        
+        overall_score = sum(factors[f] * weights[f] for f in factors.keys())
+        
+        # Apply incident modifier
+        overall_score += incident_modifier
+        
+        # Ensure final score is between 0 and 1
+        overall_score = min(max(overall_score, 0), 1)
+        
+        return overall_score, factors
+
 class AIExplanationSystem:
     """
     Provides detailed explanations of AI decision processes to increase transparency for players.

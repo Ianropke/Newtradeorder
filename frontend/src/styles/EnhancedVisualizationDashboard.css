@@ -1,0 +1,288 @@
+.enhanced-visualization-dashboard {
+  padding: 20px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.visualization-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e6ed;
+  padding-bottom: 15px;
+}
+
+.visualization-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.visualization-controls {
+  display: flex;
+  gap: 15px;
+}
+
+.tab-controls {
+  display: flex;
+}
+
+.tab-controls button {
+  padding: 8px 15px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: #7f8c8d;
+  transition: all 0.2s ease;
+}
+
+.tab-controls button:hover {
+  color: #2980b9;
+}
+
+.tab-controls button.active {
+  color: #2980b9;
+  border-bottom-color: #2980b9;
+}
+
+.mode-selector select,
+.time-range-selector select {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: white;
+  font-size: 14px;
+}
+
+.visualization-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.visualization-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.visualization-tabs button {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  margin-right: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #7f8c8d;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.visualization-tabs button:hover {
+  color: #3498db;
+}
+
+.visualization-tabs button.active {
+  color: #3498db;
+  font-weight: 600;
+}
+
+.visualization-tabs button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #3498db;
+}
+
+.visualization-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .visualization-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.visualization-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.visualization-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+.visualization-card h3 {
+  color: #34495e;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+/* Custom colors and styling for charts */
+.recharts-default-tooltip {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.recharts-tooltip-label {
+  color: #34495e !important;
+  font-weight: 600 !important;
+  margin-bottom: 5px !important;
+}
+
+.recharts-tooltip-item {
+  color: #7f8c8d !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+  font-size: 12px;
+  fill: #7f8c8d;
+}
+
+.recharts-legend-item-text {
+  font-size: 13px;
+  color: #34495e;
+}
+
+/* Animation for chart elements */
+.recharts-layer {
+  transition: opacity 0.3s ease;
+}
+
+/* Hover effect for interactive elements in charts */
+.recharts-active-dot {
+  transition: r 0.2s ease;
+}
+
+.recharts-active-dot:hover {
+  r: 10 !important;
+}
+
+/* No data message styling */
+.no-data-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: #95a5a6;
+  font-style: italic;
+  background-color: rgba(236, 240, 241, 0.5);
+  border-radius: 4px;
+}
+
+/* Economic Dashboard */
+.economic-dashboard {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.economic-indicators {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+/* Diplomatic Dashboard */
+.diplomatic-dashboard {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 20px;
+}
+
+.relation-analysis {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.relation-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Trade Dashboard */
+.trade-dashboard {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.trade-flow-visualization,
+.trade-balances {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Coalitions Dashboard */
+.coalitions-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.coalition-network,
+.coalition-strength {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Predictions Dashboard */
+.predictions-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.trend-predictions,
+.ai-analysis {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 992px) {
+  .economic-dashboard,
+  .diplomatic-dashboard,
+  .trade-dashboard,
+  .coalitions-dashboard,
+  .predictions-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
